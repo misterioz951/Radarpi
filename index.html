@@ -1,75 +1,168 @@
 <!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Radar de patrones</title>
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@600;700&family=Archivo:wght@400;600&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#0E1A33">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@600;700&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#E8EDF1;--ink:#14213D;--mut:#5B6678;--card:#fff;--acc:#F2B705;--ok:#1F7A4D;--bad:#B3341F;--ln:#CBD3DC}
-@media(prefers-color-scheme:dark){:root{--bg:#0F1726;--ink:#E8EDF4;--mut:#93A0B5;--card:#18233A;--ln:#2B3A57;--ok:#4CC38A;--bad:#FF7A66}}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Archivo,system-ui,sans-serif;padding:env(safe-area-inset-top) 14px 84px}
-h1,h2,.n{font-family:'Archivo Narrow',system-ui,sans-serif;font-weight:700;margin:0}
-h1{font-size:26px;padding:14px 0 2px}h2{font-size:18px}
+:root{--bg:#EEF1F5;--s2:#F5F7FA;--card:#fff;--ink:#0E1A33;--mut:#5A667B;--ln:#DCE2EA;--acc:#F5B800;--onacc:#1A1400;--ok:#16885A;--bad:#C2412D;--blue:#2F6FDE;--vio:#7A4FD6;--sh:0 1px 2px rgba(14,26,51,.06),0 6px 18px rgba(14,26,51,.06)}
+@media(prefers-color-scheme:dark){:root{--bg:#0B1220;--s2:#0F1829;--card:#131D31;--ink:#EAF0F8;--mut:#8C9AB3;--ln:#24324D;--acc:#FFC21A;--ok:#3DD598;--bad:#FF7B67;--blue:#6EA2FF;--vio:#A98BFF;--sh:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25)}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0 auto;max-width:560px;background:var(--bg);color:var(--ink);font:15px/1.45 Archivo,system-ui,sans-serif;padding:env(safe-area-inset-top) 14px calc(90px + env(safe-area-inset-bottom))}
+html{background:var(--bg);scroll-padding-top:env(safe-area-inset-top)}
+h1,h2{font-family:'Archivo Narrow',system-ui,sans-serif;font-weight:700;margin:0}
+h1{font-size:25px;line-height:1.1}h2{font-size:19px}
 small,.mut{color:var(--mut)}
-section{margin-top:12px}
-.card{background:var(--card);border:1px solid var(--ln);border-radius:10px;padding:12px;margin:10px 0}
-.chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{border:1px solid var(--ln);background:var(--card);color:var(--ink);border-radius:20px;padding:6px 12px;font:inherit}
+header{display:flex;align-items:center;gap:12px;padding:16px 0 4px}
+.logo{width:44px;height:44px;border-radius:13px;background:#0E1A33;display:grid;place-items:center;flex:none}
+.logo svg{width:28px;height:28px}
+header small{display:block;margin-top:2px}
+section{margin-top:6px}
+.sec{font:700 11px/1 Archivo;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin:16px 2px 8px}
+.card{background:var(--card);border:1px solid var(--ln);border-radius:18px;padding:15px;margin:12px 0;box-shadow:var(--sh);animation:up .35s ease both}
+.chips{display:flex;gap:8px;overflow-x:auto;margin:0 -14px;padding:2px 14px 8px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chips.wrap{flex-wrap:wrap;overflow:visible;margin:8px 0 0;padding:0}
+.chip{flex:none;border:1px solid var(--ln);background:var(--card);color:var(--ink);border-radius:22px;padding:8px 14px;font:600 13px Archivo;min-height:38px}
 .chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-button{font:inherit;cursor:pointer}
-.btn{background:var(--acc);color:#14213D;border:0;border-radius:8px;padding:11px 16px;font-weight:600;width:100%;margin-top:10px}
-.btn.s{width:auto;margin:6px 6px 0 0;padding:8px 12px;background:transparent;color:var(--ink);border:1px solid var(--ln)}
+button{font:inherit;cursor:pointer;color:inherit}
+button:disabled{opacity:.7;cursor:default}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 18px;width:100%;margin-top:12px;border:0;border-radius:14px;background:var(--acc);color:var(--onacc);font-weight:700;box-shadow:0 4px 14px rgba(245,184,0,.25)}
+.btn:active{transform:scale(.985)}
+.btn.s{width:auto;min-height:40px;margin:8px 6px 0 0;padding:0 14px;background:transparent;color:var(--ink);border:1px solid var(--ln);box-shadow:none;font-size:14px;font-weight:600}
 .btn.s.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.tag{border-left:4px solid var(--acc);padding:2px 8px;margin:6px 0;font-size:14px}
-input,select{font:inherit;width:100%;padding:9px;border:1px solid var(--ln);border-radius:8px;background:var(--bg);color:var(--ink);margin:4px 0}
-.row{display:flex;gap:6px}.row>*{flex:1}
-.ai{white-space:pre-wrap;margin-top:8px;padding:8px;background:var(--bg);border-radius:8px;font-size:14px}
+#go{min-height:56px;font-size:16px;border-radius:16px;margin-top:6px}
+#go.busy svg{animation:spin 1.1s linear infinite}
+label{display:block;font:600 12px/1.2 Archivo;color:var(--mut);margin:12px 0 0}
+input,select{font:inherit;font-size:15px;color:var(--ink);width:100%;min-height:46px;padding:0 12px;border:1px solid var(--ln);border-radius:12px;background:var(--s2);margin-top:6px}
+input[type=checkbox]{appearance:none;-webkit-appearance:none;width:48px;min-height:0;height:28px;border:0;border-radius:20px;background:var(--ln);position:relative;padding:0;margin:0;flex:none;transition:.2s}
+input[type=checkbox]::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:.2s}
+input[type=checkbox]:checked{background:var(--ok)}
+input[type=checkbox]:checked::after{left:23px}
+.tg-row{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0;padding:13px 0;border-top:1px solid var(--ln);font:500 15px/1.3 Archivo;color:var(--ink)}
+.tg-row small{display:block;font-size:12px;margin-top:2px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.grp p{margin:3px 0 0;font-size:13px;color:var(--mut)}
+.status{margin:12px 2px;color:var(--mut);font-size:13px;line-height:1.4}.status:empty{display:none}
+.pill{display:inline-flex;align-items:center;padding:5px 11px;border-radius:20px;background:var(--s2);border:1px solid var(--ln);font:600 12px/1 Archivo;color:var(--mut)}
+.mh{display:flex;justify-content:space-between;align-items:center}
+.ko{font:700 17px 'Archivo Narrow',sans-serif;font-variant-numeric:tabular-nums}
+.teams{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 9px;margin:12px 0 4px;font:700 23px/1.15 'Archivo Narrow',sans-serif}
+.teams em{font:600 11px Archivo;color:var(--mut);font-style:normal;text-transform:uppercase;letter-spacing:.1em}
+.xg{display:flex;flex-wrap:wrap;gap:4px 16px;color:var(--mut);font-size:13px}.xg b{color:var(--ink);font-variant-numeric:tabular-nums}
+.tags{display:flex;flex-direction:column;gap:6px;margin:12px 0 2px}
+.tg{padding:9px 11px;border-radius:11px;background:var(--s2);font-size:14px;line-height:1.3;border-left:3px solid var(--acc)}
+.tg.c{border-color:var(--blue)}.tg.k{border-color:var(--bad)}.tg.f{border-color:var(--ok)}.tg.u{border-color:var(--vio)}
+.mkts{margin-top:10px}
+.mkts>.sec{margin:12px 0 2px}
+.mr{padding:9px 0;border-top:1px solid var(--ln)}
+.mr-t{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:14px}
+.mn{font-weight:600}
+.mv{color:var(--mut);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums}.mv b{color:var(--ink);font-size:15px}
+.bar{height:5px;border-radius:5px;background:var(--s2);margin-top:7px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--acc);border-radius:5px}
+.mr.v .bar i{background:var(--ok)}
+.chip2{display:inline-block;padding:2px 7px;border-radius:8px;font:700 12px Archivo;background:var(--s2)}
+.chip2.ok{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+.chip2.bad{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
+.tier{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;font:700 12px Archivo;margin-right:7px;color:#fff;vertical-align:1px}
+.tierA{background:var(--ok)}.tierB{background:var(--blue)}.tierC{background:var(--mut)}
+.ctl{display:grid;grid-template-columns:1fr 1fr;gap:0 8px;margin-top:10px}.ctl select{grid-column:1/-1}
+.cx{font-size:14px;margin-top:8px}.cx:empty{display:none}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.acts .btn{margin:0;flex:1 1 auto;width:auto;min-height:44px}.acts .btn.s{margin:0}
+.ai{margin-top:12px;padding:13px;background:var(--s2);border:1px solid var(--ln);border-radius:14px;font-size:14px;white-space:normal}
+.ai[hidden]{display:none}
+.ai p{margin:6px 0 0}.ai ul{margin:4px 0 0;padding-left:18px}.ai li{margin:3px 0}
+.ai h4{margin:12px 0 0;font:700 11px Archivo;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+.pickhd small{display:block;font:700 11px Archivo;letter-spacing:.12em;color:var(--mut)}
+.pickhd b{font:700 24px/1.15 'Archivo Narrow',sans-serif}
+.meter{display:flex;gap:4px;margin:12px 0 8px}.meter i{flex:1;height:9px;border-radius:3px;background:var(--ln)}.meter i.f{background:var(--acc)}.meter.hi i.f{background:var(--ok)}
+.kv{display:flex;flex-wrap:wrap;gap:4px 16px;color:var(--mut);font-size:13px}.kv b{color:var(--ink)}
 .ok{color:var(--ok)}.bad{color:var(--bad)}
-nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--ln);padding-bottom:env(safe-area-inset-bottom)}
-nav button{flex:1;border:0;background:none;color:var(--mut);padding:14px 4px;font-weight:600}
-nav button.on{color:var(--ink);box-shadow:inset 0 3px 0 var(--acc)}
+.empty{text-align:center;padding:38px 18px;color:var(--mut)}
+.empty svg{width:64px;height:64px;color:var(--ln);margin-bottom:10px}
+.empty b{display:block;color:var(--ink);font:700 19px 'Archivo Narrow',sans-serif;margin-bottom:4px}
+.hero{background:linear-gradient(135deg,#0E1A33,#1C3263);color:#fff;border-radius:20px;padding:18px;margin:12px 0;box-shadow:var(--sh);animation:up .35s ease both}
+.hero small{color:#B8C4DC}
+.hero .big{font:700 42px/1.05 'Archivo Narrow',sans-serif;margin:4px 0 10px;font-variant-numeric:tabular-nums}
+.hero .big.ok{color:#5BE3A8}.hero .big.bad{color:#FF9482}
+.hero .sub{display:flex;gap:22px;font-size:13px;color:#B8C4DC}.hero .sub b{display:block;color:#fff;font:700 18px 'Archivo Narrow',sans-serif}
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:12px 0}
+.tile{background:var(--card);border:1px solid var(--ln);border-radius:16px;padding:13px 14px;box-shadow:var(--sh)}
+.tile small{display:block;font:600 12px Archivo}
+.tile b{display:block;font:700 30px/1.1 'Archivo Narrow',sans-serif;margin-top:4px;font-variant-numeric:tabular-nums}
+.tile span{font-size:12px;color:var(--mut)}
+.cal{padding:11px 0;border-top:1px solid var(--ln)}.card h2+.cal{border-top:0}
+.cal-t{display:flex;justify-content:space-between;font-weight:600;font-size:14px}
+.cal .bar{height:6px;margin-top:6px}.cal .bar.p i{background:var(--ln)}.cal .bar.h i{background:var(--acc)}
+.cal .bar.h.good i{background:var(--ok)}.cal .bar.h.low i{background:var(--bad)}
+.cal-l{display:flex;justify-content:space-between;font-size:12px;color:var(--mut);margin-top:5px}
+.bet{padding:13px 0;border-top:1px solid var(--ln)}.card.bet{padding:15px;border-top:1px solid var(--ln)}
+.bet-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.bet-h b{font-weight:600}
+.st{flex:none;padding:3px 9px;border-radius:20px;font:700 11px Archivo;letter-spacing:.05em;text-transform:uppercase;background:var(--s2);color:var(--mut)}
+.st.w{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+.st.l{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
+nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;display:flex;background:color-mix(in srgb,var(--card) 92%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--ln);padding:6px 6px calc(6px + env(safe-area-inset-bottom));z-index:10}
+nav button{flex:1;border:0;background:none;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:3px;font:600 11px Archivo;padding:2px 0;min-height:54px}
+nav svg{width:22px;height:22px;padding:4px 14px;box-sizing:content-box;border-radius:14px;transition:.2s}
+nav button.on{color:var(--ink)}nav button.on svg{background:var(--acc);color:var(--onacc)}
+#toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom));transform:translate(-50%,16px);background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:12px;font-weight:600;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:20;max-width:90%;text-align:center}
+#toast.show{opacity:1;transform:translate(-50%,0)}
 :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style></head><body>
-<h1>Radar de patrones</h1><small>Fútbol · busca solo, tú decides</small>
+<header><div class="logo"><svg viewBox="0 0 32 32" fill="none" stroke="#F5B800" stroke-width="2.4" stroke-linecap="round"><path d="M5 21a11 11 0 0 1 22 0"/><path d="M10 21a6 6 0 0 1 12 0"/><circle cx="16" cy="22.5" r="2.3" fill="#F5B800" stroke="none"/></svg></div>
+<div><h1>Radar de patrones</h1><small>Fútbol · busca solo, tú decides</small></div></header>
 
 <section id="s-f">
+<div class="sec">Ligas</div>
 <div class="chips" id="lg"></div>
-<button class="btn" id="go">Escanear partidos de hoy</button>
-<p class="mut" id="msg"></p><div id="res"></div>
+<button class="btn" id="go"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 12l5.5-5.5"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg><span>Escanear partidos de hoy</span></button>
+<p class="status" id="msg"></p>
+<div id="res"><div class="empty"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="32" cy="32" r="26"/><circle cx="32" cy="32" r="15"/><path d="M32 32l16-16"/></svg><b>Todo listo para escanear</b>Elige tus ligas y toca el botón. Te muestro solo los partidos con patrones o con valor.</div></div>
 </section>
 
-<section id="s-n" hidden><div class="card"><h2>NBA</h2>
-<p>Se activa cuando empiece la temporada. Usará el mismo escáner (rachas, ritmo, props) con datos de BallDontLie.</p></div></section>
+<section id="s-n" hidden><div class="card empty"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="32" cy="32" r="26"/><path d="M6 32h52M32 6v52M13 13c8 8 8 30 0 38M51 13c-8 8-8 30 0 38"/></svg><b>NBA, muy pronto</b>Cuando empiece la temporada tendrá el mismo escáner: rachas, ritmo y props.</div></section>
 
-<section id="s-r" hidden><div class="card" id="sum"></div>
-<button class="btn s" id="add">Añadir apuesta</button><div id="bets"></div></section>
+<section id="s-r" hidden><div id="sum"></div><button class="btn s" id="add">+ Añadir apuesta</button><div id="bets"></div></section>
 
 <section id="s-m" hidden><div id="mdl"></div></section>
 
-<section id="s-a" hidden><div class="card"><h2>Ajustes</h2>
-<p class="mut">Las llaves se guardan solo en este dispositivo.</p>
-<label>Llave Groq (IA)<input id="k-gq" type="password" autocomplete="off"></label>
-<div class="row"><label>Goles/partido mín.<input id="c-g" type="number" step="0.1"></label>
-<label>Ambos marcan % mín.<input id="c-b" type="number"></label>
-<label>Partidos máx.<input id="c-m" type="number"></label></div>
-<div class="row"><label>Under: goles/partido máx.<input id="c-u" type="number" step="0.1"></label>
-<label>Victorias local/visita % mín.<input id="c-r" type="number"></label>
-<label>Bankroll<input id="c-k" type="number"></label></div>
-<div class="row"><label>Córners por equipo mín.<input id="c-co" type="number" step="0.1"></label>
-<label>Tarjetas (suma) mín.<input id="c-ta" type="number" step="0.1"></label>
-<label>Córners y tarjetas<input id="c-x" type="checkbox" style="width:auto;margin-top:14px"></label></div>
-<label>Llave OddsPapi (cuotas)<input id="c-ok" type="password" autocomplete="off"></label>
-<label>Casa de apuestas (slug)<input id="c-bm" placeholder="rushbet.co"></label>
-<button class="btn s" id="bkfind" type="button">Buscar casas</button><div id="bkres" class="chips"></div>
-<label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input id="c-pn" type="checkbox" style="width:auto;margin:0"> Contrastar con Pinnacle (1 petición extra por escaneo)</label>
-<label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input id="c-au" type="checkbox" style="width:auto;margin:0"> Escanear solo al abrir la app (máx. cada 3 h)</label>
-<button class="btn" id="save">Guardar ajustes</button></div></section>
+<section id="s-a" hidden>
+<div class="card grp"><h2>Inteligencia artificial</h2><p>Las llaves se guardan solo en este dispositivo.</p>
+<label>Llave Groq<input id="k-gq" type="password" autocomplete="off"></label></div>
+<div class="card grp"><h2>Cuotas</h2><p>OddsPapi trae las cuotas de tu casa.</p>
+<label>Llave OddsPapi<input id="c-ok" type="password" autocomplete="off"></label>
+<label>Casa de apuestas<input id="c-bm" placeholder="rushbet.co"></label>
+<button class="btn s" id="bkfind" type="button">Buscar casas</button><div id="bkres" class="chips wrap"></div>
+<label class="tg-row"><span>Contrastar con Pinnacle<small>Usa 1 petición extra por escaneo</small></span><input id="c-pn" type="checkbox"></label></div>
+<div class="card grp"><h2>Bankroll y escáner</h2>
+<div class="g2"><label>Bankroll<input id="c-k" type="number"></label><label>Partidos máx.<input id="c-m" type="number"></label></div>
+<label class="tg-row"><span>Córners y tarjetas<small>Más datos, primer escaneo más lento</small></span><input id="c-x" type="checkbox"></label>
+<label class="tg-row"><span>Escanear al abrir la app<small>Como máximo cada 3 horas</small></span><input id="c-au" type="checkbox"></label></div>
+<div class="card grp"><h2>Umbrales de alertas</h2><p>Qué tan exigente es el escáner.</p>
+<div class="g2"><label>Goles/partido mín.<input id="c-g" type="number" step="0.1"></label><label>Ambos marcan % mín.<input id="c-b" type="number"></label>
+<label>Under: goles máx.<input id="c-u" type="number" step="0.1"></label><label>Victorias % mín.<input id="c-r" type="number"></label>
+<label>Córners por equipo mín.<input id="c-co" type="number" step="0.1"></label><label>Tarjetas (suma) mín.<input id="c-ta" type="number" step="0.1"></label></div></div>
+<button class="btn" id="save">Guardar ajustes</button>
+</section>
 
-<nav><button data-t="f" class="on">Fútbol</button><button data-t="n">NBA</button><button data-t="r">Registro</button><button data-t="m">Modelo</button><button data-t="a">Ajustes</button></nav>
+<nav>
+<button data-t="f" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5l4 2.9-1.5 4.7h-5L8 10.4z"/></svg>Fútbol</button>
+<button data-t="n"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3v18M5.6 5.6c3 3 3 9.8 0 12.8M18.4 5.6c-3 3-3 9.8 0 12.8"/></svg>NBA</button>
+<button data-t="r"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>Registro</button>
+<button data-t="m"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20v-6M11 20V5M17 20v-9M3 20h18"/></svg>Modelo</button>
+<button data-t="a"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>Ajustes</button>
+</nav>
+<div id="toast" role="status" aria-live="polite"></div>
 
 <script>
 const $=s=>document.querySelector(s);
 const LS=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??d}catch{return d}};
 const SV=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),2600)}
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const LG={"Colombia":"col.1","Premier":"eng.1","Championship":"eng.2","La Liga":"esp.1","Serie A":"ita.1","Bundesliga":"ger.1","Ligue 1":"fra.1","Liga MX":"mex.1","Argentina":"arg.1","Brasileirão":"bra.1","Eredivisie":"ned.1","Primeira Liga":"por.1","Champions":"uefa.champions","Libertadores":"conmebol.libertadores","MLS":"usa.1"};
 let cfg=Object.assign({fd:'',gq:'',g:3,b:70,m:8,u:2,r:75,co:5,ta:5,ex:true,au:false,ok:'',bm:'',pn:true,lg:['col.1','eng.1','esp.1']},LS('cfg',{}));
@@ -339,7 +432,7 @@ $('#bkfind').onclick=async()=>{
 $('#go').onclick=async()=>{
   const msg=$('#msg');R=[];$('#res').innerHTML='';
   if(!cfg.lg.length){msg.textContent='Elige al menos una liga.';return}
-  $('#go').disabled=true;
+  $('#go').disabled=true;$('#go').classList.add('busy');
   try{
     const names=Object.fromEntries(Object.entries(LG).map(([n,s])=>[s,n])),names0=names,bad0=[];let OD=null,ODP=null,diag='',mq=0;const STD={};
     if(cfg.ok){
@@ -396,27 +489,31 @@ $('#go').onclick=async()=>{
     msg.textContent=(rev?`${rev} partidos revisados, ${R.length} con patrones.`:'No hay partidos pendientes hoy en esas ligas.')+(bad.length?' No cargaron: '+bad.join('; ')+'.':'')+diag+(OD&&rev&&!mq?' Ningún partido se emparejó con la casa. OddsPapi trae: '+(OD.fx.slice(0,4).map(x=>x.h+' vs '+x.w).join('; ')||'nada')+'.':'');
     drawRes();SV('scan',{d:today(),t:Date.now(),R,msg:msg.textContent});
   }catch(e){msg.textContent='Error: '+e.message}
-  finally{$('#go').disabled=false}
+  finally{$('#go').disabled=false;$('#go').classList.remove('busy')}
 };
 
+const tagc=t=>/córners/i.test(t)?'c':/tarjetas/i.test(t)?'k':/invicto|gana|racha/i.test(t)?'f':/under|cerrado|cero/i.test(t)?'u':'';
+const mrow=(n,p,right,v,t)=>`<div class="mr${v?' v':''}"><div class="mr-t"><span class="mn">${t?`<span class="tier tier${t}">${t}</span>`:''}${esc(n)}</span><span class="mv">${right}</span></div><div class="bar"><i style="width:${Math.round(p*100)}%"></i></div></div>`;
 function drawRes(){
+  if(!R.length){$('#res').innerHTML='<div class="empty"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="32" cy="32" r="26"/><circle cx="32" cy="32" r="15"/><path d="M32 32l16-16"/></svg><b>Nada que destacar</b>No hay partidos con patrones ni valor claro. Prueba con más ligas o ajusta los umbrales.</div>';return}
   $('#res').innerHTML=R.map((r,i)=>{
     let lst;
     if(r.q&&Object.keys(r.q).length){
       const od={A:0,B:1,C:2},vl=r.mod.m.filter(x=>r.q[x[0]]&&x[1]>=0.35&&x[1]<=0.9).map(x=>({n:x[0],p:x[1],q:r.q[x[0]],e:x[1]*r.q[x[0]]-1,t:tierOf(r,x[0]),f:r.mod.f&&r.mod.f[x[0]]})).sort((a,b)=>(od[a.t]??3)-(od[b.t]??3)||b.e-a.e).slice(0,4);
-      lst=`<small>Cuotas de ${esc(r.casa||'la casa')}</small><br>`+vl.map(x=>`${x.t?'<b>['+x.t+']</b> ':''}${esc(x.n)}: ${Math.round(x.p*100)}%${x.f!=null?' (Pinnacle '+Math.round(x.f*100)+'%)':''} · cuota ${x.q} · <span class="${x.e>0.03?'ok':'bad'}">valor ${x.e>=0?'+':''}${Math.round(x.e*100)}%</span>${x.e>0.25?' <small>(muy alto: suele ser error del modelo, revísalo)</small>':''}`).join('<br>');
+      lst=`<div class="sec">Cuotas de ${esc(r.casa||'la casa')}</div>`+vl.map(x=>mrow(x.n,x.p,`<b>${Math.round(x.p*100)}%</b>${x.f!=null?' · Pinnacle '+Math.round(x.f*100)+'%':''} · @${x.q} <span class="chip2 ${x.e>0.03?'ok':'bad'}">${x.e>=0?'+':''}${Math.round(x.e*100)}%</span>${x.e>0.25?' <small>muy alto, revísalo</small>':''}`,x.e>0.03,x.t)).join('');
     }else{
       const top=r.mod.m.filter(x=>x[1]>=0.4&&x[1]<=0.85).sort((a,b)=>b[1]-a[1]).slice(0,6);
-      lst=(cfg.ok?'<small>Sin cuotas de la casa para este partido (escribe la cuota a mano)</small><br>':'')+top.map(([n,p])=>`${esc(n)}: ${Math.round(p*100)}% · cuota mín. ${(1.05/p).toFixed(2)}`).join('<br>');
+      lst=`<div class="sec">${cfg.ok?'Sin cuotas de la casa: escribe la cuota a mano':'Probabilidades del modelo'}</div>`+top.map(([n,p])=>mrow(n,p,`<b>${Math.round(p*100)}%</b> · cuota mín. ${(1.05/p).toFixed(2)}`,false,null)).join('');
     }
-    return `<div class="card"><h2>${esc(r.m)}</h2>
-  <small>${esc(r.liga)} · ${r.hora} · goles esperados ${r.mod.lh.toFixed(1)} a ${r.mod.la.toFixed(1)}${r.mod.lc?' · córners '+r.mod.lc.toFixed(1):''}</small>
-  ${r.p.map(x=>`<div class="tag">${esc(x)}</div>`).join('')}
-  <p class="mut" style="font-size:13px;margin:8px 0">${lst}</p>
-  <div class="row"><select id="mk${i}" onchange="pick(${i})"><option value="">Que la IA elija</option>${r.mod.m.map(([n])=>`<option>${n}</option>`).join('')}</select><input id="od${i}" type="number" step="0.01" placeholder="Cuota" oninput="calc(${i})"><input id="sk${i}" type="number" placeholder="Monto"></div>
-  <div id="cx${i}" style="font-size:14px;margin-top:4px"></div>
-  <button class="btn s" onclick="showInfo(${i})">Bajas y alineaciones</button><button class="btn s" onclick="ai(${i})">Analizar con IA</button><button class="btn s" onclick="reg(${i})">Registrar apuesta</button>
-  <div class="ai" id="in${i}" hidden></div><div class="ai" id="ai${i}" hidden></div></div>`}).join('');
+    return `<article class="card"><div class="mh"><span class="pill">${esc(r.liga)}</span><span class="ko">${r.hora}</span></div>
+  <div class="teams"><span>${esc(r.h)}</span><em>vs</em><span>${esc(r.w)}</span></div>
+  <div class="xg"><span>Goles esperados <b>${r.mod.lh.toFixed(1)} – ${r.mod.la.toFixed(1)}</b></span>${r.mod.lc?`<span>Córners <b>${r.mod.lc.toFixed(1)}</b></span>`:''}</div>
+  ${r.p.length?`<div class="tags">${r.p.map(x=>`<div class="tg ${tagc(x)}">${esc(x)}</div>`).join('')}</div>`:''}
+  <div class="mkts">${lst}</div>
+  <div class="ctl"><select id="mk${i}" onchange="pick(${i})" aria-label="Mercado"><option value="">Que la IA elija</option>${r.mod.m.map(([n])=>`<option>${n}</option>`).join('')}</select><input id="od${i}" type="number" step="0.01" placeholder="Cuota" oninput="calc(${i})" aria-label="Cuota"><input id="sk${i}" type="number" placeholder="Monto" aria-label="Monto"></div>
+  <div class="cx" id="cx${i}"></div>
+  <div class="acts"><button class="btn" onclick="ai(${i})">Analizar con IA</button><button class="btn s" onclick="showInfo(${i})">Bajas y alineaciones</button><button class="btn s" onclick="reg(${i})">Registrar apuesta</button></div>
+  <div class="ai" id="in${i}" hidden></div><div class="ai" id="ai${i}" hidden></div></article>`}).join('');
 }
 function pick(i){const r=R[i],q=$('#mk'+i).value&&r.q&&r.q[$('#mk'+i).value];$('#od'+i).value=q||'';calc(i)}
 
@@ -426,6 +523,8 @@ function calc(i){
   const r=R[i],q=+$('#od'+i).value,o=$('#cx'+i),p=(r.mod.m.find(x=>x[0]===$('#mk'+i).value)||[0,0])[1];
   if(!q||q<=1){o.textContent='';return}
   const e=p*q-1;
+  {const P=LS('picks',[]),k=P.find(x=>x.ev===r.ev&&x.mk===$('#mk'+i).value);
+   if(k){k.q=q;k.qr=true;if(e<=0.03)k.nv=true;else delete k.nv;SV('picks',P)}}
   if(e<=0.03){o.innerHTML=`<span class="bad">Sin valor</span>: ${Math.round(p*100)}% de probabilidad con cuota ${q} no compensa. No apostar.`;$('#sk'+i).value='';return}
   const k=Math.min(e/(q-1)*0.25,0.03),amt=cfg.bk?Math.round(cfg.bk*k/100)*100:0;
   $('#sk'+i).value=amt||'';
@@ -482,7 +581,7 @@ function techo(r,m){
   const tr=tierOf(r,m[0]);if(tr==='A')t++;else if(tr==='C')t--;else if(!tr&&r.mod.raw&&r.q&&r.q[m[0]])t--;
   return Math.max(1,Math.min(9,t));
 }
-const lista=(a,t)=>a&&a.length?`<br><b>${t}</b><ul style="margin:4px 0;padding-left:18px">${a.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'';
+const lista=(a,t)=>a&&a.length?`<h4>${t}</h4><ul>${a.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'';
 async function ai(i){
   const r=R[i],box=$('#ai'+i);box.hidden=false;box.style.whiteSpace='normal';
   if(!cfg.gq){box.textContent='Falta la llave de Groq (Ajustes).';return}
@@ -528,10 +627,15 @@ async function ai(i){
     const rl=x=>x?x.titulares_recientes.length:0,nb=inf?rl(inf.bajas_local)+rl(inf.bajas_visitante):0;
     if(nb>=2)cap=Math.max(1,cap-2);else if(nb===1)cap=Math.max(1,cap-1);
     stk=Math.max(1,Math.min(stk,cap));
-    if(o.decision!=='apostar'){box.innerHTML=`<b class="bad">No apostar</b><br>${esc(o.resumen||'')}${note?'<br>'+esc(note):''}${lista(o.razones,'Razones')}`;return}
+    if(o.decision!=='apostar'){box.innerHTML=`<div class="pickhd"><small>DECISIÓN</small><b class="bad">No apostar</b></div><p>${esc(o.resumen||'')}</p>${note?`<p class="bad">${esc(note)}</p>`:''}${lista(o.razones,'Razones')}`;return}
     const pct=stk*0.3,amt=cfg.bk?Math.round(cfg.bk*pct/100/100)*100:0;
-    r.pk=o.pick;r.sk=amt;if(mk)addPick(r,o.pick,price,amt,false);
-    box.innerHTML=`<b>Pick: ${esc(o.pick)}</b><br>Stake <b>${stk}/10</b> (${pct.toFixed(1)}% del bankroll${amt?' ≈ '+amt.toLocaleString('es'):''}) · Cuota mínima ${esc(o.cuota_minima||(mk?(1.05/mk[1]).toFixed(2):''))}${price?` · cuota ${price} (valor ${Math.round((mk[1]*price-1)*100)}%)`:''}${stk<(+o.stake)?'<br><small>Stake limitado por los datos disponibles.</small>':''}<br>${esc(o.resumen||'')}${lista(o.razones,'Razones')}${lista(o.riesgos,'Riesgos')}${inf&&!inf.alineaciones?'<br><small>Alineaciones sin confirmar: stake máximo 7. Vuelve a analizar cuando salgan (≈1 h antes).</small>':''}`;
+    r.pk=o.pick;r.sk=amt;r.pq=price;
+    box.innerHTML=`<div class="pickhd"><small>PICK</small><b>${esc(o.pick)}</b></div>
+<div class="meter${stk>=8?' hi':''}" role="img" aria-label="Stake ${stk} de 10">${Array.from({length:10},(_,k)=>`<i class="${k<stk?'f':''}"></i>`).join('')}</div>
+<div class="kv"><span>Stake <b>${stk}/10</b></span><span>${pct.toFixed(1)}% del bankroll${amt?' ≈ <b>'+amt.toLocaleString('es')+'</b>':''}</span><span>Cuota mín. <b>${esc(o.cuota_minima||(mk?(1.05/mk[1]).toFixed(2):''))}</b></span>${price?`<span>Cuota casa <b>${price}</b> · valor <b>${Math.round((mk[1]*price-1)*100)}%</b></span>`:''}</div>
+${stk<(+o.stake)?'<p><small>Stake limitado por los datos disponibles.</small></p>':''}
+<p>${esc(o.resumen||'')}</p>${lista(o.razones,'Razones')}${lista(o.riesgos,'Riesgos')}${inf&&!inf.alineaciones?'<p><small>Alineaciones sin confirmar: stake máximo 7. Vuelve a analizar cuando salgan (≈1 h antes).</small></p>':''}
+${mk?`<div class="ctl" style="grid-template-columns:1fr auto;margin-top:12px;align-items:center"><input id="pq${i}" type="number" step="0.01" placeholder="Cuota real" value="${price||''}"><button class="btn s" style="margin:6px 0 0" onclick="regPick(${i})">Agregar al seguimiento</button></div>`:''}`;
   }catch(e){box.textContent='Error: '+e.message}
 }
 
@@ -569,6 +673,20 @@ async function final(slug,ev){
   }
   return{h,a,cor,crd};
 }
+function regPick(i){
+  const r=R[i],mk=r.pk;if(!mk)return;
+  const q=+$('#pq'+i).value;
+  if(!q||q<=1){toast('Escribe la cuota real de tu casa.');return}
+  const p=(r.mod.m.find(x=>x[0]===mk)||[0,0])[1],e=p*q-1;
+  if(e<=0.03&&!confirm(`Con la cuota ${q} no hay valor (el modelo da ${Math.round(p*100)}%). ¿Agregarlo de todas formas?`))return;
+  const id=addPick(r,mk,q,r.sk||0,false),P=LS('picks',[]),k=P.find(x=>x.id===id);
+  if(k){k.qr=true;if(e<=0.03)k.nv=true;else delete k.nv;SV('picks',P)}
+  toast('Agregado al seguimiento.');
+}
+function delPick(id){
+  if(!confirm('¿Borrar este pick del seguimiento?'))return;
+  SV('picks',LS('picks',[]).filter(x=>x.id!==id));drawModel();
+}
 function setPick(id,res){
   const P=LS('picks',[]),k=P.find(x=>x.id===id);if(!k)return;
   k.res=res;k.man=res!==null;if(res===null)delete k.sc;
@@ -592,21 +710,27 @@ const grp=n=>/^Córners/.test(n)?'Córners':/^Tarjetas/.test(n)?'Tarjetas':/^(Lo
 function drawModel(){
   const P=LS('picks',[]),D=P.filter(k=>k.res==='w'||k.res==='l'),pend=P.filter(k=>!k.res).length;
   const hit=a=>a.length?Math.round(100*a.filter(k=>k.res==='w').length/a.length):0,pr=a=>a.length?Math.round(100*a.reduce((t,k)=>t+k.p,0)/a.length):0;
-  const row=(t,a)=>a.length?`<div class="tag">${t}: prometía ${pr(a)}% · acertó ${hit(a)}% <small>(${a.length})</small></div>`:'';
-  const conQ=D.filter(k=>k.q),inv=conQ.reduce((t,k)=>t+(k.s||1),0),gan=conQ.reduce((t,k)=>t+(k.res==='w'?(k.s||1)*(k.q-1):-(k.s||1)),0);
+  const row=(t,a)=>{if(!a.length)return '';const h=hit(a),p=pr(a);return `<div class="cal"><div class="cal-t"><span>${t} <small>(${a.length})</small></span><span>${h}%</span></div><div class="bar p"><i style="width:${p}%"></i></div><div class="bar h ${h>=p?'good':h<p-8?'low':''}"><i style="width:${h}%"></i></div><div class="cal-l"><span>Prometía ${p}%</span><span>Acertó ${h}%</span></div></div>`};
+  const conQ=D.filter(k=>k.bet&&k.q),inv=conQ.reduce((t,k)=>t+(k.s||1),0),gan=conQ.reduce((t,k)=>t+(k.res==='w'?(k.s||1)*(k.q-1):-(k.s||1)),0);
   const bk=[[0,.6,'50-60%'],[.6,.7,'60-70%'],[.7,.8,'70-80%'],[.8,1.01,'80% o más'],[0,.5,'menos de 50%']];
   const gs=[...new Set(D.map(k=>grp(k.mk)))];
   const LST=[...P.filter(k=>!k.res).reverse(),...P.filter(k=>k.res).reverse().slice(0,15)];
-  $('#mdl').innerHTML=`<div class="card"><h2>Seguimiento del modelo</h2>
-  <p>${D.length} picks resueltos · ${pend} pendientes</p>
-  ${D.length?`<p>El modelo prometía <b>${pr(D)}%</b> de media y acertó <b>${hit(D)}%</b>.</p>`:'<p class="mut">Aún no hay picks resueltos. Se guardan solos cuando la IA da un pick o registras una apuesta.</p>'}
-  ${D.length&&D.length<30?'<p class="mut">Son pocos datos: hacen falta 30 o más para sacar conclusiones.</p>':''}
-  ${conQ.length?`<p>Con cuotas (${conQ.length} picks): <b class="${gan>=0?'ok':'bad'}">${gan>=0?'+':''}${gan.toFixed(1)}</b> unidades · ROI ${(100*gan/inv).toFixed(1)}%</p>`:''}
-  <button class="btn" id="mrf">Actualizar resultados</button></div>
+  const B=(k,r,t)=>`<button class="btn s ${k.res===r?'on':''}" onclick="setPick('${k.id}','${r}')">${t}</button>`;
+  $('#mdl').innerHTML=`<div class="tiles">
+  <div class="tile"><small>Resueltos</small><b>${D.length}</b><span>${pend} pendientes</span></div>
+  <div class="tile"><small>Acierto</small><b>${D.length?hit(D)+'%':'—'}</b><span>${D.length?'prometía '+pr(D)+'%':'sin datos aún'}</span></div>
+  ${conQ.length?`<div class="tile"><small>Ganancia (apuestas)</small><b class="${gan>=0?'ok':'bad'}">${gan>=0?'+':''}${gan.toFixed(1)}</b><span>unidades · ${conQ.length} apuestas</span></div>
+  <div class="tile"><small>ROI</small><b class="${gan>=0?'ok':'bad'}">${(100*gan/inv).toFixed(1)}%</b><span>solo apuestas registradas</span></div>`:''}</div>
+  ${D.length&&D.length<30?'<p class="status">Son pocos datos: hacen falta 30 o más para sacar conclusiones.</p>':''}
+  ${D.length?'':'<p class="status">Aún no hay picks resueltos. Agrega los picks de la IA al seguimiento o registra apuestas y aquí verás si el modelo acierta lo que promete.</p>'}
+  <button class="btn" id="mrf">Actualizar resultados</button>
   ${D.length?`<div class="card"><h2>Por probabilidad</h2>${bk.map(([a,b,t])=>row(t,D.filter(k=>k.p>=a&&k.p<b))).join('')}</div>
   <div class="card"><h2>Por tipo de mercado</h2>${gs.map(g=>row(g,D.filter(k=>grp(k.mk)===g))).join('')}</div>
   <div class="card"><h2>Por nivel (A, B, C)</h2>${['A','B','C'].map(t=>row('Nivel '+t,D.filter(k=>k.t===t))).join('')}<small>Si el nivel A no acierta más que el C, el contraste con Pinnacle no está aportando.</small></div>`:''}
-  <div class="card"><h2>Picks</h2><small>Toca Ganó, Perdió o Nulo para marcarlo tú. Lo manual no lo cambia la app; ↺ lo devuelve a automático.</small>${LST.map(k=>`<div class="tag">${esc(k.m)} · ${esc(k.mk)} · ${Math.round(k.p*100)}%${k.q?' · cuota '+k.q:''} · ${k.res==='w'?'<b class="ok">Ganó</b>':k.res==='l'?'<b class="bad">Perdió</b>':k.res==='v'?'Nulo':'Pendiente'}${k.sc?' ('+k.sc+')':''}${k.man?' <small>(manual)</small>':''}<br>${[['w','Ganó'],['l','Perdió'],['v','Nulo']].map(([r,t])=>`<button class="btn s ${k.res===r?'on':''}" onclick="setPick('${k.id}','${r}')">${t}</button>`).join('')}<button class="btn s" onclick="setPick('${k.id}',null)">↺</button></div>`).join('')||'<p class="mut">Sin picks todavía.</p>'}</div>`;
+  <div class="card"><h2>Picks</h2><small>Marca el resultado tú si ya lo sabes. Lo manual no lo cambia la app; ↺ lo devuelve a automático.</small>
+  ${LST.map(k=>`<div class="bet"><div class="bet-h"><b>${esc(k.m)}</b><span class="st ${k.res||'p'}">${{w:'Ganó',l:'Perdió',v:'Nulo'}[k.res]||'Pendiente'}</span></div>
+  <small>${esc(k.mk)} · modelo ${Math.round(k.p*100)}%${k.q?' · cuota '+k.q+(k.qr?' (tuya)':' (de la casa)'):''}${k.nv?' · sin valor con tu cuota':''}${k.sc?' · '+k.sc:''}${k.man?' · manual':''}</small>
+  <div>${B(k,'w','Ganó')}${B(k,'l','Perdió')}${B(k,'v','Nulo')}<button class="btn s" onclick="setPick('${k.id}',null)">↺</button><button class="btn s" onclick="delPick('${k.id}')">Borrar</button></div></div>`).join('')||'<p class="mut">Sin picks todavía.</p>'}</div>`;
   $('#mrf').onclick=refreshModel;
 }
 async function refreshModel(){
@@ -618,9 +742,11 @@ async function refreshModel(){
 // registro
 function reg(i){
   const r=R[i],m=($('#mk'+i).value||r.pk||'').trim(),q=+$('#od'+i).value||(r.q&&r.q[m])||0,s=+$('#sk'+i).value||r.sk||0;
-  if(!q||!s||!m){alert('Escribe mercado, cuota y monto.');return}
+  if(!q||!s||!m){toast('Escribe mercado, cuota y monto.');return}
+  const pm=(r.mod.m.find(x=>x[0]===m)||[0,0])[1];
+  if(pm*q-1<=0.03&&!confirm('Con esa cuota no hay valor según el modelo. ¿Registrar la apuesta de todas formas?'))return;
   const pid=addPick(r,m,q,s,true);
-  bets.unshift({id:Date.now(),m:R[i].m+' · '+m,q,s,r:'p',pid});SV('bets',bets);alert('Apuesta registrada.');
+  bets.unshift({id:Date.now(),m:R[i].m+' · '+m,q,s,r:'p',pid});SV('bets',bets);toast('Apuesta registrada.');
 }
 $('#add').onclick=()=>{
   const m=prompt('Partido y mercado');if(!m)return;
@@ -635,11 +761,12 @@ function delB(id){if(confirm('¿Borrar esta apuesta?')){bets=bets.filter(b=>b.id
 function drawBets(){
   const done=bets.filter(b=>b.r==='w'||b.r==='l');
   const gan=done.reduce((a,b)=>a+(b.r==='w'?b.s*(b.q-1):-b.s),0),stk=done.reduce((a,b)=>a+b.s,0);
-  $('#sum').innerHTML=`<h2>Resumen</h2><p class="n" style="font-size:28px;margin:4px 0" class="${gan>=0?'ok':'bad'}"><span class="${gan>=0?'ok':'bad'}">${gan>=0?'+':''}${Math.round(gan).toLocaleString('es')}</span></p>
-  <small>${done.length} resueltas · acierto ${done.length?Math.round(100*done.filter(b=>b.r==='w').length/done.length):0}% · ROI ${stk?(100*gan/stk).toFixed(1):0}%</small>`;
-  $('#bets').innerHTML=bets.map(b=>`<div class="card"><b>${esc(b.m)}</b><br><small>Cuota ${b.q} · Monto ${b.s.toLocaleString('es')} · ${{p:'Pendiente',w:'Ganó',l:'Perdió',v:'Nula'}[b.r]}</small><br>
-  ${b.r==='p'?`<button class="btn s" onclick="setR(${b.id},'w')">Ganó</button><button class="btn s" onclick="setR(${b.id},'l')">Perdió</button><button class="btn s" onclick="setR(${b.id},'v')">Nula</button>`:''}
-  <button class="btn s" onclick="delB(${b.id})">Borrar</button></div>`).join('')||'<p class="mut">Aún no hay apuestas registradas.</p>';
+  const ac=done.length?Math.round(100*done.filter(b=>b.r==='w').length/done.length):0;
+  $('#sum').innerHTML=`<div class="hero"><small>Ganancia neta</small><div class="big ${gan>=0?'ok':'bad'}">${gan>=0?'+':''}${Math.round(gan).toLocaleString('es')}</div>
+  <div class="sub"><span><b>${done.length}</b>resueltas</span><span><b>${ac}%</b>acierto</span><span><b>${stk?(100*gan/stk).toFixed(1):0}%</b>ROI</span><span><b>${bets.length-done.length}</b>pendientes</span></div></div>`;
+  $('#bets').innerHTML=bets.map(b=>`<div class="card bet"><div class="bet-h"><b>${esc(b.m)}</b><span class="st ${b.r}">${{p:'Pendiente',w:'Ganó',l:'Perdió',v:'Nula'}[b.r]}</span></div>
+  <small>Cuota ${b.q} · Monto ${b.s.toLocaleString('es')}</small>
+  <div>${b.r==='p'?`<button class="btn s" onclick="setR(${b.id},'w')">Ganó</button><button class="btn s" onclick="setR(${b.id},'l')">Perdió</button><button class="btn s" onclick="setR(${b.id},'v')">Nula</button>`:''}<button class="btn s" onclick="delB(${b.id})">Borrar</button></div></div>`).join('')||'<div class="empty"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="8" width="36" height="48" rx="5"/><path d="M23 22h18M23 32h18M23 42h10"/></svg><b>Sin apuestas todavía</b>Las que registres desde las tarjetas aparecerán aquí.</div>';
 }
 (function(){
   const sv=LS('scan',null);
