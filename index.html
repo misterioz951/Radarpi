@@ -18,6 +18,7 @@ section{margin-top:12px}
 button{font:inherit;cursor:pointer}
 .btn{background:var(--acc);color:#14213D;border:0;border-radius:8px;padding:11px 16px;font-weight:600;width:100%;margin-top:10px}
 .btn.s{width:auto;margin:6px 6px 0 0;padding:8px 12px;background:transparent;color:var(--ink);border:1px solid var(--ln)}
+.btn.s.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .tag{border-left:4px solid var(--acc);padding:2px 8px;margin:6px 0;font-size:14px}
 input,select{font:inherit;width:100%;padding:9px;border:1px solid var(--ln);border-radius:8px;background:var(--bg);color:var(--ink);margin:4px 0}
 .row{display:flex;gap:6px}.row>*{flex:1}
@@ -568,10 +569,17 @@ async function final(slug,ev){
   }
   return{h,a,cor,crd};
 }
+function setPick(id,res){
+  const P=LS('picks',[]),k=P.find(x=>x.id===id);if(!k)return;
+  k.res=res;k.man=res!==null;if(res===null)delete k.sc;
+  SV('picks',P);
+  bets.filter(b=>b.pid===id).forEach(b=>b.r=res||'p');SV('bets',bets);
+  drawModel();
+}
 async function settle(){
   const P=LS('picks',[]);let ch=0;
   for(const k of P){
-    if(k.res||new Date(k.ko).getTime()>Date.now()-3*36e5)continue;
+    if(k.res||k.man||new Date(k.ko).getTime()>Date.now()-3*36e5)continue;
     let f=null;try{f=await final(k.slug,k.ev)}catch{}
     if(!f||f.pending){if(Date.now()-new Date(k.ko).getTime()>4*864e5){k.res='v';ch++}continue}
     const ok=evalMk(k.mk,f.h,f.a,f.cor,f.crd);if(ok===null)continue;
@@ -588,6 +596,7 @@ function drawModel(){
   const conQ=D.filter(k=>k.q),inv=conQ.reduce((t,k)=>t+(k.s||1),0),gan=conQ.reduce((t,k)=>t+(k.res==='w'?(k.s||1)*(k.q-1):-(k.s||1)),0);
   const bk=[[0,.6,'50-60%'],[.6,.7,'60-70%'],[.7,.8,'70-80%'],[.8,1.01,'80% o más'],[0,.5,'menos de 50%']];
   const gs=[...new Set(D.map(k=>grp(k.mk)))];
+  const LST=[...P.filter(k=>!k.res).reverse(),...P.filter(k=>k.res).reverse().slice(0,15)];
   $('#mdl').innerHTML=`<div class="card"><h2>Seguimiento del modelo</h2>
   <p>${D.length} picks resueltos · ${pend} pendientes</p>
   ${D.length?`<p>El modelo prometía <b>${pr(D)}%</b> de media y acertó <b>${hit(D)}%</b>.</p>`:'<p class="mut">Aún no hay picks resueltos. Se guardan solos cuando la IA da un pick o registras una apuesta.</p>'}
@@ -597,7 +606,7 @@ function drawModel(){
   ${D.length?`<div class="card"><h2>Por probabilidad</h2>${bk.map(([a,b,t])=>row(t,D.filter(k=>k.p>=a&&k.p<b))).join('')}</div>
   <div class="card"><h2>Por tipo de mercado</h2>${gs.map(g=>row(g,D.filter(k=>grp(k.mk)===g))).join('')}</div>
   <div class="card"><h2>Por nivel (A, B, C)</h2>${['A','B','C'].map(t=>row('Nivel '+t,D.filter(k=>k.t===t))).join('')}<small>Si el nivel A no acierta más que el C, el contraste con Pinnacle no está aportando.</small></div>`:''}
-  <div class="card"><h2>Últimos picks</h2>${[...P].reverse().slice(0,15).map(k=>`<div class="tag">${esc(k.m)} · ${esc(k.mk)} · ${Math.round(k.p*100)}%${k.q?' · cuota '+k.q:''} · ${k.res==='w'?'<b class="ok">Ganó</b>':k.res==='l'?'<b class="bad">Perdió</b>':k.res==='v'?'Nulo':'Pendiente'}${k.sc?' ('+k.sc+')':''}</div>`).join('')||'<p class="mut">Sin picks todavía.</p>'}</div>`;
+  <div class="card"><h2>Picks</h2><small>Toca Ganó, Perdió o Nulo para marcarlo tú. Lo manual no lo cambia la app; ↺ lo devuelve a automático.</small>${LST.map(k=>`<div class="tag">${esc(k.m)} · ${esc(k.mk)} · ${Math.round(k.p*100)}%${k.q?' · cuota '+k.q:''} · ${k.res==='w'?'<b class="ok">Ganó</b>':k.res==='l'?'<b class="bad">Perdió</b>':k.res==='v'?'Nulo':'Pendiente'}${k.sc?' ('+k.sc+')':''}${k.man?' <small>(manual)</small>':''}<br>${[['w','Ganó'],['l','Perdió'],['v','Nulo']].map(([r,t])=>`<button class="btn s ${k.res===r?'on':''}" onclick="setPick('${k.id}','${r}')">${t}</button>`).join('')}<button class="btn s" onclick="setPick('${k.id}',null)">↺</button></div>`).join('')||'<p class="mut">Sin picks todavía.</p>'}</div>`;
   $('#mrf').onclick=refreshModel;
 }
 async function refreshModel(){
@@ -617,7 +626,11 @@ $('#add').onclick=()=>{
   const m=prompt('Partido y mercado');if(!m)return;
   const q=+prompt('Cuota'),s=+prompt('Monto');if(!q||!s)return;
   bets.unshift({id:Date.now(),m,q,s,r:'p'});SV('bets',bets);drawBets()};
-function setR(id,r){bets.find(b=>b.id===id).r=r;SV('bets',bets);drawBets()}
+function setR(id,r){
+  const b=bets.find(x=>x.id===id);b.r=r;SV('bets',bets);
+  if(b.pid){const P=LS('picks',[]),k=P.find(x=>x.id===b.pid);if(k){k.res=r==='p'?null:r;k.man=r!=='p';SV('picks',P)}}
+  drawBets();
+}
 function delB(id){if(confirm('¿Borrar esta apuesta?')){bets=bets.filter(b=>b.id!==id);SV('bets',bets);drawBets()}}
 function drawBets(){
   const done=bets.filter(b=>b.r==='w'||b.r==='l');
