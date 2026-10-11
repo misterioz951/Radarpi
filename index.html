@@ -42,6 +42,8 @@ nav button.on{color:var(--ink);box-shadow:inset 0 3px 0 var(--acc)}
 <section id="s-r" hidden><div class="card" id="sum"></div>
 <button class="btn s" id="add">Añadir apuesta</button><div id="bets"></div></section>
 
+<section id="s-m" hidden><div id="mdl"></div></section>
+
 <section id="s-a" hidden><div class="card"><h2>Ajustes</h2>
 <p class="mut">Las llaves se guardan solo en este dispositivo.</p>
 <label>Llave Groq (IA)<input id="k-gq" type="password" autocomplete="off"></label>
@@ -60,7 +62,7 @@ nav button.on{color:var(--ink);box-shadow:inset 0 3px 0 var(--acc)}
 <label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input id="c-au" type="checkbox" style="width:auto;margin:0"> Escanear solo al abrir la app (máx. cada 3 h)</label>
 <button class="btn" id="save">Guardar ajustes</button></div></section>
 
-<nav><button data-t="f" class="on">Fútbol</button><button data-t="n">NBA</button><button data-t="r">Registro</button><button data-t="a">Ajustes</button></nav>
+<nav><button data-t="f" class="on">Fútbol</button><button data-t="n">NBA</button><button data-t="r">Registro</button><button data-t="m">Modelo</button><button data-t="a">Ajustes</button></nav>
 
 <script>
 const $=s=>document.querySelector(s);
@@ -79,8 +81,9 @@ const today=()=>iso(new Date());
 // pestañas
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
-  ['f','n','r','a'].forEach(t=>$('#s-'+t).hidden=t!==b.dataset.t);
+  ['f','n','r','m','a'].forEach(t=>$('#s-'+t).hidden=t!==b.dataset.t);
   if(b.dataset.t==='r')drawBets();
+  if(b.dataset.t==='m')refreshModel();
 });
 
 // ligas
@@ -289,12 +292,12 @@ $('#go').onclick=async()=>{
   if(!cfg.lg.length){msg.textContent='Elige al menos una liga.';return}
   $('#go').disabled=true;
   try{
-    const bad0=[];let OD=null;
+    const names=Object.fromEntries(Object.entries(LG).map(([n,s])=>[s,n])),names0=names,bad0=[];let OD=null,diag='',mq=0;
     if(cfg.ok){
       if(!cfg.bm)msg.textContent='Elige tu casa en Ajustes para traer cuotas.';
-      else{msg.textContent='Cargando cuotas…';try{OD=await loadOdds()}catch(e){OD=null;bad0.push('Cuotas ('+e.message.slice(0,90)+')')}}
+      else{msg.textContent='Cargando cuotas…';try{OD=await loadOdds();const T=(LS('optour',null)||{}).v||{},sin=cfg.lg.filter(x=>!T[x]).map(x=>names0[x]||x);diag=` Cuotas de ${cfg.bm}: ${OD.fx.length} partidos en las próximas 48 h.`+(sin.length?' Sin torneo en OddsPapi: '+sin.join(', ')+'.':'')}catch(e){OD=null;bad0.push('Cuotas ('+e.message.slice(0,90)+')')}}
     }
-    let rev=0;const bad=bad0;const names=Object.fromEntries(Object.entries(LG).map(([n,s])=>[s,n]));
+    let rev=0;const bad=bad0;
     for(const slug of cfg.lg){
       if(rev>=cfg.m)break;
       msg.textContent='Cargando '+names[slug]+'…';
@@ -330,11 +333,12 @@ $('#go').onclick=async()=>{
           if(A.y!=null&&B.y!=null&&A.y+B.y>=cfg.ta)p.push(`Tarjetas: promedian ${A.y.toFixed(1)} y ${B.y.toFixed(1)} por partido (suman ${(A.y+B.y).toFixed(1)})`);
         }
         const mod=model(A,B),q=A.n>=5&&B.n>=5?oddsQ(OD,hf,wf,e.date):null,bv=best({mod,q});
+        if(q&&Object.keys(q).length)mq++;
         if(p.length||(bv&&bv.e>=0.08))R.push({m:`${hn} vs ${wn}`,liga:names[slug],
-          hora:new Date(e.date).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}),p,A,B,h:hn,w:wn,mod,q,casa:cfg.bm});
+          hora:new Date(e.date).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}),p,A,B,h:hn,w:wn,mod,q,casa:cfg.bm,ev:e.id,slug,ko:e.date});
       }
     }
-    msg.textContent=(rev?`${rev} partidos revisados, ${R.length} con patrones.`:'No hay partidos pendientes hoy en esas ligas.')+(bad.length?' No cargaron: '+bad.join('; ')+'.':'');
+    msg.textContent=(rev?`${rev} partidos revisados, ${R.length} con patrones.`:'No hay partidos pendientes hoy en esas ligas.')+(bad.length?' No cargaron: '+bad.join('; ')+'.':'')+diag+(OD&&rev&&!mq?' Ningún partido se emparejó con la casa. OddsPapi trae: '+(OD.fx.slice(0,4).map(x=>x.h+' vs '+x.w).join('; ')||'nada')+'.':'');
     drawRes();SV('scan',{d:today(),t:Date.now(),R,msg:msg.textContent});
   }catch(e){msg.textContent='Error: '+e.message}
   finally{$('#go').disabled=false}
@@ -354,16 +358,16 @@ function drawRes(){
   <small>${esc(r.liga)} · ${r.hora} · goles esperados ${r.mod.lh.toFixed(1)} a ${r.mod.la.toFixed(1)}${r.mod.lc?' · córners '+r.mod.lc.toFixed(1):''}</small>
   ${r.p.map(x=>`<div class="tag">${esc(x)}</div>`).join('')}
   <p class="mut" style="font-size:13px;margin:8px 0">${lst}</p>
-  <div class="row"><select id="mk${i}" onchange="pick(${i})">${r.mod.m.map(([n])=>`<option>${n}</option>`).join('')}</select><input id="od${i}" type="number" step="0.01" placeholder="Cuota" oninput="calc(${i})"><input id="sk${i}" type="number" placeholder="Monto"></div>
+  <div class="row"><select id="mk${i}" onchange="pick(${i})"><option value="">Que la IA elija</option>${r.mod.m.map(([n])=>`<option>${n}</option>`).join('')}</select><input id="od${i}" type="number" step="0.01" placeholder="Cuota" oninput="calc(${i})"><input id="sk${i}" type="number" placeholder="Monto"></div>
   <div id="cx${i}" style="font-size:14px;margin-top:4px"></div>
   <button class="btn s" onclick="ai(${i})">Analizar con IA</button><button class="btn s" onclick="reg(${i})">Registrar apuesta</button>
   <div class="ai" id="ai${i}" hidden></div></div>`}).join('');
-  R.forEach((r,i)=>{const b=best(r);if(b){$('#mk'+i).value=b.n;$('#od'+i).value=b.q;calc(i)}});
 }
-function pick(i){const r=R[i],q=r.q&&r.q[$('#mk'+i).value];$('#od'+i).value=q||'';calc(i)}
+function pick(i){const r=R[i],q=$('#mk'+i).value&&r.q&&r.q[$('#mk'+i).value];$('#od'+i).value=q||'';calc(i)}
 
 // Stake: Kelly fraccionado (25%), máximo 3% del bankroll, solo si hay valor
 function calc(i){
+  if(!$('#mk'+i).value){$('#cx'+i).textContent='';return}
   const r=R[i],q=+$('#od'+i).value,o=$('#cx'+i),p=(r.mod.m.find(x=>x[0]===$('#mk'+i).value)||[0,0])[1];
   if(!q||q<=1){o.textContent='';return}
   const e=p*q-1;
@@ -388,18 +392,20 @@ async function ai(i){
   if(!cfg.gq){box.textContent='Falta la llave de Groq (Ajustes).';return}
   box.textContent='Analizando…';
   const sel=$('#mk'+i).value,q=+$('#od'+i).value||null;
+  const modo=sel?`El usuario eligió el mercado "${sel}": analiza SOLO ese mercado y el pick debe ser exactamente ese. Si no hay valor o respaldo suficiente, decision="no_apostar". Si hay cuota_del_usuario o cuota_casa, úsala.`:'El usuario no eligió mercado: elige tú el mejor de toda la lista, o no_apostar.';
   const pk=x=>({victorias:x.w,derrotas:x.l,goles_favor_prom:+x.gf.toFixed(2),goles_totales_prom:+x.t.toFixed(2),ambos_marcan_pct:x.b,partidos_2_goles_o_menos_pct:x.low,porterias_en_cero:x.cs,sin_marcar:x.fts,racha_victorias:x.rs,corners_favor:x.cf,corners_contra:x.ca,tarjetas_por_partido:x.y});
   const data={partido:r.m,liga:r.liga,patrones_detectados:r.p,
     [r.h+' (local)']:{ultimos10:pk(r.A),en_casa:r.A.hn+' jugados, '+r.A.hw+' ganados'},
     [r.w+' (visitante)']:{ultimos10:pk(r.B),de_visita:r.B.an+' jugados, '+r.B.aw+' ganados'},
     modelo:{goles_esperados:{local:+r.mod.lh.toFixed(2),visitante:+r.mod.la.toFixed(2)},
       mercados:r.mod.m.map(m=>({mercado:m[0],prob_pct:Math.round(m[1]*100),cuota_minima:+(1.05/m[1]).toFixed(2),techo_stake:techo(r,m),cuota_casa:(r.q&&r.q[m[0]])||null,valor_pct:(r.q&&r.q[m[0]])?Math.round((m[1]*r.q[m[0]]-1)*100):null}))},
-    cuota_del_usuario:q?{mercado:sel,cuota:q}:null};
+    cuota_del_usuario:(sel&&q)?{mercado:sel,cuota:q}:null};
   try{
     const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',
       headers:{'Content-Type':'application/json',Authorization:'Bearer '+cfg.gq},
       body:JSON.stringify({model:MODEL,temperature:0.2,max_completion_tokens:2500,messages:[
         {role:'system',content:'Eres analista de apuestas deportivas, directo y concreto. Usa SOLO los datos del JSON; no inventes lesiones, alineaciones ni noticias. "modelo.mercados" trae probabilidades (Poisson sobre los últimos 10 partidos, forma reciente ponderada, separando local y visitante; incluye córners y tarjetas si existen) y un techo_stake por mercado. Elige UN pick de esa lista con respaldo claro en las estadísticas y probabilidad de al menos 50%; evita mercados obvios. Si hay cuota_casa, es la cuota real de la casa: prioriza mercados con valor_pct mayor a 3 y desconfía de valor_pct mayor a 25 (suele ser error del modelo). Si ninguno convence, decision="no_apostar". "stake" va de 1 a 10 (10 = máxima confianza) y nunca puede superar el techo_stake del mercado elegido; súbelo o bájalo según qué tan claros y consistentes son los datos. Razones: máximo 3, cada una con un dato numérico del JSON, sin frases genéricas. Riesgos: máximo 2. Responde SOLO con JSON válido, sin texto extra ni markdown: {"decision":"apostar"|"no_apostar","pick":"<nombre exacto del mercado>","stake":1-10,"cuota_minima":número,"resumen":"una frase","razones":["..."],"riesgos":["..."]}. Nunca prometas ganancias.'},
+        {role:'system',content:modo},
         {role:'user',content:JSON.stringify(data)}]})});
     const j=await res.json();
     if(j.error&&/model/i.test(j.error.message||'')){
@@ -412,6 +418,7 @@ async function ai(i){
     const txt=j.choices[0].message.content||'';
     let o=null;try{o=JSON.parse(txt.match(/\{[\s\S]*\}/)[0])}catch{}
     if(!o){box.style.whiteSpace='pre-wrap';box.textContent=txt||'La IA no devolvió respuesta. Intenta de nuevo.';return}
+    if(sel)o.pick=sel;
     const mk=r.mod.m.find(m=>m[0]===o.pick);
     let stk=Math.round(+o.stake)||1,cap=mk?techo(r,mk):10,note='';
     const price=mk?((r.q&&r.q[mk[0]])||(sel===mk[0]?q:null)):null;
@@ -423,16 +430,87 @@ async function ai(i){
     stk=Math.max(1,Math.min(stk,cap));
     if(o.decision!=='apostar'){box.innerHTML=`<b class="bad">No apostar</b><br>${esc(o.resumen||'')}${note?'<br>'+esc(note):''}${lista(o.razones,'Razones')}`;return}
     const pct=stk*0.3,amt=cfg.bk?Math.round(cfg.bk*pct/100/100)*100:0;
-    if(mk){$('#mk'+i).value=o.pick;calc(i)}
-    box.innerHTML=`<b>Pick: ${esc(o.pick)}</b><br>Stake <b>${stk}/10</b> (${pct.toFixed(1)}% del bankroll${amt?' ≈ '+amt.toLocaleString('es'):''}) · Cuota mínima ${esc(o.cuota_minima||(mk?(1.05/mk[1]).toFixed(2):''))}${stk<(+o.stake)?'<br><small>Stake limitado por los datos disponibles.</small>':''}<br>${esc(o.resumen||'')}${lista(o.razones,'Razones')}${lista(o.riesgos,'Riesgos')}`;
+    r.pk=o.pick;r.sk=amt;if(mk)addPick(r,o.pick,price,amt,false);
+    box.innerHTML=`<b>Pick: ${esc(o.pick)}</b><br>Stake <b>${stk}/10</b> (${pct.toFixed(1)}% del bankroll${amt?' ≈ '+amt.toLocaleString('es'):''}) · Cuota mínima ${esc(o.cuota_minima||(mk?(1.05/mk[1]).toFixed(2):''))}${price?` · cuota ${price} (valor ${Math.round((mk[1]*price-1)*100)}%)`:''}${stk<(+o.stake)?'<br><small>Stake limitado por los datos disponibles.</small>':''}<br>${esc(o.resumen||'')}${lista(o.razones,'Razones')}${lista(o.riesgos,'Riesgos')}`;
   }catch(e){box.textContent='Error: '+e.message}
+}
+
+// ===== Seguimiento del modelo: guarda cada pick y lo resuelve solo con el marcador final de ESPN =====
+function addPick(r,mk,q,s,bet){
+  if(!r.ev)return null;
+  const m=r.mod.m.find(x=>x[0]===mk);if(!m)return null;
+  const P=LS('picks',[]);
+  let k=P.find(x=>x.ev===r.ev&&x.mk===mk);
+  if(!k){k={id:Date.now()+'-'+Math.floor(Math.random()*1e4),ev:r.ev,slug:r.slug,m:r.m,ko:r.ko,mk,p:+m[1].toFixed(3),res:null};P.push(k)}
+  if(q)k.q=q;if(s)k.s=s;if(bet)k.bet=true;
+  SV('picks',P);return k.id;
+}
+function evalMk(n,h,a,cor,crd){
+  const ou=n.match(/(Over|Under) (\d+\.\d)/);
+  if(ou){const t=/^Córners/.test(n)?cor:/^Tarjetas/.test(n)?crd:h+a;if(t==null)return null;return ou[1]==='Over'?t>+ou[2]:t<+ou[2]}
+  const tm=n.match(/^(Local|Visitante) marca (\d)\+/);if(tm)return (tm[1]==='Local'?h:a)>=+tm[2];
+  return ({'Local gana':h>a,'Empate':h===a,'Visitante gana':a>h,'Doble oportunidad 1X':h>=a,'Doble oportunidad X2':a>=h,'Doble oportunidad 12':h!==a,
+    'Ambos marcan: sí':h>0&&a>0,'Ambos marcan: no':!(h>0&&a>0),'Local deja arco en cero':a===0,'Visitante deja arco en cero':h===0})[n]??null;
+}
+async function final(slug,ev){
+  const r=await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/soccer/${slug}/summary?event=${ev}`);
+  if(!r.ok)return null;
+  const j=await r.json(),c=j.header&&j.header.competitions&&j.header.competitions[0];
+  if(!c||!(c.status&&c.status.type&&c.status.type.completed))return{pending:true};
+  const H=c.competitors.find(x=>x.homeAway==='home'),A=c.competitors.find(x=>x.homeAway==='away');
+  const h=+H.score,a=+A.score;if(isNaN(h)||isNaN(a))return null;
+  let cor=null,crd=null;const ts=(j.boxscore&&j.boxscore.teams)||[];
+  if(ts.length===2){
+    const g=n=>ts.map(t=>{const x=(t.statistics||[]).find(q=>q.name===n);return x?+x.displayValue:NaN});
+    const cs=g('wonCorners'),ys=g('yellowCards'),rs=g('redCards');
+    if(cs.every(x=>!isNaN(x)))cor=cs[0]+cs[1];
+    if(ys.every(x=>!isNaN(x)))crd=ys[0]+ys[1]+(rs.every(x=>!isNaN(x))?rs[0]+rs[1]:0);
+  }
+  return{h,a,cor,crd};
+}
+async function settle(){
+  const P=LS('picks',[]);let ch=0;
+  for(const k of P){
+    if(k.res||new Date(k.ko).getTime()>Date.now()-3*36e5)continue;
+    let f=null;try{f=await final(k.slug,k.ev)}catch{}
+    if(!f||f.pending){if(Date.now()-new Date(k.ko).getTime()>4*864e5){k.res='v';ch++}continue}
+    const ok=evalMk(k.mk,f.h,f.a,f.cor,f.crd);if(ok===null)continue;
+    k.res=ok?'w':'l';k.sc=f.h+'-'+f.a;ch++;
+    const b=bets.find(x=>x.pid===k.id);if(b)b.r=k.res;
+  }
+  SV('picks',P);SV('bets',bets);return ch;
+}
+const grp=n=>/^Córners/.test(n)?'Córners':/^Tarjetas/.test(n)?'Tarjetas':/^(Local|Visitante) (marca|deja)/.test(n)?'Goles de un equipo':/^Ambos/.test(n)?'Ambos marcan':/^(Over|Under)/.test(n)?'Goles totales':'Resultado';
+function drawModel(){
+  const P=LS('picks',[]),D=P.filter(k=>k.res==='w'||k.res==='l'),pend=P.filter(k=>!k.res).length;
+  const hit=a=>a.length?Math.round(100*a.filter(k=>k.res==='w').length/a.length):0,pr=a=>a.length?Math.round(100*a.reduce((t,k)=>t+k.p,0)/a.length):0;
+  const row=(t,a)=>a.length?`<div class="tag">${t}: prometía ${pr(a)}% · acertó ${hit(a)}% <small>(${a.length})</small></div>`:'';
+  const conQ=D.filter(k=>k.q),inv=conQ.reduce((t,k)=>t+(k.s||1),0),gan=conQ.reduce((t,k)=>t+(k.res==='w'?(k.s||1)*(k.q-1):-(k.s||1)),0);
+  const bk=[[0,.6,'50-60%'],[.6,.7,'60-70%'],[.7,.8,'70-80%'],[.8,1.01,'80% o más'],[0,.5,'menos de 50%']];
+  const gs=[...new Set(D.map(k=>grp(k.mk)))];
+  $('#mdl').innerHTML=`<div class="card"><h2>Seguimiento del modelo</h2>
+  <p>${D.length} picks resueltos · ${pend} pendientes</p>
+  ${D.length?`<p>El modelo prometía <b>${pr(D)}%</b> de media y acertó <b>${hit(D)}%</b>.</p>`:'<p class="mut">Aún no hay picks resueltos. Se guardan solos cuando la IA da un pick o registras una apuesta.</p>'}
+  ${D.length&&D.length<30?'<p class="mut">Son pocos datos: hacen falta 30 o más para sacar conclusiones.</p>':''}
+  ${conQ.length?`<p>Con cuotas (${conQ.length} picks): <b class="${gan>=0?'ok':'bad'}">${gan>=0?'+':''}${gan.toFixed(1)}</b> unidades · ROI ${(100*gan/inv).toFixed(1)}%</p>`:''}
+  <button class="btn" id="mrf">Actualizar resultados</button></div>
+  ${D.length?`<div class="card"><h2>Por probabilidad</h2>${bk.map(([a,b,t])=>row(t,D.filter(k=>k.p>=a&&k.p<b))).join('')}</div>
+  <div class="card"><h2>Por tipo de mercado</h2>${gs.map(g=>row(g,D.filter(k=>grp(k.mk)===g))).join('')}</div>`:''}
+  <div class="card"><h2>Últimos picks</h2>${[...P].reverse().slice(0,15).map(k=>`<div class="tag">${esc(k.m)} · ${esc(k.mk)} · ${Math.round(k.p*100)}%${k.q?' · cuota '+k.q:''} · ${k.res==='w'?'<b class="ok">Ganó</b>':k.res==='l'?'<b class="bad">Perdió</b>':k.res==='v'?'Nulo':'Pendiente'}${k.sc?' ('+k.sc+')':''}</div>`).join('')||'<p class="mut">Sin picks todavía.</p>'}</div>`;
+  $('#mrf').onclick=refreshModel;
+}
+async function refreshModel(){
+  drawModel();const b=$('#mrf');if(b){b.disabled=true;b.textContent='Buscando resultados…'}
+  try{await settle()}catch{}
+  drawModel();
 }
 
 // registro
 function reg(i){
-  const q=+$('#od'+i).value,s=+$('#sk'+i).value,m=$('#mk'+i).value.trim();
+  const r=R[i],m=($('#mk'+i).value||r.pk||'').trim(),q=+$('#od'+i).value||(r.q&&r.q[m])||0,s=+$('#sk'+i).value||r.sk||0;
   if(!q||!s||!m){alert('Escribe mercado, cuota y monto.');return}
-  bets.unshift({id:Date.now(),m:R[i].m+' · '+m,q,s,r:'p'});SV('bets',bets);alert('Apuesta registrada.');
+  const pid=addPick(r,m,q,s,true);
+  bets.unshift({id:Date.now(),m:R[i].m+' · '+m,q,s,r:'p',pid});SV('bets',bets);alert('Apuesta registrada.');
 }
 $('#add').onclick=()=>{
   const m=prompt('Partido y mercado');if(!m)return;
