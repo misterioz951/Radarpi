@@ -105,10 +105,16 @@ input[type=checkbox]:checked::after{left:23px}
 nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;display:flex;background:color-mix(in srgb,var(--card) 92%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--ln);padding:6px 6px calc(6px + env(safe-area-inset-bottom));z-index:10}
 nav button{flex:1;border:0;background:none;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:3px;font:600 11px Archivo;padding:2px 0;min-height:54px}
 nav svg{width:22px;height:22px;padding:4px 14px;box-sizing:content-box;border-radius:14px;transition:.2s}
+nav button{position:relative}
+nav button.dot::after{content:'';position:absolute;top:6px;left:calc(50% + 12px);width:11px;height:11px;border-radius:50%;background:var(--bad);border:2px solid var(--card)}
 nav button.on{color:var(--ink)}nav button.on svg{background:var(--acc);color:var(--onacc)}
 #toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom));transform:translate(-50%,16px);background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:12px;font-weight:600;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:20;max-width:90%;text-align:center}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+details>summary{cursor:pointer;font:700 19px 'Archivo Narrow',sans-serif;list-style:none;display:flex;justify-content:space-between;align-items:center;min-height:32px}
+details>summary::-webkit-details-marker{display:none}
+details>summary::after{content:'+';font:700 22px Archivo;color:var(--mut)}
+details[open]>summary::after{content:'–'}
 @keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -141,7 +147,9 @@ nav button.on{color:var(--ink)}nav button.on svg{background:var(--acc);color:var
 <div class="card grp"><h2>Bankroll y escáner</h2>
 <div class="g2"><label>Bankroll<input id="c-k" type="number"></label><label>Partidos máx.<input id="c-m" type="number"></label></div>
 <label class="tg-row"><span>Córners y tarjetas<small>Más datos, primer escaneo más lento</small></span><input id="c-x" type="checkbox"></label>
-<label class="tg-row"><span>Escanear al abrir la app<small>Como máximo cada 3 horas</small></span><input id="c-au" type="checkbox"></label></div>
+<label class="tg-row"><span>Escanear al abrir la app<small>Como máximo cada 3 horas</small></span><input id="c-au" type="checkbox"></label>
+<label class="tg-row"><span>Alertas con la app abierta<small>Escanea solo y te avisa de partidos nuevos con sonido, vibración y un punto rojo. Se pausa si bloqueas el celular o cierras la app.</small></span><input id="c-aa" type="checkbox"></label>
+<label>Cada cuántos minutos (mínimo 15)<input id="c-iv" type="number"></label></div>
 <div class="card grp"><h2>Umbrales de alertas</h2><p>Qué tan exigente es el escáner.</p>
 <div class="g2"><label>Goles/partido mín.<input id="c-g" type="number" step="0.1"></label><label>Ambos marcan % mín.<input id="c-b" type="number"></label>
 <label>Under: goles máx.<input id="c-u" type="number" step="0.1"></label><label>Victorias % mín.<input id="c-r" type="number"></label>
@@ -162,11 +170,12 @@ nav button.on{color:var(--ink)}nav button.on svg{background:var(--acc);color:var
 const $=s=>document.querySelector(s);
 const LS=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??d}catch{return d}};
 const SV=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
-function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),2600)}
+function toast(t,ms){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),ms||2600)}
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const LG={"Colombia":"col.1","Premier":"eng.1","Championship":"eng.2","La Liga":"esp.1","Serie A":"ita.1","Bundesliga":"ger.1","Ligue 1":"fra.1","Liga MX":"mex.1","Argentina":"arg.1","Brasileirão":"bra.1","Eredivisie":"ned.1","Primeira Liga":"por.1","Champions":"uefa.champions","Libertadores":"conmebol.libertadores","MLS":"usa.1"};
-let cfg=Object.assign({fd:'',gq:'',g:3,b:70,m:8,u:2,r:75,co:5,ta:5,ex:true,au:false,ok:'',bm:'',pn:true,lg:['col.1','eng.1','esp.1']},LS('cfg',{}));
+let cfg=Object.assign({fd:'',gq:'',g:3,b:70,m:8,u:2,r:75,co:5,ta:5,ex:true,au:false,aa:false,iv:60,ok:'',bm:'',pn:true,lg:['col.1','eng.1','esp.1']},LS('cfg',{}));
 cfg.lg=cfg.lg.filter(x=>Object.values(LG).includes(x));if(!cfg.lg.length)cfg.lg=['col.1','eng.1','esp.1'];
+let openRes=false,autoRun=false;
 let MODEL='openai/gpt-oss-120b';
 let R=[],bets=LS('bets',[]);
 const pad=n=>String(n).padStart(2,'0');
@@ -176,6 +185,7 @@ const today=()=>iso(new Date());
 // pestañas
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+  if(b.dataset.t==='f'){b.classList.remove('dot');document.title='Radar de patrones'}
   ['f','n','r','m','a'].forEach(t=>$('#s-'+t).hidden=t!==b.dataset.t);
   if(b.dataset.t==='r')drawBets();
   if(b.dataset.t==='m')refreshModel();
@@ -189,9 +199,9 @@ function drawLg(){$('#lg').innerHTML=Object.entries(LG).map(([n,id])=>
 drawLg();
 
 // ajustes
-$('#k-gq').value=cfg.gq;$('#c-g').value=cfg.g;$('#c-b').value=cfg.b;$('#c-m').value=cfg.m;$('#c-u').value=cfg.u;$('#c-r').value=cfg.r;$('#c-k').value=cfg.bk||'';$('#c-co').value=cfg.co;$('#c-ta').value=cfg.ta;$('#c-x').checked=cfg.ex;$('#c-au').checked=cfg.au;$('#c-pn').checked=cfg.pn;$('#c-ok').value=cfg.ok;$('#c-bm').value=cfg.bm;
+$('#k-gq').value=cfg.gq;$('#c-g').value=cfg.g;$('#c-b').value=cfg.b;$('#c-m').value=cfg.m;$('#c-u').value=cfg.u;$('#c-r').value=cfg.r;$('#c-k').value=cfg.bk||'';$('#c-co').value=cfg.co;$('#c-ta').value=cfg.ta;$('#c-x').checked=cfg.ex;$('#c-au').checked=cfg.au;$('#c-aa').checked=cfg.aa;$('#c-iv').value=cfg.iv;$('#c-pn').checked=cfg.pn;$('#c-ok').value=cfg.ok;$('#c-bm').value=cfg.bm;
 $('#save').onclick=()=>{cfg.gq=$('#k-gq').value.trim();
-  cfg.g=+$('#c-g').value||3;cfg.b=+$('#c-b').value||70;cfg.m=+$('#c-m').value||8;cfg.u=+$('#c-u').value||2;cfg.r=+$('#c-r').value||75;cfg.bk=+$('#c-k').value||0;cfg.co=+$('#c-co').value||5;cfg.ta=+$('#c-ta').value||5;cfg.ex=$('#c-x').checked;cfg.au=$('#c-au').checked;cfg.pn=$('#c-pn').checked;cfg.ok=$('#c-ok').value.trim();cfg.bm=$('#c-bm').value.trim();SV('cfg',cfg);$('#save').textContent='Guardado'};
+  cfg.g=+$('#c-g').value||3;cfg.b=+$('#c-b').value||70;cfg.m=+$('#c-m').value||8;cfg.u=+$('#c-u').value||2;cfg.r=+$('#c-r').value||75;cfg.bk=+$('#c-k').value||0;cfg.co=+$('#c-co').value||5;cfg.ta=+$('#c-ta').value||5;cfg.ex=$('#c-x').checked;cfg.au=$('#c-au').checked;cfg.aa=$('#c-aa').checked;cfg.iv=Math.max(15,+$('#c-iv').value||60);cfg.pn=$('#c-pn').checked;cfg.ok=$('#c-ok').value.trim();cfg.bm=$('#c-bm').value.trim();SV('cfg',cfg);$('#save').textContent='Guardado'};
 
 // ESPN (API pública no oficial, sin llave). Sin rangos de fechas: partidos de hoy + calendario de cada equipo
 async function espn(path){
@@ -267,6 +277,7 @@ function starters(v){
 function model(A,B){
   const sh=x=>0.7*x+0.3*1.35,pois=(l,k)=>{let p=Math.exp(-l);for(let i=1;i<=k;i++)p*=l/i;return p};
   const cdf=(l,k)=>{let q=0;for(let i=0;i<=k;i++)q+=pois(l,i);return q};
+  const cdfN=(l,k,r)=>{let q=Math.pow(r/(r+l),r),t=q;for(let i=0;i<k;i++){q*=(i+r)/(i+1)*l/(r+l);t+=q}return t}; // binomial negativa: córners y tarjetas varían más que un Poisson
   const bl=(sp,k,ov)=>sp!=null&&k>=3?0.5*sp+0.5*ov:ov;
   const mu=A.mu||1.35,wS=X=>X.ss?Math.min(0.6,X.ss.gp/(X.ss.gp+12)):0;
   const att=(X,sp,k)=>{const f=bl(sp,k,X.gfw)/mu,w=wS(X),q=X.ss?(X.ss.gf/X.ss.gp)/mu:f;return 0.85*(w*q+(1-w)*f)+0.15};
@@ -289,12 +300,12 @@ function model(A,B){
   let lc=null,lk=null;
   if(A.cf!=null&&B.cf!=null&&A.ca!=null&&B.ca!=null){
     lc=0.8*((A.cf+B.ca)/2+(B.cf+A.ca)/2)+0.2*9.8;
-    for(const x of [8,9,10])m.push([`Córners Over ${x}.5`,1-cdf(lc,x)]);
-    m.push(['Córners Under 9.5',cdf(lc,9)]);
+    for(const x of [8,9,10])m.push([`Córners Over ${x}.5`,1-cdfN(lc,x,40)]);
+    m.push(['Córners Under 9.5',cdfN(lc,9,40)]);
   }
   if(A.y!=null&&B.y!=null){
     lk=0.7*(A.y+B.y)+0.3*4;
-    m.push(['Tarjetas Over 3.5',1-cdf(lk,3)],['Tarjetas Over 4.5',1-cdf(lk,4)],['Tarjetas Under 4.5',cdf(lk,4)]);
+    m.push(['Tarjetas Over 3.5',1-cdfN(lk,3,15)],['Tarjetas Over 4.5',1-cdfN(lk,4,15)],['Tarjetas Under 4.5',cdfN(lk,4,15)]);
   }
   return{lh,la,lc,lk,m};
 }
@@ -346,7 +357,8 @@ async function mkMap(){
 }
 async function loadOdds(bm){
   bm=bm||cfg.bm;const key=bm+'|'+cfg.lg.join(','),c=LS('odds_'+bm,null);
-  if(c&&c.k===key&&Date.now()-c.t<3*36e5)return c.v;
+  if(autoRun&&!(c&&c.k===key))throw new Error('el escaneo automático no gasta cuotas; haz un escaneo manual');
+  if(c&&c.k===key&&(Date.now()-c.t<3*36e5||autoRun))return c.v;
   const MK=await mkMap(),T=await tourIds(),P=await cached('oppart',30,()=>op('participants',{sportId:10}));
   const ids=cfg.lg.map(x=>T[x]).filter(Boolean);
   if(!ids.length)throw new Error('no encontré esas ligas en OddsPapi');
@@ -480,16 +492,17 @@ $('#go').onclick=async()=>{
         const mod=model(A,B),q=A.n>=5&&B.n>=5?oddsQ(OD,hf,wf,e.date):null;
         const qp=(ODP&&A.n>=5&&B.n>=5)?oddsQ(ODP,hf,wf,e.date):null,fair=qp?fairP(qp):null;
         if(fair&&Object.keys(fair).length){mod.raw=mod.m;mod.f=fair;mod.m=mod.m.map(([n,pp])=>[n,fair[n]!=null?0.65*fair[n]+0.35*pp:pp])}
+        if(!mod.raw&&q&&Object.keys(q).length){const fc=fairP(q);if(Object.keys(fc).length){mod.m0=mod.m;mod.fc=fc;mod.m=mod.m.map(([n,pp])=>[n,fc[n]!=null?0.5*fc[n]+0.5*pp:pp])}}
         const bv=best({mod,q}),hasT=!!(mod.raw&&q&&mod.m.some(m=>['A','B'].includes(tierOf({q,mod},m[0]))));
         if(q&&Object.keys(q).length)mq++;
-        if(p.length||hasT||(!mod.raw&&bv&&bv.e>=0.08))R.push({m:`${hn} vs ${wn}`,liga:names[slug],
+        if(p.length||hasT||(!mod.raw&&bv&&bv.e>=0.05))R.push({m:`${hn} vs ${wn}`,liga:names[slug],
           hora:new Date(e.date).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}),p,A,B,h:hn,w:wn,mod,q,casa:cfg.bm,ev:e.id,slug,ko:e.date,hid:H.team.id,wid:W.team.id});
       }
     }
     msg.textContent=(rev?`${rev} partidos revisados, ${R.length} con patrones.`:'No hay partidos pendientes hoy en esas ligas.')+(bad.length?' No cargaron: '+bad.join('; ')+'.':'')+diag+(OD&&rev&&!mq?' Ningún partido se emparejó con la casa. OddsPapi trae: '+(OD.fx.slice(0,4).map(x=>x.h+' vs '+x.w).join('; ')||'nada')+'.':'');
-    drawRes();SV('scan',{d:today(),t:Date.now(),R,msg:msg.textContent});
+    drawRes();SV('scan',{d:today(),t:Date.now(),R,msg:msg.textContent});afterScan();
   }catch(e){msg.textContent='Error: '+e.message}
-  finally{$('#go').disabled=false;$('#go').classList.remove('busy')}
+  finally{$('#go').disabled=false;$('#go').classList.remove('busy');autoRun=false}
 };
 
 const tagc=t=>/córners/i.test(t)?'c':/tarjetas/i.test(t)?'k':/invicto|gana|racha/i.test(t)?'f':/under|cerrado|cero/i.test(t)?'u':'';
@@ -594,7 +607,7 @@ async function ai(i){
     [r.h+' (local)']:{ultimos10:pk(r.A),en_casa:r.A.hn+' jugados, '+r.A.hw+' ganados'},
     [r.w+' (visitante)']:{ultimos10:pk(r.B),de_visita:r.B.an+' jugados, '+r.B.aw+' ganados'},
     modelo:{goles_esperados:{local:+r.mod.lh.toFixed(2),visitante:+r.mod.la.toFixed(2)},
-      mercados:r.mod.m.map(m=>({mercado:m[0],prob_pct:Math.round(m[1]*100),cuota_minima:+(1.05/m[1]).toFixed(2),techo_stake:techo(r,m),prob_modelo_pct:Math.round(((r.mod.raw||r.mod.m).find(x=>x[0]===m[0])||m)[1]*100),prob_pinnacle_pct:(r.mod.f&&r.mod.f[m[0]]!=null)?Math.round(r.mod.f[m[0]]*100):null,nivel:tierOf(r,m[0]),cuota_casa:(r.q&&r.q[m[0]])||null,valor_pct:(r.q&&r.q[m[0]])?Math.round((m[1]*r.q[m[0]]-1)*100):null}))},
+      mercados:r.mod.m.map(m=>({mercado:m[0],prob_pct:Math.round(m[1]*100),cuota_minima:+(1.05/m[1]).toFixed(2),techo_stake:techo(r,m),prob_modelo_pct:Math.round(((r.mod.raw||r.mod.m0||r.mod.m).find(x=>x[0]===m[0])||m)[1]*100),prob_pinnacle_pct:(r.mod.f&&r.mod.f[m[0]]!=null)?Math.round(r.mod.f[m[0]]*100):null,nivel:tierOf(r,m[0]),cuota_casa:(r.q&&r.q[m[0]])||null,valor_pct:(r.q&&r.q[m[0]])?Math.round((m[1]*r.q[m[0]]-1)*100):null}))},
     cuota_del_usuario:(sel&&q)?{mercado:sel,cuota:q}:null,bajas_y_alineaciones:inf};
   try{
     const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',
@@ -647,7 +660,7 @@ function addPick(r,mk,q,s,bet){
   let k=P.find(x=>x.ev===r.ev&&x.mk===mk);
   if(!k){k={id:Date.now()+'-'+Math.floor(Math.random()*1e4),ev:r.ev,slug:r.slug,m:r.m,ko:r.ko,mk,p:+m[1].toFixed(3),res:null};P.push(k)}
   if(q)k.q=q;if(s)k.s=s;if(bet)k.bet=true;
-  const raw=(r.mod.raw||r.mod.m).find(x=>x[0]===mk);k.pm=raw?+raw[1].toFixed(3):k.p;k.pf=r.mod.f&&r.mod.f[mk]!=null?+r.mod.f[mk].toFixed(3):null;k.t=tierOf(r,mk);
+  const raw=(r.mod.raw||r.mod.m0||r.mod.m).find(x=>x[0]===mk);k.pm=raw?+raw[1].toFixed(3):k.p;k.pf=r.mod.f&&r.mod.f[mk]!=null?+r.mod.f[mk].toFixed(3):null;k.t=tierOf(r,mk);
   SV('picks',P);return k.id;
 }
 function evalMk(n,h,a,cor,crd){
@@ -714,8 +727,11 @@ function drawModel(){
   const conQ=D.filter(k=>k.bet&&k.q),inv=conQ.reduce((t,k)=>t+(k.s||1),0),gan=conQ.reduce((t,k)=>t+(k.res==='w'?(k.s||1)*(k.q-1):-(k.s||1)),0);
   const bk=[[0,.6,'50-60%'],[.6,.7,'60-70%'],[.7,.8,'70-80%'],[.8,1.01,'80% o más'],[0,.5,'menos de 50%']];
   const gs=[...new Set(D.map(k=>grp(k.mk)))];
-  const LST=[...P.filter(k=>!k.res).reverse(),...P.filter(k=>k.res).reverse().slice(0,15)];
+  const LSTP=P.filter(k=>!k.res).reverse(),LSTR=P.filter(k=>k.res).reverse().slice(0,30);
   const B=(k,r,t)=>`<button class="btn s ${k.res===r?'on':''}" onclick="setPick('${k.id}','${r}')">${t}</button>`;
+  const item=k=>`<div class="bet"><div class="bet-h"><b>${esc(k.m)}</b><span class="st ${k.res||'p'}">${{w:'Ganó',l:'Perdió',v:'Nulo'}[k.res]||'Pendiente'}</span></div>
+  <small>${esc(k.mk)} · modelo ${Math.round(k.p*100)}%${k.q?' · cuota '+k.q+(k.qr?' (tuya)':' (de la casa)'):''}${k.nv?' · sin valor con tu cuota':''}${k.sc?' · '+k.sc:''}${k.man?' · manual':''}</small>
+  <div>${B(k,'w','Ganó')}${B(k,'l','Perdió')}${B(k,'v','Nulo')}<button class="btn s" onclick="setPick('${k.id}',null)">↺</button><button class="btn s" onclick="delPick('${k.id}')">Borrar</button></div></div>`;
   $('#mdl').innerHTML=`<div class="tiles">
   <div class="tile"><small>Resueltos</small><b>${D.length}</b><span>${pend} pendientes</span></div>
   <div class="tile"><small>Acierto</small><b>${D.length?hit(D)+'%':'—'}</b><span>${D.length?'prometía '+pr(D)+'%':'sin datos aún'}</span></div>
@@ -727,10 +743,9 @@ function drawModel(){
   ${D.length?`<div class="card"><h2>Por probabilidad</h2>${bk.map(([a,b,t])=>row(t,D.filter(k=>k.p>=a&&k.p<b))).join('')}</div>
   <div class="card"><h2>Por tipo de mercado</h2>${gs.map(g=>row(g,D.filter(k=>grp(k.mk)===g))).join('')}</div>
   <div class="card"><h2>Por nivel (A, B, C)</h2>${['A','B','C'].map(t=>row('Nivel '+t,D.filter(k=>k.t===t))).join('')}<small>Si el nivel A no acierta más que el C, el contraste con Pinnacle no está aportando.</small></div>`:''}
-  <div class="card"><h2>Picks</h2><small>Marca el resultado tú si ya lo sabes. Lo manual no lo cambia la app; ↺ lo devuelve a automático.</small>
-  ${LST.map(k=>`<div class="bet"><div class="bet-h"><b>${esc(k.m)}</b><span class="st ${k.res||'p'}">${{w:'Ganó',l:'Perdió',v:'Nulo'}[k.res]||'Pendiente'}</span></div>
-  <small>${esc(k.mk)} · modelo ${Math.round(k.p*100)}%${k.q?' · cuota '+k.q+(k.qr?' (tuya)':' (de la casa)'):''}${k.nv?' · sin valor con tu cuota':''}${k.sc?' · '+k.sc:''}${k.man?' · manual':''}</small>
-  <div>${B(k,'w','Ganó')}${B(k,'l','Perdió')}${B(k,'v','Nulo')}<button class="btn s" onclick="setPick('${k.id}',null)">↺</button><button class="btn s" onclick="delPick('${k.id}')">Borrar</button></div></div>`).join('')||'<p class="mut">Sin picks todavía.</p>'}</div>`;
+  <div class="card"><h2>Pendientes</h2><small>Marca el resultado tú si ya lo sabes. Lo manual no lo cambia la app; ↺ lo devuelve a automático.</small>
+  ${LSTP.map(item).join('')||'<p class="mut">No hay picks pendientes.</p>'}</div>
+  ${LSTR.length?`<details class="card" ${openRes?'open':''} ontoggle="openRes=this.open"><summary>Resueltos (${P.filter(k=>k.res).length})</summary>${LSTR.map(item).join('')}${P.filter(k=>k.res).length>30?'<small>Se muestran los 30 más recientes; las estadísticas cuentan todos.</small>':''}</details>`:''}`;
   $('#mrf').onclick=refreshModel;
 }
 async function refreshModel(){
@@ -768,6 +783,30 @@ function drawBets(){
   <small>Cuota ${b.q} · Monto ${b.s.toLocaleString('es')}</small>
   <div>${b.r==='p'?`<button class="btn s" onclick="setR(${b.id},'w')">Ganó</button><button class="btn s" onclick="setR(${b.id},'l')">Perdió</button><button class="btn s" onclick="setR(${b.id},'v')">Nula</button>`:''}<button class="btn s" onclick="delB(${b.id})">Borrar</button></div></div>`).join('')||'<div class="empty"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="8" width="36" height="48" rx="5"/><path d="M23 22h18M23 32h18M23 42h10"/></svg><b>Sin apuestas todavía</b>Las que registres desde las tarjetas aparecerán aquí.</div>';
 }
+// ===== Alertas dentro de la app (funcionan con la app abierta) =====
+function afterScan(){
+  const S=LS('seen',null),k=(S&&S.d===today())?S.k:[],fresh=R.filter(r=>!k.includes(r.ev));
+  SV('seen',{d:today(),k:[...new Set([...k,...R.map(r=>r.ev)])]});
+  if(autoRun&&fresh.length)notify(fresh);
+}
+function beep(){
+  const C=window.AudioContext||window.webkitAudioContext;if(!C)return;
+  const a=notify.a||(notify.a=new C()),o=a.createOscillator(),g=a.createGain();
+  o.connect(g);g.connect(a.destination);o.frequency.value=880;g.gain.value=.15;o.start();o.stop(a.currentTime+.25);
+}
+function notify(f){
+  toast('🔔 Alertas nuevas: '+f.slice(0,3).map(r=>r.m).join(' · ')+(f.length>3?' +'+(f.length-3):''),7000);
+  try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch{}
+  try{beep()}catch{}
+  try{document.querySelector('nav button[data-t="f"]').classList.add('dot');document.title='('+f.length+') Radar de patrones'}catch{}
+}
+(function loop(){
+  setTimeout(()=>{
+    if(cfg.aa&&!$('#go').disabled&&cfg.lg.length){autoRun=true;$('#go').click()}
+    loop();
+  },Math.max(15,cfg.iv||60)*6e4);
+})();
+
 (function(){
   const sv=LS('scan',null);
   if(sv&&sv.d===today()){R=sv.R;$('#msg').textContent=sv.msg+' (guardado '+new Date(sv.t).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})+')';drawRes()}
