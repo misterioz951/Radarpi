@@ -125,7 +125,7 @@ details[open]>summary::after{content:'–'}
 <section id="s-f">
 <div class="sec">Ligas</div>
 <div class="chips" id="lg"></div>
-<button class="btn" id="go"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 12l5.5-5.5"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg><span>Escanear partidos de hoy</span></button>
+<button class="btn" id="go"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 12l5.5-5.5"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg><span>Escanear próximos partidos</span></button>
 <p class="status" id="msg"></p>
 <div id="res"><div class="empty"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="32" cy="32" r="26"/><circle cx="32" cy="32" r="15"/><path d="M32 32l16-16"/></svg><b>Todo listo para escanear</b>Elige tus ligas y toca el botón. Te muestro solo los partidos con patrones o con valor.</div></div>
 </section>
@@ -170,10 +170,11 @@ details[open]>summary::after{content:'–'}
 const $=s=>document.querySelector(s);
 const LS=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??d}catch{return d}};
 const SV=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
+const dlab=d=>{const k=iso(new Date(d));return k===today()?'':k===iso(new Date(Date.now()+864e5))?'Mañana · ':new Date(d).toLocaleDateString('es',{weekday:'short',day:'numeric'})+' · '};
 function toast(t,ms){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),ms||2600)}
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const LG={"Colombia":"col.1","Premier":"eng.1","Championship":"eng.2","La Liga":"esp.1","Serie A":"ita.1","Bundesliga":"ger.1","Ligue 1":"fra.1","Liga MX":"mex.1","Argentina":"arg.1","Brasileirão":"bra.1","Eredivisie":"ned.1","Primeira Liga":"por.1","Champions":"uefa.champions","Libertadores":"conmebol.libertadores","MLS":"usa.1"};
-let cfg=Object.assign({fd:'',gq:'',g:3,b:70,m:8,u:2,r:75,co:5,ta:5,ex:true,au:false,aa:false,iv:60,ok:'',bm:'',pn:true,lg:['col.1','eng.1','esp.1']},LS('cfg',{}));
+const LG={"Colombia":"col.1","Premier":"eng.1","Championship":"eng.2","La Liga":"esp.1","Serie A":"ita.1","Bundesliga":"ger.1","Ligue 1":"fra.1","Liga MX":"mex.1","Argentina":"arg.1","Brasileirão":"bra.1","Eredivisie":"ned.1","Primeira Liga":"por.1","Champions":"uefa.champions","Libertadores":"conmebol.libertadores","Sudamericana":"conmebol.sudamericana","MLS":"usa.1"};
+let cfg=Object.assign({fd:'',gq:'',g:3,b:70,m:12,u:2,r:75,co:5,ta:5,ex:true,au:false,aa:false,iv:60,ok:'',bm:'',pn:true,lg:['col.1','eng.1','esp.1']},LS('cfg',{}));
 cfg.lg=cfg.lg.filter(x=>Object.values(LG).includes(x));if(!cfg.lg.length)cfg.lg=['col.1','eng.1','esp.1'];
 let openRes=false,autoRun=false;
 let MODEL='openai/gpt-oss-120b';
@@ -210,18 +211,42 @@ async function espn(path){
   return r.json();
 }
 const sc=x=>+(x.score&&x.score.value!=null?x.score.value:x.score);
+// En Champions, Libertadores y Sudamericana el calendario de la competición es muy corto:
+// se completa con la liga local de cada equipo (se descubre una vez y se guarda 30 días)
+const CONT=['uefa.champions','conmebol.libertadores','conmebol.sudamericana'];
+const DOM=['eng.1','esp.1','ita.1','ger.1','fra.1','por.1','ned.1','bel.1','tur.1','sco.1','gre.1','aut.1','sui.1','cze.1','den.1','nor.1','swe.1','pol.1','ukr.1','cro.1','srb.1','cyp.1','isr.1','arg.1','bra.1','col.1','chi.1','uru.1','par.1','per.1','ecu.1','bol.1','ven.1'];
+async function domMap(){
+  const c=LS('DOM',null);if(c&&Date.now()-c.t<30*864e5)return c.v;
+  const v={};
+  await Promise.all(DOM.map(async sl=>{
+    try{
+      const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+sl+'/teams');if(!r.ok)return;
+      const j=await r.json(),L=((j.sports||[])[0]||{}).leagues||[{}];
+      for(const t of (L[0].teams||[]))if(!v[t.team.id])v[t.team.id]=sl;
+    }catch{}
+  }));
+  SV('DOM',{t:Date.now(),v});return v;
+}
 async function teamForm(slug,id){
-  const k='W'+slug+id,cc=LS(k,null);
+  const k='X'+slug+id,cc=LS(k,null);
   if(cc&&cc.d===today())return cc.v;
-  const j=await espn(`${slug}/teams/${id}/schedule`);
-  const v=[];
-  for(const e of (j.events||[]).sort((a,b)=>a.date<b.date?-1:1)){
+  const sls=[slug];
+  if(CONT.includes(slug)){const d=(await domMap())[id];if(d&&d!==slug)sls.push(d)}
+  const evs=[];
+  for(const sl of sls){
+    let j=null;try{j=await espn(`${sl}/teams/${id}/schedule`)}catch{}
+    for(const e of ((j&&j.events)||[]))evs.push([e,sl]);
+  }
+  evs.sort((a,b)=>a[0].date<b[0].date?-1:1);
+  const v=[],vistos=new Set();
+  for(const [e,sl] of evs){
+    if(vistos.has(e.id))continue;
     const c0=e.competitions&&e.competitions[0];if(!c0)continue;
     const t=(c0.status||e.status||{}).type||{};if(!t.completed)continue;
     const me=c0.competitors.find(x=>String(x.team.id)===String(id)),ot=c0.competitors.find(x=>x!==me);
     if(!me||!ot)continue;
     const gf=sc(me),ga=sc(ot);if(isNaN(gf)||isNaN(ga))continue;
-    v.push({id:e.id,gf,ga,h:me.homeAway==='home'});
+    vistos.add(e.id);v.push({id:e.id,sl,gf,ga,h:me.homeAway==='home'});
   }
   const out=v.slice(-10);
   if(cfg.ex)await addExtra(slug,out,id);
@@ -245,7 +270,7 @@ async function ev(slug,eid){
 async function addExtra(slug,v,id){
   for(let i=0;i<v.length;i+=6){
     await Promise.all(v.slice(i,i+6).map(async x=>{
-      const o=await ev(slug,x.id);if(!o)return;
+      const o=await ev(x.sl||slug,x.id);if(!o)return;
       const me=o[id],ot=Object.entries(o).find(([t])=>String(t)!==String(id));
       if(me&&me.s&&me.s.length)x.st=me.s;
       if(me&&me.c!=null&&!isNaN(me.c)){x.cf=me.c;x.y=(me.y||0)+(me.r||0)}
@@ -323,7 +348,7 @@ const TL={'col.1':[/colombia/i,/primera a|betplay|liga/i],'eng.1':[/england/i,/^
   'esp.1':[/spain/i,/^la ?liga$/i],'ita.1':[/italy/i,/^serie a$/i],'ger.1':[/germany/i,/^bundesliga$/i],'fra.1':[/france/i,/^ligue 1$/i],
   'mex.1':[/mexico/i,/liga mx/i],'arg.1':[/argentina/i,/liga profesional|primera divisi/i],'bra.1':[/brazil/i,/serie a|brasileir/i],
   'ned.1':[/netherlands/i,/eredivisie/i],'por.1':[/portugal/i,/primeira liga|liga portugal/i],
-  'uefa.champions':[/./,/^(uefa )?champions league$/i],'conmebol.libertadores':[/./,/libertadores/i],'usa.1':[/usa|united states/i,/mls|major league soccer/i]};
+  'uefa.champions':[/./,/^(uefa )?champions league$/i],'conmebol.libertadores':[/./,/libertadores/i],'conmebol.sudamericana':[/./,/sudamericana/i],'usa.1':[/usa|united states/i,/mls|major league soccer/i]};
 const BADT=/women|femenin|u-?\d\d|youth|reserve|qualif|serie [bcd]|primera b|segunda|\b2\./i;
 async function tourIds(){
   return cached('optour',30,async()=>{
@@ -401,7 +426,7 @@ async function standings(slug){
     const gp=+st.gamesPlayed,gf=+st.pointsFor,ga=+st.pointsAgainst;
     if(gp>0&&!isNaN(gf)&&!isNaN(ga)){t[e.team.id]={gp,gf,ga};G+=gf;P+=gp}
   }
-  const v=P?{mu:G/P,t}:null;SV(k,{d:today(),v});return v;
+  const v=P?{mu:P>=30?G/P:1.35,t}:null;SV(k,{d:today(),v});return v;
 }
 // probabilidad "justa" de la casa de referencia: se le quita el margen a cada mercado
 function fairP(q){
@@ -457,13 +482,13 @@ $('#go').onclick=async()=>{
       if(rev>=cfg.m)break;
       msg.textContent='Cargando '+names[slug]+'…';
       let ev;
-      try{ev=(await espn(`${slug}/scoreboard?dates=${iso(new Date()).replace(/-/g,'')}`)).events||[]}
+      try{ev=[];const vistos=new Set();for(const n of [0,1]){for(const x of ((await espn(`${slug}/scoreboard?dates=${iso(new Date(Date.now()+n*864e5)).replace(/-/g,'')}`)).events||[])){if(!vistos.has(x.id)){vistos.add(x.id);ev.push(x)}}}}
       catch(e){bad.push(names[slug]+' ('+e.message.slice(0,60)+')');continue}
       if(ev.length)STD[slug]=await standings(slug).catch(()=>null);
       for(const e of ev){
         if(rev>=cfg.m)break;
         const c0=e.competitions[0],H=c0.competitors.find(x=>x.homeAway==='home'),W=c0.competitors.find(x=>x.homeAway==='away');
-        if(!H||!W||e.status.type.state!=='pre')continue;
+        if(!H||!W||e.status.type.state!=='pre'||new Date(e.date)-Date.now()>48*36e5)continue;
         rev++;
         const hn=H.team.shortDisplayName||H.team.displayName,wn=W.team.shortDisplayName||W.team.displayName,hf=H.team.displayName||hn,wf=W.team.displayName||wn;
         msg.textContent=`Analizando ${hn} vs ${wn}…`;
@@ -496,10 +521,10 @@ $('#go').onclick=async()=>{
         const bv=best({mod,q}),hasT=!!(mod.raw&&q&&mod.m.some(m=>['A','B'].includes(tierOf({q,mod},m[0]))));
         if(q&&Object.keys(q).length)mq++;
         if(p.length||hasT||(!mod.raw&&bv&&bv.e>=0.05))R.push({m:`${hn} vs ${wn}`,liga:names[slug],
-          hora:new Date(e.date).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}),p,A,B,h:hn,w:wn,mod,q,casa:cfg.bm,ev:e.id,slug,ko:e.date,hid:H.team.id,wid:W.team.id});
+          hora:dlab(e.date)+new Date(e.date).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}),p,A,B,h:hn,w:wn,mod,q,casa:cfg.bm,ev:e.id,slug,ko:e.date,hid:H.team.id,wid:W.team.id});
       }
     }
-    msg.textContent=(rev?`${rev} partidos revisados, ${R.length} con patrones.`:'No hay partidos pendientes hoy en esas ligas.')+(bad.length?' No cargaron: '+bad.join('; ')+'.':'')+diag+(OD&&rev&&!mq?' Ningún partido se emparejó con la casa. OddsPapi trae: '+(OD.fx.slice(0,4).map(x=>x.h+' vs '+x.w).join('; ')||'nada')+'.':'');
+    msg.textContent=(rev?`${rev} partidos revisados, ${R.length} con patrones.`:'No hay partidos pendientes en las próximas 48 h en esas ligas.')+(bad.length?' No cargaron: '+bad.join('; ')+'.':'')+diag+(OD&&rev&&!mq?' Ningún partido se emparejó con la casa. OddsPapi trae: '+(OD.fx.slice(0,4).map(x=>x.h+' vs '+x.w).join('; ')||'nada')+'.':'');
     drawRes();SV('scan',{d:today(),t:Date.now(),R,msg:msg.textContent});afterScan();
   }catch(e){msg.textContent='Error: '+e.message}
   finally{$('#go').disabled=false;$('#go').classList.remove('busy');autoRun=false}
