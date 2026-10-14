@@ -111,6 +111,11 @@ nav button.on{color:var(--ink)}nav button.on svg{background:var(--acc);color:var
 #toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom));transform:translate(-50%,16px);background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:12px;font-weight:600;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:20;max-width:90%;text-align:center}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+#save{position:sticky;bottom:calc(76px + env(safe-area-inset-bottom));z-index:5}
+.seg{display:flex;background:var(--s2);border:1px solid var(--ln);border-radius:14px;padding:4px;margin:6px 0}
+.seg button{flex:1;border:0;background:none;min-height:40px;border-radius:10px;font-weight:600;color:var(--mut)}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:var(--sh)}
+details.grp[open]>summary{margin-bottom:4px}
 details>summary{cursor:pointer;font:700 19px 'Archivo Narrow',sans-serif;list-style:none;display:flex;justify-content:space-between;align-items:center;min-height:32px}
 details>summary::-webkit-details-marker{display:none}
 details>summary::after{content:'+';font:700 22px Archivo;color:var(--mut)}
@@ -125,7 +130,10 @@ details[open]>summary::after{content:'–'}
 <section id="s-f">
 <div class="sec">Ligas</div>
 <div class="chips" id="lg"></div>
-<button class="btn" id="go"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 12l5.5-5.5"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg><span>Escanear próximos partidos</span></button>
+<div class="sec">Días</div>
+<div class="seg" id="dd" role="group" aria-label="Días a escanear"><button type="button" data-d="1">Hoy</button><button type="button" data-d="2">Hoy y mañana</button></div>
+<button class="btn" id="go"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 12l5.5-5.5"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg><span>Escanear partidos</span></button>
+<button class="btn s" id="hunt" type="button" style="width:100%;min-height:46px;margin:10px 0 0">Buscar el mejor pick en todas las ligas</button>
 <p class="status" id="msg"></p>
 <div id="res"><div class="empty"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="32" cy="32" r="26"/><circle cx="32" cy="32" r="15"/><path d="M32 32l16-16"/></svg><b>Todo listo para escanear</b>Elige tus ligas y toca el botón. Te muestro solo los partidos con patrones o con valor.</div></div>
 </section>
@@ -137,23 +145,25 @@ details[open]>summary::after{content:'–'}
 <section id="s-m" hidden><div id="mdl"></div></section>
 
 <section id="s-a" hidden>
-<div class="card grp"><h2>Inteligencia artificial</h2><p>Las llaves se guardan solo en este dispositivo.</p>
-<label>Llave Groq<input id="k-gq" type="password" autocomplete="off"></label></div>
-<div class="card grp"><h2>Cuotas</h2><p>OddsPapi trae las cuotas de tu casa.</p>
+<details class="card grp" open><summary>Escaneo</summary>
+<div class="g2"><label>Partidos máx.<input id="c-m" type="number"></label><label>Bankroll<input id="c-k" type="number"></label></div>
+<label class="tg-row"><span>Córners y tarjetas<small>Más datos; el primer escaneo es más lento</small></span><input id="c-x" type="checkbox"></label>
+<label class="tg-row"><span>Escanear al abrir la app<small>Como máximo cada 3 horas</small></span><input id="c-au" type="checkbox"></label>
+<label class="tg-row"><span>Alertas con la app abierta<small>Escanea solo y te avisa de partidos nuevos con sonido, vibración y un punto rojo. Se pausa si bloqueas el celular o cierras la app.</small></span><input id="c-aa" type="checkbox"></label>
+<label>Cada cuántos minutos (mínimo 15)<input id="c-iv" type="number"></label></details>
+<details class="card grp" open><summary>Picks</summary><p>Reglas para elegir el mejor pick y para la búsqueda en todas las ligas.</p>
+<div class="g2"><label>Cuota mínima<input id="c-qm" type="number" step="0.05"></label><label>Stake mínimo (búsqueda)<input id="c-sm" type="number"></label></div></details>
+<details class="card grp"><summary>Cuotas</summary><p>OddsPapi trae las cuotas de tu casa.</p>
 <label>Llave OddsPapi<input id="c-ok" type="password" autocomplete="off"></label>
 <label>Casa de apuestas<input id="c-bm" placeholder="rushbet.co"></label>
 <button class="btn s" id="bkfind" type="button">Buscar casas</button><div id="bkres" class="chips wrap"></div>
-<label class="tg-row"><span>Contrastar con Pinnacle<small>Usa 1 petición extra por escaneo</small></span><input id="c-pn" type="checkbox"></label></div>
-<div class="card grp"><h2>Bankroll y escáner</h2>
-<div class="g2"><label>Bankroll<input id="c-k" type="number"></label><label>Partidos máx.<input id="c-m" type="number"></label></div>
-<label class="tg-row"><span>Córners y tarjetas<small>Más datos, primer escaneo más lento</small></span><input id="c-x" type="checkbox"></label>
-<label class="tg-row"><span>Escanear al abrir la app<small>Como máximo cada 3 horas</small></span><input id="c-au" type="checkbox"></label>
-<label class="tg-row"><span>Alertas con la app abierta<small>Escanea solo y te avisa de partidos nuevos con sonido, vibración y un punto rojo. Se pausa si bloqueas el celular o cierras la app.</small></span><input id="c-aa" type="checkbox"></label>
-<label>Cada cuántos minutos (mínimo 15)<input id="c-iv" type="number"></label></div>
-<div class="card grp"><h2>Umbrales de alertas</h2><p>Qué tan exigente es el escáner.</p>
+<label class="tg-row"><span>Contrastar con Pinnacle<small>Usa 1 petición extra por escaneo</small></span><input id="c-pn" type="checkbox"></label></details>
+<details class="card grp"><summary>Inteligencia artificial</summary><p>La llave se guarda solo en este dispositivo.</p>
+<label>Llave Groq<input id="k-gq" type="password" autocomplete="off"></label></details>
+<details class="card grp"><summary>Umbrales de alertas (avanzado)</summary><p>Qué tan exigente es el escáner con los patrones.</p>
 <div class="g2"><label>Goles/partido mín.<input id="c-g" type="number" step="0.1"></label><label>Ambos marcan % mín.<input id="c-b" type="number"></label>
 <label>Under: goles máx.<input id="c-u" type="number" step="0.1"></label><label>Victorias % mín.<input id="c-r" type="number"></label>
-<label>Córners por equipo mín.<input id="c-co" type="number" step="0.1"></label><label>Tarjetas (suma) mín.<input id="c-ta" type="number" step="0.1"></label></div></div>
+<label>Córners por equipo mín.<input id="c-co" type="number" step="0.1"></label><label>Tarjetas (suma) mín.<input id="c-ta" type="number" step="0.1"></label></div></details>
 <button class="btn" id="save">Guardar ajustes</button>
 </section>
 
@@ -171,12 +181,13 @@ const $=s=>document.querySelector(s);
 const LS=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??d}catch{return d}};
 const SV=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
 const dlab=d=>{const k=iso(new Date(d));return k===today()?'':k===iso(new Date(Date.now()+864e5))?'Mañana · ':new Date(d).toLocaleDateString('es',{weekday:'short',day:'numeric'})+' · '};
+const okDay=d=>{const k=iso(new Date(d));return k===today()||((cfg.dd||1)>=2&&k===iso(new Date(Date.now()+864e5)))};
 function toast(t,ms){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),ms||2600)}
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const LG={"Colombia":"col.1","Premier":"eng.1","Championship":"eng.2","La Liga":"esp.1","Serie A":"ita.1","Bundesliga":"ger.1","Ligue 1":"fra.1","Liga MX":"mex.1","Argentina":"arg.1","Brasileirão":"bra.1","Eredivisie":"ned.1","Primeira Liga":"por.1","Champions":"uefa.champions","Libertadores":"conmebol.libertadores","Sudamericana":"conmebol.sudamericana","MLS":"usa.1"};
-let cfg=Object.assign({fd:'',gq:'',g:3,b:70,m:12,u:2,r:75,co:5,ta:5,ex:true,au:false,aa:false,iv:60,ok:'',bm:'',pn:true,lg:['col.1','eng.1','esp.1']},LS('cfg',{}));
+let cfg=Object.assign({fd:'',gq:'',g:3,b:70,m:12,u:2,qm:1.5,dd:1,sm:5,r:75,co:5,ta:5,ex:true,au:false,aa:false,iv:60,ok:'',bm:'',pn:true,lg:['col.1','eng.1','esp.1']},LS('cfg',{}));
 cfg.lg=cfg.lg.filter(x=>Object.values(LG).includes(x));if(!cfg.lg.length)cfg.lg=['col.1','eng.1','esp.1'];
-let openRes=false,autoRun=false;
+let openRes=false,autoRun=false,hunt=false;
 let MODEL='openai/gpt-oss-120b';
 let R=[],bets=LS('bets',[]);
 const pad=n=>String(n).padStart(2,'0');
@@ -198,11 +209,14 @@ function drawLg(){$('#lg').innerHTML=Object.entries(LG).map(([n,id])=>
   $('#lg').querySelectorAll('button').forEach(b=>b.onclick=()=>{
     const id=b.dataset.id;cfg.lg=cfg.lg.includes(id)?cfg.lg.filter(x=>x!==id):[...cfg.lg,id];SV('cfg',cfg);drawLg()})}
 drawLg();
+function drawDd(){document.querySelectorAll('#dd button').forEach(b=>b.classList.toggle('on',+b.dataset.d===(cfg.dd||1)))}
+document.querySelectorAll('#dd button').forEach(b=>b.onclick=()=>{cfg.dd=+b.dataset.d;SV('cfg',cfg);drawDd()});
+drawDd();
 
 // ajustes
-$('#k-gq').value=cfg.gq;$('#c-g').value=cfg.g;$('#c-b').value=cfg.b;$('#c-m').value=cfg.m;$('#c-u').value=cfg.u;$('#c-r').value=cfg.r;$('#c-k').value=cfg.bk||'';$('#c-co').value=cfg.co;$('#c-ta').value=cfg.ta;$('#c-x').checked=cfg.ex;$('#c-au').checked=cfg.au;$('#c-aa').checked=cfg.aa;$('#c-iv').value=cfg.iv;$('#c-pn').checked=cfg.pn;$('#c-ok').value=cfg.ok;$('#c-bm').value=cfg.bm;
+$('#k-gq').value=cfg.gq;$('#c-g').value=cfg.g;$('#c-b').value=cfg.b;$('#c-m').value=cfg.m;$('#c-qm').value=cfg.qm;$('#c-sm').value=cfg.sm;$('#c-u').value=cfg.u;$('#c-r').value=cfg.r;$('#c-k').value=cfg.bk||'';$('#c-co').value=cfg.co;$('#c-ta').value=cfg.ta;$('#c-x').checked=cfg.ex;$('#c-au').checked=cfg.au;$('#c-aa').checked=cfg.aa;$('#c-iv').value=cfg.iv;$('#c-pn').checked=cfg.pn;$('#c-ok').value=cfg.ok;$('#c-bm').value=cfg.bm;
 $('#save').onclick=()=>{cfg.gq=$('#k-gq').value.trim();
-  cfg.g=+$('#c-g').value||3;cfg.b=+$('#c-b').value||70;cfg.m=+$('#c-m').value||8;cfg.u=+$('#c-u').value||2;cfg.r=+$('#c-r').value||75;cfg.bk=+$('#c-k').value||0;cfg.co=+$('#c-co').value||5;cfg.ta=+$('#c-ta').value||5;cfg.ex=$('#c-x').checked;cfg.au=$('#c-au').checked;cfg.aa=$('#c-aa').checked;cfg.iv=Math.max(15,+$('#c-iv').value||60);cfg.pn=$('#c-pn').checked;cfg.ok=$('#c-ok').value.trim();cfg.bm=$('#c-bm').value.trim();SV('cfg',cfg);$('#save').textContent='Guardado'};
+  cfg.g=+$('#c-g').value||3;cfg.b=+$('#c-b').value||70;cfg.m=+$('#c-m').value||8;cfg.qm=+$('#c-qm').value||1.5;cfg.sm=+$('#c-sm').value||5;cfg.u=+$('#c-u').value||2;cfg.r=+$('#c-r').value||75;cfg.bk=+$('#c-k').value||0;cfg.co=+$('#c-co').value||5;cfg.ta=+$('#c-ta').value||5;cfg.ex=$('#c-x').checked;cfg.au=$('#c-au').checked;cfg.aa=$('#c-aa').checked;cfg.iv=Math.max(15,+$('#c-iv').value||60);cfg.pn=$('#c-pn').checked;cfg.ok=$('#c-ok').value.trim();cfg.bm=$('#c-bm').value.trim();SV('cfg',cfg);$('#save').textContent='Guardado'};
 
 // ESPN (API pública no oficial, sin llave). Sin rangos de fechas: partidos de hoy + calendario de cada equipo
 async function espn(path){
@@ -380,12 +394,12 @@ async function mkMap(){
     return o;
   });
 }
-async function loadOdds(bm){
-  bm=bm||cfg.bm;const key=bm+'|'+cfg.lg.join(','),c=LS('odds_'+bm,null);
+async function loadOdds(bm,lg){
+  bm=bm||cfg.bm;lg=lg||cfg.lg;const key=bm+'|'+lg.join(','),c=LS('odds_'+bm,null);
   if(autoRun&&!(c&&c.k===key))throw new Error('el escaneo automático no gasta cuotas; haz un escaneo manual');
   if(c&&c.k===key&&(Date.now()-c.t<3*36e5||autoRun))return c.v;
   const MK=await mkMap(),T=await tourIds(),P=await cached('oppart',30,()=>op('participants',{sportId:10}));
-  const ids=cfg.lg.map(x=>T[x]).filter(Boolean);
+  const ids=lg.map(x=>T[x]).filter(Boolean);
   if(!ids.length)throw new Error('no encontré esas ligas en OddsPapi');
   const arr=await op('odds-by-tournaments',{bookmaker:bm,tournamentIds:ids.join(',')});
   const keys=new Set(Object.values(MK).map(x=>x.split('_')[0])),out=[];
@@ -469,28 +483,31 @@ $('#bkfind').onclick=async()=>{
 $('#go').onclick=async()=>{
   const msg=$('#msg');R=[];$('#res').innerHTML='';
   if(!cfg.lg.length){msg.textContent='Elige al menos una liga.';return}
+  if(hunt&&(!cfg.ok||!cfg.bm)){msg.textContent='Para buscar picks con cuota necesitas la llave de OddsPapi y tu casa en Ajustes.';hunt=false;return}
   $('#go').disabled=true;$('#go').classList.add('busy');
   try{
+    const leagues=hunt?Object.values(LG):cfg.lg,cap=hunt?40:cfg.m;
     const names=Object.fromEntries(Object.entries(LG).map(([n,s])=>[s,n])),names0=names,bad0=[];let OD=null,ODP=null,diag='',mq=0;const STD={};
     if(cfg.ok){
       if(!cfg.bm)msg.textContent='Elige tu casa en Ajustes para traer cuotas.';
-      else{msg.textContent='Cargando cuotas…';try{OD=await loadOdds();const T=(LS('optour',null)||{}).v||{},sin=cfg.lg.filter(x=>!T[x]).map(x=>names0[x]||x);if(cfg.pn){try{ODP=await loadOdds('pinnacle');diag+=` Pinnacle: ${ODP.fx.length} partidos.`}catch(e){ODP=null;bad0.push('Pinnacle ('+e.message.slice(0,60)+')')}}
+      else{msg.textContent='Cargando cuotas…';try{OD=await loadOdds(undefined,leagues);const T=(LS('optour',null)||{}).v||{},sin=leagues.filter(x=>!T[x]).map(x=>names0[x]||x);if(cfg.pn){try{ODP=await loadOdds('pinnacle',leagues);diag+=` Pinnacle: ${ODP.fx.length} partidos.`}catch(e){ODP=null;bad0.push('Pinnacle ('+e.message.slice(0,60)+')')}}
       diag+=` Cuotas de ${cfg.bm}: ${OD.fx.length} partidos en las próximas 48 h.`+(sin.length?' Sin torneo en OddsPapi: '+sin.join(', ')+'.':'')}catch(e){OD=null;bad0.push('Cuotas ('+e.message.slice(0,90)+')')}}
     }
     let rev=0;const bad=bad0;
-    for(const slug of cfg.lg){
-      if(rev>=cfg.m)break;
+    for(const slug of leagues){
+      if(rev>=cap)break;
       msg.textContent='Cargando '+names[slug]+'…';
       let ev;
-      try{ev=[];const vistos=new Set();for(const n of [0,1]){for(const x of ((await espn(`${slug}/scoreboard?dates=${iso(new Date(Date.now()+n*864e5)).replace(/-/g,'')}`)).events||[])){if(!vistos.has(x.id)){vistos.add(x.id);ev.push(x)}}}}
+      try{ev=[];const vistos=new Set();for(const n of Array.from({length:cfg.dd||1},(_,k)=>k)){for(const x of ((await espn(`${slug}/scoreboard?dates=${iso(new Date(Date.now()+n*864e5)).replace(/-/g,'')}`)).events||[])){if(!vistos.has(x.id)){vistos.add(x.id);ev.push(x)}}}}
       catch(e){bad.push(names[slug]+' ('+e.message.slice(0,60)+')');continue}
       if(ev.length)STD[slug]=await standings(slug).catch(()=>null);
       for(const e of ev){
-        if(rev>=cfg.m)break;
+        if(rev>=cap)break;
         const c0=e.competitions[0],H=c0.competitors.find(x=>x.homeAway==='home'),W=c0.competitors.find(x=>x.homeAway==='away');
-        if(!H||!W||e.status.type.state!=='pre'||new Date(e.date)-Date.now()>48*36e5)continue;
+        if(!H||!W||e.status.type.state!=='pre'||!okDay(e.date))continue;
         rev++;
         const hn=H.team.shortDisplayName||H.team.displayName,wn=W.team.shortDisplayName||W.team.displayName,hf=H.team.displayName||hn,wf=W.team.displayName||wn;
+        if(hunt&&!oddsQ(OD,hf,wf,e.date)){rev--;continue}
         msg.textContent=`Analizando ${hn} vs ${wn}…`;
         let A,B;
         try{A=st(await teamForm(slug,H.team.id));B=st(await teamForm(slug,W.team.id))}
@@ -520,21 +537,27 @@ $('#go').onclick=async()=>{
         if(!mod.raw&&q&&Object.keys(q).length){const fc=fairP(q);if(Object.keys(fc).length){mod.m0=mod.m;mod.fc=fc;mod.m=mod.m.map(([n,pp])=>[n,fc[n]!=null?0.5*fc[n]+0.5*pp:pp])}}
         const bv=best({mod,q}),hasT=!!(mod.raw&&q&&mod.m.some(m=>['A','B'].includes(tierOf({q,mod},m[0]))));
         if(q&&Object.keys(q).length)mq++;
-        if(p.length||hasT||(!mod.raw&&bv&&bv.e>=0.05))R.push({m:`${hn} vs ${wn}`,liga:names[slug],
+        if(hunt||p.length||hasT||(!mod.raw&&bv&&bv.e>=0.05))R.push({m:`${hn} vs ${wn}`,liga:names[slug],
           hora:dlab(e.date)+new Date(e.date).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}),p,A,B,h:hn,w:wn,mod,q,casa:cfg.bm,ev:e.id,slug,ko:e.date,hid:H.team.id,wid:W.team.id});
       }
     }
-    msg.textContent=(rev?`${rev} partidos revisados, ${R.length} con patrones.`:'No hay partidos pendientes en las próximas 48 h en esas ligas.')+(bad.length?' No cargaron: '+bad.join('; ')+'.':'')+diag+(OD&&rev&&!mq?' Ningún partido se emparejó con la casa. OddsPapi trae: '+(OD.fx.slice(0,4).map(x=>x.h+' vs '+x.w).join('; ')||'nada')+'.':'');
+    let huntTxt='';
+    if(hunt){
+      const tot=R.length;
+      R=R.map(r=>({r,b:bestOf(r)})).filter(x=>x.b&&x.b.q&&baseStake(x.r,x.b.n,x.b.q)>=cfg.sm).sort((a,b)=>b.b.sc-a.b.sc).slice(0,3).map(x=>x.r);
+      huntTxt=R.length?`Búsqueda en todas las ligas: ${tot} partidos con cuotas, ${R.length} cumplen (cuota de ${cfg.qm} o más y stake de ${cfg.sm} o más).`:`Búsqueda en todas las ligas: de ${tot} partidos con cuotas, ninguno cumple cuota de ${cfg.qm} o más y stake de ${cfg.sm} o más. Es normal: casi nunca hay uno.`;
+    }
+    msg.textContent=(huntTxt||(rev?`${rev} partidos revisados, ${R.length} con patrones.`:'No hay partidos pendientes ('+((cfg.dd||1)>=2?'hoy y mañana':'hoy')+') en esas ligas.'))+(bad.length?' No cargaron: '+bad.join('; ')+'.':'')+diag+(OD&&rev&&!mq?' Ningún partido se emparejó con la casa. OddsPapi trae: '+(OD.fx.slice(0,4).map(x=>x.h+' vs '+x.w).join('; ')||'nada')+'.':'');
     drawRes();SV('scan',{d:today(),t:Date.now(),R,msg:msg.textContent});afterScan();
   }catch(e){msg.textContent='Error: '+e.message}
-  finally{$('#go').disabled=false;$('#go').classList.remove('busy');autoRun=false}
+  finally{$('#go').disabled=false;$('#go').classList.remove('busy');autoRun=false;hunt=false}
 };
 
 const tagc=t=>/córners/i.test(t)?'c':/tarjetas/i.test(t)?'k':/invicto|gana|racha/i.test(t)?'f':/under|cerrado|cero/i.test(t)?'u':'';
 const mrow=(n,p,right,v,t)=>`<div class="mr${v?' v':''}"><div class="mr-t"><span class="mn">${t?`<span class="tier tier${t}">${t}</span>`:''}${esc(n)}</span><span class="mv">${right}</span></div><div class="bar"><i style="width:${Math.round(p*100)}%"></i></div></div>`;
 function drawRes(){
   if(!R.length){$('#res').innerHTML='<div class="empty"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="32" cy="32" r="26"/><circle cx="32" cy="32" r="15"/><path d="M32 32l16-16"/></svg><b>Nada que destacar</b>No hay partidos con patrones ni valor claro. Prueba con más ligas o ajusta los umbrales.</div>';return}
-  $('#res').innerHTML=R.map((r,i)=>{
+  $('#res').innerHTML=topHtml()+R.map((r,i)=>{
     let lst;
     if(r.q&&Object.keys(r.q).length){
       const od={A:0,B:1,C:2},vl=r.mod.m.filter(x=>r.q[x[0]]&&x[1]>=0.35&&x[1]<=0.9).map(x=>({n:x[0],p:x[1],q:r.q[x[0]],e:x[1]*r.q[x[0]]-1,t:tierOf(r,x[0]),f:r.mod.f&&r.mod.f[x[0]]})).sort((a,b)=>(od[a.t]??3)-(od[b.t]??3)||b.e-a.e).slice(0,4);
@@ -610,6 +633,41 @@ async function showInfo(i){
     (f.alineaciones?f.alineaciones.map(t=>`<b>${t.lado==='home'?esc(r.h):esc(r.w)}</b> ${esc(t.formacion||'')}: ${esc(t.titulares.join(', '))}`).join('<br>'):'Alineaciones aún no publicadas (suelen salir ~1 h antes).');
 }
 
+// ===== El mejor pick de cada partido lo elige la app con criterios fijos (así siempre sale el mismo) =====
+const supports=(r,n)=>r.p.some(t=>(/^Over:/.test(t)&&/^Over [123]\.5$/.test(n))||(/^Ambos marcan/.test(t)&&n==='Ambos marcan: sí')||(/^(Under:|Partido cerrado)/.test(t)&&/^Under [12]\.5$/.test(n))||(/córners/i.test(t)&&/^Córners Over/.test(n))||(/^Tarjetas/.test(t)&&/^Tarjetas Over/.test(n)));
+function cands(r){
+  const out=[],conC=r.q&&Object.keys(r.q).length>0,qm=cfg.qm||1.5;
+  for(const [n,p] of r.mod.m){
+    if(p<0.45||p>0.92)continue;
+    const q=(r.q&&r.q[n])||null,t=tierOf(r,n),sp=supports(r,n);
+    let sc,e=null;
+    if(conC){
+      if(!q||q<qm)continue;
+      e=p*q-1;if(e<=0.03)continue;
+      sc=e+({A:.06,B:.03,C:-.02}[t]||0)+(sp?.03:0);
+    }else{
+      if(p>1/qm)continue;                 // sin cuotas: la cuota justa debe alcanzar la mínima
+      sc=(p-0.45)*0.4+(sp?.05:0)-0.1;
+    }
+    out.push({n,p,q,e,sc,t});
+  }
+  return out.sort((a,b)=>b.sc-a.sc);
+}
+const bestOf=r=>cands(r)[0]||null;
+function baseStake(r,n,price){
+  const m=r.mod.m.find(x=>x[0]===n);if(!m)return 1;
+  let b=techo(r,m);
+  if(price){const e=m[1]*price-1,es=Math.max(1,Math.min(10,Math.round(2+e*30)));b=Math.min(b+(e>0.2?2:e>0.1?1:0),es,10)}
+  else b=Math.min(b,6);                   // sin la cuota no se puede comprobar el valor
+  return Math.max(1,b);
+}
+function topHtml(){
+  const t3=R.map((r,i)=>{const b=bestOf(r);return b?{r,b,s:baseStake(r,b.n,b.q)}:null}).filter(Boolean).sort((a,b)=>b.b.sc-a.b.sc).slice(0,3);
+  if(!t3.length)return '';
+  return `<div class="card"><h2>Mejores picks</h2><small>Elegidos por la app: valor, nivel, cuota mínima ${cfg.qm} y respaldo de patrones. Valídalos con Analizar con IA.</small>`+
+    t3.map(t=>`<div class="bet"><div class="bet-h"><b>${esc(t.r.h)} vs ${esc(t.r.w)}</b><span class="st w">${t.s}/10</span></div><small>${esc(t.b.n)} · ${Math.round(t.b.p*100)}%${t.b.q?' · @'+t.b.q+' · valor '+Math.round(t.b.e*100)+'%':' · cuota mín. '+(1.05/t.b.p).toFixed(2)}${t.b.t?' · nivel '+t.b.t:''}</small></div>`).join('')+'</div>';
+}
+
 // techo de stake (1-10) que permiten los datos: probabilidad, tamaño de muestra y patrones que coinciden
 function techo(r,m){
   let t=Math.round((m[1]-0.45)*20);
@@ -626,18 +684,20 @@ async function ai(i){
   box.textContent='Analizando…';
   let inf=null;try{inf=await info(i)}catch{}
   const sel=$('#mk'+i).value,q=+$('#od'+i).value||null;
-  const modo=sel?`El usuario eligió el mercado "${sel}": analiza SOLO ese mercado y el pick debe ser exactamente ese. Si no hay valor o respaldo suficiente, decision="no_apostar". Si hay cuota_del_usuario o cuota_casa, úsala.`:'El usuario no eligió mercado: elige tú el mejor de toda la lista, o no_apostar.';
+  const bp=sel?null:bestOf(r);
+  if(!sel&&!bp){box.innerHTML=`<div class="pickhd"><small>DECISIÓN</small><b class="bad">No apostar</b></div><p>Ningún mercado de este partido cumple: valor mayor a 3%, cuota de al menos ${cfg.qm} y respaldo del modelo.</p>`;return}
+  const modo=sel?`El usuario eligió el mercado "${sel}": analiza SOLO ese mercado y el pick debe ser exactamente ese. Si no hay valor o respaldo suficiente, decision="no_apostar". Si hay cuota_del_usuario o cuota_casa, úsala. En lugar de stake devuelve ajuste_stake (0, -1 o -2 según los riesgos): la app calcula el stake.`:`La app ya eligió el mejor pick de este partido con criterios fijos (valor, nivel, cuota mínima y respaldo de patrones): "pick_de_la_app". Tu tarea: devolver decision "apostar" o "no_apostar" (no_apostar solo si hay una razón concreta en las bajas, las alineaciones o los datos), el pick EXACTAMENTE igual a pick_de_la_app, ajuste_stake (0, -1 o -2 según los riesgos; la app calcula el stake, ignora el campo stake) y explicar. No cambies de mercado.`;
   const pk=x=>({victorias:x.w,derrotas:x.l,goles_favor_prom:+x.gf.toFixed(2),goles_totales_prom:+x.t.toFixed(2),ambos_marcan_pct:x.b,partidos_2_goles_o_menos_pct:x.low,porterias_en_cero:x.cs,sin_marcar:x.fts,racha_victorias:x.rs,corners_favor:x.cf,corners_contra:x.ca,tarjetas_por_partido:x.y});
   const data={partido:r.m,liga:r.liga,patrones_detectados:r.p,
     [r.h+' (local)']:{ultimos10:pk(r.A),en_casa:r.A.hn+' jugados, '+r.A.hw+' ganados'},
     [r.w+' (visitante)']:{ultimos10:pk(r.B),de_visita:r.B.an+' jugados, '+r.B.aw+' ganados'},
     modelo:{goles_esperados:{local:+r.mod.lh.toFixed(2),visitante:+r.mod.la.toFixed(2)},
       mercados:r.mod.m.map(m=>({mercado:m[0],prob_pct:Math.round(m[1]*100),cuota_minima:+(1.05/m[1]).toFixed(2),techo_stake:techo(r,m),prob_modelo_pct:Math.round(((r.mod.raw||r.mod.m0||r.mod.m).find(x=>x[0]===m[0])||m)[1]*100),prob_pinnacle_pct:(r.mod.f&&r.mod.f[m[0]]!=null)?Math.round(r.mod.f[m[0]]*100):null,nivel:tierOf(r,m[0]),cuota_casa:(r.q&&r.q[m[0]])||null,valor_pct:(r.q&&r.q[m[0]])?Math.round((m[1]*r.q[m[0]]-1)*100):null}))},
-    cuota_del_usuario:(sel&&q)?{mercado:sel,cuota:q}:null,bajas_y_alineaciones:inf};
+    cuota_del_usuario:(sel&&q)?{mercado:sel,cuota:q}:null,bajas_y_alineaciones:inf,pick_de_la_app:bp?{mercado:bp.n,prob_pct:Math.round(bp.p*100),cuota:bp.q,valor_pct:bp.e!=null?Math.round(bp.e*100):null,nivel:bp.t}:null};
   try{
     const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',
       headers:{'Content-Type':'application/json',Authorization:'Bearer '+cfg.gq},
-      body:JSON.stringify({model:MODEL,temperature:0.2,max_completion_tokens:2500,messages:[
+      body:JSON.stringify({model:MODEL,temperature:0,max_completion_tokens:2500,messages:[
         {role:'system',content:'Eres analista de apuestas deportivas, directo y concreto. Usa SOLO los datos del JSON; no inventes lesiones, alineaciones ni noticias. "modelo.mercados" trae probabilidades (Poisson sobre los últimos 10 partidos, forma reciente ponderada, separando local y visitante; incluye córners y tarjetas si existen) y un techo_stake por mercado. Elige UN pick de esa lista con respaldo claro en las estadísticas y probabilidad de al menos 50%; evita mercados obvios. Si hay cuota_casa, es la cuota real de la casa: prioriza mercados con valor_pct mayor a 3 y desconfía de valor_pct mayor a 25 (suele ser error del modelo). nivel (A, B o C) indica cuánto confirma la casa de referencia Pinnacle el valor: prioriza A y B; un mercado sin nivel no tiene confirmación del mercado, solo recomiéndalo si el respaldo estadístico es muy claro. Si ninguno convence, decision="no_apostar". "stake" va de 1 a 10 (10 = máxima confianza) y nunca puede superar el techo_stake del mercado elegido; súbelo o bájalo según qué tan claros y consistentes son los datos. Razones: máximo 3, cada una con un dato numérico del JSON, sin frases genéricas. Riesgos: máximo 2. Responde SOLO con JSON válido, sin texto extra ni markdown: {"decision":"apostar"|"no_apostar","pick":"<nombre exacto del mercado>","stake":1-10,"cuota_minima":número,"resumen":"una frase","razones":["..."],"riesgos":["..."]}. Nunca prometas ganancias.'},
         {role:'system',content:modo+' Los datos de bajas_y_alineaciones vienen de ESPN y pueden estar incompletos: sin bajas reportadas no significa que no haya bajas. Solo las bajas en titulares_recientes son relevantes (evalúa a qué lado favorecen o perjudican); baja_larga ya está reflejada en la forma reciente y no_titulares casi no importa. Si las alineaciones no están confirmadas, dilo en los riesgos y no pongas un stake alto.'},
         {role:'user',content:JSON.stringify(data)}]})});
@@ -652,26 +712,22 @@ async function ai(i){
     const txt=j.choices[0].message.content||'';
     let o=null;try{o=JSON.parse(txt.match(/\{[\s\S]*\}/)[0])}catch{}
     if(!o){box.style.whiteSpace='pre-wrap';box.textContent=txt||'La IA no devolvió respuesta. Intenta de nuevo.';return}
-    if(sel)o.pick=sel;
+    if(sel)o.pick=sel;else if(bp)o.pick=bp.n;
     const mk=r.mod.m.find(m=>m[0]===o.pick);
-    let stk=Math.round(+o.stake)||1,cap=mk?techo(r,mk):10,note='';
-    const price=mk?((r.q&&r.q[mk[0]])||(sel===mk[0]?q:null)):null;
-    if(mk&&price){
-      const e=mk[1]*price-1;
-      if(e<=0.03){o.decision='no_apostar';note='Con la cuota '+price+' no hay valor.'}
-      else cap=Math.min(10,cap+(e>0.2?2:e>0.1?1:0));
-    }
-    if(inf&&!inf.alineaciones)cap=Math.min(cap,7);
+    const price=mk?((r.q&&r.q[mk[0]])||(sel===mk[0]?q:null)):null;let note='';
+    if(mk&&price&&mk[1]*price-1<=0.03){o.decision='no_apostar';note='Con la cuota '+price+' no hay valor.'}
+    const aj=Math.max(-2,Math.min(0,Math.round(+o.ajuste_stake||0)));
     const rl=x=>x?x.titulares_recientes.length:0,nb=inf?rl(inf.bajas_local)+rl(inf.bajas_visitante):0;
-    if(nb>=2)cap=Math.max(1,cap-2);else if(nb===1)cap=Math.max(1,cap-1);
-    stk=Math.max(1,Math.min(stk,cap));
+    let stk=mk?baseStake(r,mk[0],price):1;
+    if(inf&&!inf.alineaciones)stk=Math.min(stk,7);
+    stk=Math.max(1,Math.min(10,stk-(nb>=2?2:nb===1?1:0)+aj));
     if(o.decision!=='apostar'){box.innerHTML=`<div class="pickhd"><small>DECISIÓN</small><b class="bad">No apostar</b></div><p>${esc(o.resumen||'')}</p>${note?`<p class="bad">${esc(note)}</p>`:''}${lista(o.razones,'Razones')}`;return}
     const pct=stk*0.3,amt=cfg.bk?Math.round(cfg.bk*pct/100/100)*100:0;
     r.pk=o.pick;r.sk=amt;r.pq=price;
     box.innerHTML=`<div class="pickhd"><small>PICK</small><b>${esc(o.pick)}</b></div>
 <div class="meter${stk>=8?' hi':''}" role="img" aria-label="Stake ${stk} de 10">${Array.from({length:10},(_,k)=>`<i class="${k<stk?'f':''}"></i>`).join('')}</div>
 <div class="kv"><span>Stake <b>${stk}/10</b></span><span>${pct.toFixed(1)}% del bankroll${amt?' ≈ <b>'+amt.toLocaleString('es')+'</b>':''}</span><span>Cuota mín. <b>${esc(o.cuota_minima||(mk?(1.05/mk[1]).toFixed(2):''))}</b></span>${price?`<span>Cuota casa <b>${price}</b> · valor <b>${Math.round((mk[1]*price-1)*100)}%</b></span>`:''}</div>
-${stk<(+o.stake)?'<p><small>Stake limitado por los datos disponibles.</small></p>':''}
+<p><small>Stake calculado por la app (probabilidad, valor, nivel, muestra y bajas)${aj?' · la IA lo bajó '+(-aj):''}.</small></p>
 <p>${esc(o.resumen||'')}</p>${lista(o.razones,'Razones')}${lista(o.riesgos,'Riesgos')}${inf&&!inf.alineaciones?'<p><small>Alineaciones sin confirmar: stake máximo 7. Vuelve a analizar cuando salgan (≈1 h antes).</small></p>':''}
 ${mk?`<div class="ctl" style="grid-template-columns:1fr auto;margin-top:12px;align-items:center"><input id="pq${i}" type="number" step="0.01" placeholder="Cuota real" value="${price||''}"><button class="btn s" style="margin:6px 0 0" onclick="regPick(${i})">Agregar al seguimiento</button></div>`:''}`;
   }catch(e){box.textContent='Error: '+e.message}
@@ -831,6 +887,8 @@ function notify(f){
     loop();
   },Math.max(15,cfg.iv||60)*6e4);
 })();
+
+$('#hunt').onclick=()=>{if($('#go').disabled)return;hunt=true;$('#go').click()};
 
 (function(){
   const sv=LS('scan',null);
