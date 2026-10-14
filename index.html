@@ -154,7 +154,7 @@ details.hint p{margin:8px 0 0;font-size:13.5px;color:var(--mut)}details.hint b{c
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style></head><body>
 <header><div class="logo"><svg viewBox="0 0 32 32" fill="none" stroke="#F5B800" stroke-width="2.4" stroke-linecap="round"><path d="M5 21a11 11 0 0 1 22 0"/><path d="M10 21a6 6 0 0 1 12 0"/><circle cx="16" cy="22.5" r="2.3" fill="#F5B800" stroke="none"/></svg></div>
-<div><h1>Radar de patrones</h1><small>Fútbol · busca solo, tú decides</small></div></header>
+<div><h1>Radar de patrones</h1><small>Fútbol · análisis exigente, tú decides</small></div></header>
 
 <section id="s-f">
 <div class="sec">Ligas</div>
@@ -167,7 +167,7 @@ details.hint p{margin:8px 0 0;font-size:13.5px;color:var(--mut)}details.hint b{c
 <div id="res"><div class="empty"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="32" cy="32" r="26"/><circle cx="32" cy="32" r="15"/><path d="M32 32l16-16"/></svg><b>Todo listo para escanear</b>Elige tus ligas y toca el botón. Te muestro solo los partidos con patrones o con valor.</div></div>
 </section>
 
-<section id="s-n" hidden><div class="card empty"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="32" cy="32" r="26"/><path d="M6 32h52M32 6v52M13 13c8 8 8 30 0 38M51 13c-8 8-8 30 0 38"/></svg><b>NBA, muy pronto</b>Cuando empiece la temporada tendrá el mismo escáner: rachas, ritmo y props.</div></section>
+<section id="s-n" hidden><div class="card empty"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="32" cy="32" r="26"/><path d="M6 32h52M32 6v52M13 13c8 8 8 30 0 38M51 13c-8 8-8 30 0 38"/></svg><b>Módulo NBA en preparación</b>No se reutilizarán las estadísticas de fútbol. La versión NBA necesitará datos propios de lesiones, descanso, minutos, quintetos, ritmo, uso y cuotas. Hasta validar esas fuentes, esta pestaña no genera picks NBA ficticios.</div></section>
 
 <section id="s-r" hidden><div id="sum"></div><button class="btn s" id="add">+ Añadir apuesta</button><div id="bets"></div></section>
 
@@ -187,7 +187,7 @@ details.hint p{margin:8px 0 0;font-size:13.5px;color:var(--mut)}details.hint b{c
 <label>Casa de apuestas<input id="c-bm" placeholder="rushbet.co"></label>
 <button class="btn s" id="bkfind" type="button">Buscar casas</button><div id="bkres" class="chips wrap"></div>
 <label class="tg-row"><span>Contrastar con Pinnacle<small>Usa 1 petición extra por escaneo</small></span><input id="c-pn" type="checkbox"></label></details>
-<details class="card grp"><summary>Inteligencia artificial</summary><p>La llave se guarda solo en este dispositivo.</p>
+<details class="card grp"><summary>Inteligencia artificial</summary><p>La IA de contexto buscará motivación competitiva, escenarios de clasificación/eliminación, rotaciones, suplentes, lesiones, descanso, viajes y declaraciones recientes. Las claves quedan en el almacenamiento local del navegador; no es un almacén seguro frente a alguien con acceso al dispositivo o a las herramientas del navegador.</p>
 <label>Llave Groq (análisis y pick)<input id="k-gq" type="password" autocomplete="off"></label>
 <label>Llave Gemini (noticias y bajas buscadas en Google)<input id="k-gm" type="password" autocomplete="off"></label></details>
 <details class="card grp"><summary>Umbrales de alertas (avanzado)</summary><p>Qué tan exigente es el escáner con los patrones.</p>
@@ -453,11 +453,15 @@ function sim(a,b){
   return A.filter(x=>B.some(y=>m(x,y))).length/Math.min(A.length,B.length);
 }
 function oddsQ(OD,hf,wf,ko){
-  if(!OD||!OD.fx)return null;
-  const t=new Date(ko).getTime(),f=OD.fx.find(x=>Math.abs(x.t-t)<4*36e5&&sim(hf,x.h)>=0.5&&sim(wf,x.w)>=0.5);
-  if(!f)return null;
-  const q={};for(const [n,k] of Object.entries(OD.mk))if(f.pr[k])q[n]=f.pr[k];
-  return q;
+  if(!OD||!Array.isArray(OD.fx))return null;
+  const t=new Date(ko).getTime();
+  // Evita emparejar equipos parecidos de otra fecha/partido: exige ambos lados y prioriza el evento más cercano.
+  const cand=OD.fx.map(x=>({x,dh:sim(hf,x.h),da:sim(wf,x.w),dt:Math.abs(x.t-t)}))
+    .filter(z=>z.dt<2.5*36e5&&z.dh>=0.67&&z.da>=0.67)
+    .sort((a,b)=>(b.dh+b.da-a.dh-a.da)||(a.dt-b.dt));
+  const f=cand[0]?.x;if(!f)return null;
+  const q={};for(const [n,k] of Object.entries(OD.mk)){const v=+(f.pr&&f.pr[k]);if(Number.isFinite(v)&&v>1)q[n]=v;}
+  return Object.keys(q).length?q:null;
 }
 async function standings(slug){
   const k='ST'+slug,c=LS(k,null);if(c&&c.d===today())return c.v;
@@ -563,8 +567,10 @@ $('#go').onclick=async()=>{
         }
         const mod=model(A,B),q=A.n>=5&&B.n>=5?oddsQ(OD,hf,wf,e.date):null;
         const qp=(ODP&&A.n>=5&&B.n>=5)?oddsQ(ODP,hf,wf,e.date):null,fair=qp?fairP(qp):null;
-        if(fair&&Object.keys(fair).length){mod.raw=mod.m;mod.f=fair;mod.m=mod.m.map(([n,pp])=>[n,fair[n]!=null?0.65*fair[n]+0.35*pp:pp])}
-        if(!mod.raw&&q&&Object.keys(q).length){const fc=fairP(q);if(Object.keys(fc).length){mod.m0=mod.m;mod.fc=fc;mod.m=mod.m.map(([n,pp])=>[n,fc[n]!=null?0.5*fc[n]+0.5*pp:pp])}}
+        // Mantener separadas las probabilidades del modelo y las probabilidades justas del mercado.
+        // No mezclarlas con pesos arbitrarios hasta calibrar el modelo con resultados fuera de muestra.
+        if(fair&&Object.keys(fair).length){mod.raw=mod.m;mod.f=fair}
+        if(!mod.raw&&q&&Object.keys(q).length){const fc=fairP(q);if(Object.keys(fc).length){mod.m0=mod.m;mod.fc=fc}}
         const bv=best({mod,q}),hasT=!!(mod.raw&&q&&mod.m.some(m=>['A','B'].includes(tierOf({q,mod},m[0]))));
         if(q&&Object.keys(q).length)mq++;
         if(hunt||p.length||hasT||(!mod.raw&&bv&&bv.e>=0.05))R.push({m:`${hn} vs ${wn}`,liga:names[slug],
@@ -645,8 +651,8 @@ function calc(i){
   if(!q||q<=1){o.textContent='';return}
   const e=p*q-1;
   {const P=LS('picks',[]),k=P.find(x=>x.ev===r.ev&&x.mk===$('#mk'+i).value);
-   if(k){k.q=q;k.qr=true;if(e<=0.03)k.nv=true;else delete k.nv;SV('picks',P)}}
-  if(e<=0.03){o.innerHTML=`<span class="bad">Sin valor</span>: ${Math.round(p*100)}% de probabilidad con cuota ${q} no compensa. No apostar.`;$('#sk'+i).value='';return}
+   if(k){k.q=q;k.qr=true;if(e<0.05||e>0.25)k.nv=true;else delete k.nv;SV('picks',P)}}
+  if(e<0.05||e>0.25){o.innerHTML=`<span class="bad">Ventaja insuficiente o sospechosamente alta</span>: valor estimado ${Math.round(e*100)}%. La app solo considera candidatos entre 5% y 25%; revisa cuota/modelo y no fuerces el pick.`;$('#sk'+i).value='';return}
   const k=Math.min(e/(q-1)*0.25,0.03),amt=cfg.bk?Math.round(cfg.bk*k/100)*100:0;
   $('#sk'+i).value=amt||'';
   o.innerHTML=`<span class="ok">Valor +${Math.round(e*100)}%</span>. Stake sugerido: ${(k*100).toFixed(1)}% del bankroll${amt?' ≈ '+amt.toLocaleString('es'):' (pon tu bankroll en Ajustes para ver el monto)'}.`;
@@ -700,19 +706,16 @@ async function showInfo(i){
 // ===== El mejor pick de cada partido lo elige la app con criterios fijos (así siempre sale el mismo) =====
 const supports=(r,n)=>r.p.some(t=>(/^Over:/.test(t)&&/^Over [123]\.5$/.test(n))||(/^Ambos marcan/.test(t)&&n==='Ambos marcan: sí')||(/^(Under:|Partido cerrado)/.test(t)&&/^Under [12]\.5$/.test(n))||(/córners/i.test(t)&&/^Córners Over/.test(n))||(/^Tarjetas/.test(t)&&/^Tarjetas Over/.test(n)));
 function cands(r){
-  const out=[],conC=r.q&&Object.keys(r.q).length>0,qm=cfg.qm||1.5;
+  const out=[],conC=!!(r.q&&Object.keys(r.q).length),qm=cfg.qm||1.5;
   for(const [n,p] of r.mod.m){
-    if(p<0.45||p>0.92)continue;
+    if(!Number.isFinite(p)||p<0.50||p>0.90)continue;
     const q=(r.q&&r.q[n])||null,t=tierOf(r,n),sp=supports(r,n);
-    let sc,e=null;
-    if(conC){
-      if(!q||q<qm)continue;
-      e=p*q-1;if(e<=0.03)continue;
-      sc=e+({A:.06,B:.03,C:-.02}[t]||0)+(sp?.03:0);
-    }else{
-      if(p>1/qm)continue;                 // sin cuotas: la cuota justa debe alcanzar la mínima
-      sc=(p-0.45)*0.4+(sp?.05:0)-0.1;
-    }
+    // Sin cuota real no existe valor esperado comprobable: solo se puede mostrar como mercado a vigilar.
+    if(!conC||!q||q<qm)continue;
+    const e=p*q-1;
+    // Evita sobrevalorar estimaciones débiles: edge >25% suele señalar un modelo/dato mal calibrado.
+    if(e<0.05||e>0.25)continue;
+    const sc=e+({A:.035,B:.015,C:-.025}[t]||0)+(sp?.01:0);
     out.push({n,p,q,e,sc,t});
   }
   return out.sort((a,b)=>b.sc-a.sc);
@@ -720,15 +723,22 @@ function cands(r){
 const bestOf=r=>cands(r)[0]||null;
 function baseStake(r,n,price){
   const m=r.mod.m.find(x=>x[0]===n);if(!m)return 1;
+  if(!price||price<=1)return 1;
+  const e=m[1]*price-1;
+  // El stake expresa exposición, no probabilidad de ganar. Sin ventaja verificada, no apostar.
+  if(e<0.05||e>0.25)return 1;
   let b=techo(r,m);
-  if(price){const e=m[1]*price-1,es=Math.max(1,Math.min(10,Math.round(2+e*30)));b=Math.min(b+(e>0.2?2:e>0.1?1:0),es,10)}
-  else b=Math.min(b,6);                   // sin la cuota no se puede comprobar el valor
-  return Math.max(1,b);
+  if(r.A.n<8||r.B.n<8)b=Math.min(b,4);
+  if(!r.mod.f||r.mod.f[n]==null)b=Math.min(b,4);
+  if(e<0.08)b=Math.min(b,3);
+  else if(e<0.12)b=Math.min(b,5);
+  else b=Math.min(b,6);
+  return Math.max(1,Math.min(6,b));
 }
 function topHtml(){
   const t3=R.map((r,i)=>{const b=bestOf(r);return b?{r,b,s:baseStake(r,b.n,b.q)}:null}).filter(Boolean).sort((a,b)=>b.b.sc-a.b.sc).slice(0,3);
   if(!t3.length)return '';
-  return `<div class="card"><h2>Mejores picks</h2><small>Elegidos por la app: valor, nivel, cuota mínima ${cfg.qm} y respaldo de patrones. Valídalos con Analizar con IA.</small>`+
+  return `<div class="card"><h2>Mejores picks</h2><small>Solo aparecen con cuota real emparejada y ventaja estimada entre 5% y 25%. La ventaja es una estimación, no garantía; confirma contexto y alineaciones con la IA.</small>`+
     t3.map(t=>`<div class="bet"><div class="bet-h"><b>${esc(t.r.h)} vs ${esc(t.r.w)}</b><span class="st w">${t.s}/10</span></div><small>${esc(t.b.n)} · ${Math.round(t.b.p*100)}%${t.b.q?' · @'+t.b.q+' · valor '+Math.round(t.b.e*100)+'%':' · cuota mín. '+(1.05/t.b.p).toFixed(2)}${t.b.t?' · nivel '+t.b.t:''}</small></div>`).join('')+'</div>';
 }
 
@@ -744,8 +754,9 @@ async function gmodel(){
 }
 async function research(i){
   const r=R[i];if(r.news)return r.news;if(!cfg.gk)return null;
-  const mdl=await gmodel(),f=new Date(r.ko).toLocaleString('es',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
-  const prompt=`Eres un asistente de investigación de fútbol. Busca en la web información ACTUAL y verificable (últimos días) sobre el partido ${r.h} vs ${r.w} (${r.liga}, ${f}). Responde SOLO con JSON válido, sin markdown, con esta forma: {"resumen":"1 o 2 frases","bajas_local":["Jugador (motivo)"],"bajas_visitante":["Jugador (motivo)"],"bajas_clave_total":0,"dudas":["Jugador (duda)"],"alineacion_probable_local":null,"alineacion_probable_visitante":null,"contexto":["máximo 3 puntos: rotaciones, motivación, calendario, clima, árbitro, viaje"],"confianza":"alta|media|baja"}. "bajas_clave_total" es el número de bajas de titulares habituales o figuras entre los dos equipos. No inventes: si no encuentras o no puedes verificar algo, déjalo vacío o null y pon confianza baja.`;
+  const cacheKey='CTX_'+r.ev,cache=LS(cacheKey,null);if(cache&&cache.v&&Date.now()-cache.t<8*36e5){r.news=cache.v;return r.news;}
+  const mdl=await gmodel(),now=new Date().toLocaleDateString('es',{weekday:'long',day:'numeric',month:'long',year:'numeric'}),f=new Date(r.ko).toLocaleString('es',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
+  const prompt=`Actúa como investigador deportivo prepartido. Fecha actual: ${now}. Partido: ${r.h} vs ${r.w}, competición ${r.liga}, inicio ${f}. Busca en la web noticias publicadas recientemente y fuentes verificables. Investiga especialmente: (1) qué se juega cada equipo, clasificación, eliminación, descenso, título o necesidad de ganar/empatar; calcula el escenario solo si la tabla/reglamento lo permite y cita fuente; (2) si el resultado de otro partido afecta la clasificación; (3) rotaciones, suplentes, posible once, declaraciones del entrenador, copa entre semana, calendario, descanso y viajes; (4) lesiones/sanciones y si son titulares habituales; (5) clima/árbitro solo si afecta mercados relevantes. Distingue CONFIRMADO, PROBABLE y NO VERIFICADO. No deduzcas que un equipo "debe ganar sí o sí" sin respaldo matemático o declaración fiable. Si las fuentes se contradicen, dilo. Devuelve SOLO JSON válido con forma: {"resumen":"1-3 frases","situacion_competitiva":{"local":"...","visitante":"...","escenarios_clasificacion":"...","urgencia_verificada":"alta|media|baja|desconocida"},"bajas_local":["Jugador (motivo; fuente/estado)"],"bajas_visitante":["Jugador (motivo; fuente/estado)"],"bajas_clave_total":0,"dudas":["Jugador (duda; fuente)"],"alineacion_probable_local":null,"alineacion_probable_visitante":null,"rotaciones_y_descanso":["..."],"contexto":["máximo 5 hechos concretos y su posible efecto"],"impacto_en_mercados":{"resultado":"...","goles":"...","corners":"...","tarjetas":"..."},"alertas_contrarias":["hechos que contradigan el pick o lo vuelvan arriesgado"],"fuentes":[{"medio":"...","titulo":"...","fecha":"...","url":"..."}],"confianza":"alta|media|baja"}. No inventes lesiones, citas, fechas, tablas ni enlaces. Si no hay evidencia, dilo y usa confianza baja. No conviertas rumor en hecho.`;
   const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${mdl}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':cfg.gk},
     body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],tools:[{google_search:{}}],generationConfig:{temperature:0.1}})});
   const j=await res.json();
@@ -754,7 +765,7 @@ async function research(i){
   let o=null;try{o=JSON.parse(txt.match(/\{[\s\S]*\}/)[0])}catch{}
   const src=((c&&c.groundingMetadata&&c.groundingMetadata.groundingChunks)||[]).map(x=>x.web).filter(Boolean).slice(0,4);
   r.news=o?{...o,fuentes:src}:{resumen:txt.slice(0,400),fuentes:src,confianza:'baja'};
-  return r.news;
+  SV(cacheKey,{t:Date.now(),v:r.news});return r.news;
 }
 function newsHtml(n,r){
   if(!n)return '';
@@ -763,8 +774,9 @@ function newsHtml(n,r){
 <p><b>Bajas ${esc(r.h)}:</b> ${L(n.bajas_local)}<br><b>Bajas ${esc(r.w)}:</b> ${L(n.bajas_visitante)}</p>
 ${n.dudas&&n.dudas.length?`<p><b>Dudas:</b> ${L(n.dudas)}</p>`:''}
 ${n.alineacion_probable_local?`<p><b>Alineación probable ${esc(r.h)}:</b> ${esc(n.alineacion_probable_local)}</p>`:''}${n.alineacion_probable_visitante?`<p><b>Alineación probable ${esc(r.w)}:</b> ${esc(n.alineacion_probable_visitante)}</p>`:''}
-${lista(n.contexto,'Contexto')}
-<p><small>Confianza ${esc(n.confianza||'?')}. Búsqueda hecha por IA en Google: puede tener errores, verifícalo.${(n.fuentes&&n.fuentes.length)?' Fuentes: '+n.fuentes.map(x=>`<a href="${esc(x.uri||'#')}" target="_blank" rel="noopener">${esc((x.title||'enlace').slice(0,40))}</a>`).join(' · '):''}</small></p>`;
+${n.situacion_competitiva?`<h4>Motivación y clasificación</h4><p><b>${esc(r.h)}:</b> ${esc(n.situacion_competitiva.local||'Sin datos')}<br><b>${esc(r.w)}:</b> ${esc(n.situacion_competitiva.visitante||'Sin datos')}<br><b>Escenarios:</b> ${esc(n.situacion_competitiva.escenarios_clasificacion||'No verificados')}<br><b>Urgencia verificada:</b> ${esc(n.situacion_competitiva.urgencia_verificada||'desconocida')}</p>`:''}
+${lista(n.rotaciones_y_descanso,'Rotaciones y descanso')}${lista(n.contexto,'Contexto verificado')}${lista(n.impacto_en_mercados?Object.entries(n.impacto_en_mercados).map(([k,v])=>k+': '+v):[],'Posible impacto por mercado')}${lista(n.alertas_contrarias,'Alertas contra el pick')}
+<p><small>Confianza ${esc(n.confianza||'?')}. La IA puede equivocarse: abre las fuentes y verifica noticias/alineaciones. ${(n.fuentes&&n.fuentes.length)?' Fuentes: '+n.fuentes.map(x=>`<a href="${esc(x.url||x.uri||'#')}" target="_blank" rel="noopener">${esc((x.titulo||x.title||x.medio||'enlace').slice(0,55))}</a>`).join(' · '):''}</small></p>`;
 }
 
 // techo de stake (1-10) que permiten los datos: probabilidad, tamaño de muestra y patrones que coinciden
@@ -785,7 +797,7 @@ async function ai(i){
   try{news=await research(i)}catch{}
   const sel=$('#mk'+i).value,q=+$('#od'+i).value||null;
   const bp=sel?null:bestOf(r);
-  if(!sel&&!bp){box.innerHTML=`<div class="pickhd"><small>DECISIÓN</small><b class="bad">No apostar</b></div><p>Ningún mercado de este partido cumple: valor mayor a 3%, cuota de al menos ${cfg.qm} y respaldo del modelo.</p>`;return}
+  if(!sel&&!bp){box.innerHTML=`<div class="pickhd"><small>DECISIÓN</small><b class="bad">No apostar por ahora</b></div><p>No hay un mercado con cuota real emparejada, probabilidad estimada suficiente y ventaja verificable de 5% a 25%. Puedes revisar contexto y noticias, pero sin cuota real no es posible calcular valor esperado.</p><button class="btn s" onclick="showInfo(${i})">Investigar contexto</button>`;return}
   const modo=sel?`El usuario eligió el mercado "${sel}": analiza SOLO ese mercado y el pick debe ser exactamente ese. Si no hay valor o respaldo suficiente, decision="no_apostar". Si hay cuota_del_usuario o cuota_casa, úsala. En lugar de stake devuelve ajuste_stake (0, -1 o -2 según los riesgos): la app calcula el stake.`:`La app ya eligió el mejor pick de este partido con criterios fijos (valor, nivel, cuota mínima y respaldo de patrones): "pick_de_la_app". Tu tarea: devolver decision "apostar" o "no_apostar" (no_apostar solo si hay una razón concreta en las bajas, las alineaciones o los datos), el pick EXACTAMENTE igual a pick_de_la_app, ajuste_stake (0, -1 o -2 según los riesgos; la app calcula el stake, ignora el campo stake) y explicar. No cambies de mercado.`;
   const pk=x=>({victorias:x.w,derrotas:x.l,goles_favor_prom:+x.gf.toFixed(2),goles_totales_prom:+x.t.toFixed(2),ambos_marcan_pct:x.b,partidos_2_goles_o_menos_pct:x.low,porterias_en_cero:x.cs,sin_marcar:x.fts,racha_victorias:x.rs,corners_favor:x.cf,corners_contra:x.ca,tarjetas_por_partido:x.y});
   const data={partido:r.m,liga:r.liga,patrones_detectados:r.p,
@@ -793,12 +805,12 @@ async function ai(i){
     [r.w+' (visitante)']:{ultimos10:pk(r.B),de_visita:r.B.an+' jugados, '+r.B.aw+' ganados'},
     modelo:{goles_esperados:{local:+r.mod.lh.toFixed(2),visitante:+r.mod.la.toFixed(2)},
       mercados:r.mod.m.map(m=>({mercado:m[0],prob_pct:Math.round(m[1]*100),cuota_minima:+(1.05/m[1]).toFixed(2),techo_stake:techo(r,m),prob_modelo_pct:Math.round(((r.mod.raw||r.mod.m0||r.mod.m).find(x=>x[0]===m[0])||m)[1]*100),prob_pinnacle_pct:(r.mod.f&&r.mod.f[m[0]]!=null)?Math.round(r.mod.f[m[0]]*100):null,nivel:tierOf(r,m[0]),cuota_casa:(r.q&&r.q[m[0]])||null,valor_pct:(r.q&&r.q[m[0]])?Math.round((m[1]*r.q[m[0]]-1)*100):null}))},
-    cuota_del_usuario:(sel&&q)?{mercado:sel,cuota:q}:null,bajas_y_alineaciones:inf,noticias_gemini:news,pick_de_la_app:bp?{mercado:bp.n,prob_pct:Math.round(bp.p*100),cuota:bp.q,valor_pct:bp.e!=null?Math.round(bp.e*100):null,nivel:bp.t}:null};
+    cuota_del_usuario:(sel&&q)?{mercado:sel,cuota:q}:null,bajas_y_alineaciones:inf,noticias_gemini:news,contexto_calidad:{muestra_local:r.A.n,muestra_visitante:r.B.n,cuota_real_disponible:!!(sel?q:bestOf(r)?.q),alineacion_confirmada:!!(inf&&inf.alineaciones),modelo_validado_fuera_de_muestra:false},pick_de_la_app:bp?{mercado:bp.n,prob_pct:Math.round(bp.p*100),cuota:bp.q,valor_pct:bp.e!=null?Math.round(bp.e*100):null,nivel:bp.t}:null};
   try{
     const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',
       headers:{'Content-Type':'application/json',Authorization:'Bearer '+cfg.gq},
       body:JSON.stringify({model:MODEL,temperature:0,max_completion_tokens:2500,messages:[
-        {role:'system',content:'Eres analista de apuestas deportivas, directo y concreto. Usa SOLO los datos del JSON; no inventes lesiones, alineaciones ni noticias. "modelo.mercados" trae probabilidades (Poisson sobre los últimos 10 partidos, forma reciente ponderada, separando local y visitante; incluye córners y tarjetas si existen) y un techo_stake por mercado. Elige UN pick de esa lista con respaldo claro en las estadísticas y probabilidad de al menos 50%; evita mercados obvios. Si hay cuota_casa, es la cuota real de la casa: prioriza mercados con valor_pct mayor a 3 y desconfía de valor_pct mayor a 25 (suele ser error del modelo). nivel (A, B o C) indica cuánto confirma la casa de referencia Pinnacle el valor: prioriza A y B; un mercado sin nivel no tiene confirmación del mercado, solo recomiéndalo si el respaldo estadístico es muy claro. Si ninguno convence, decision="no_apostar". "stake" va de 1 a 10 (10 = máxima confianza) y nunca puede superar el techo_stake del mercado elegido; súbelo o bájalo según qué tan claros y consistentes son los datos. Razones: máximo 3, cada una con un dato numérico del JSON, sin frases genéricas. Riesgos: máximo 2. Responde SOLO con JSON válido, sin texto extra ni markdown: {"decision":"apostar"|"no_apostar","pick":"<nombre exacto del mercado>","stake":1-10,"cuota_minima":número,"resumen":"una frase","razones":["..."],"riesgos":["..."]}. Nunca prometas ganancias.'},
+        {role:'system',content:'Eres analista escéptico de apuestas deportivas. Usa las estadísticas y el contexto recibido; no inventes datos ni trates ausencia de noticia como confirmación. Las probabilidades son estimaciones no calibradas todavía, basadas en una muestra pequeña, así que no las presentes como certezas. Comprueba si el contexto competitivo (eliminación/clasificación/descenso/título), posibles rotaciones, bajas y descanso contradicen la señal estadística. Una necesidad de ganar no significa automáticamente que ganará ni que habrá muchos goles. Si contexto clave está sin verificar, la alineación no está confirmada, faltan datos del mercado, el valor estimado es menor de 5% o mayor de 25%, o hay contradicciones fuertes, recomienda no apostar. Solo recomienda el pick_de_la_app o el mercado exacto seleccionado; no cambies de mercado. No conviertas una probabilidad alta en valor si la cuota no compensa. Las razones deben incluir datos numéricos del JSON y, cuando aplique, hechos contextuales con fuente/estado. Devuelve máximo 3 razones y 3 riesgos. ajuste_stake debe ser 0, -1 o -2. Responde SOLO JSON válido: {"decision":"apostar"|"no_apostar","pick":"nombre exacto del mercado","ajuste_stake":0|-1|-2,"cuota_minima":número,"resumen":"una frase","razones":["..."],"riesgos":["..."]}. Nunca prometas ganancias.'},
         {role:'system',content:modo+' Los datos de bajas_y_alineaciones vienen de ESPN y pueden estar incompletos: sin bajas reportadas no significa que no haya bajas. Solo las bajas en titulares_recientes son relevantes (evalúa a qué lado favorecen o perjudican); baja_larga ya está reflejada en la forma reciente y no_titulares casi no importa. Si las alineaciones no están confirmadas, dilo en los riesgos y no pongas un stake alto. noticias_gemini viene de una búsqueda web hecha por otra IA y puede tener errores: úsalo solo para señalar riesgos o contexto (rotaciones, motivación, bajas) y para ajuste_stake; nunca para inventar números.'},
         {role:'user',content:JSON.stringify(data)}]})});
     const j=await res.json();
@@ -815,7 +827,8 @@ async function ai(i){
     if(sel)o.pick=sel;else if(bp)o.pick=bp.n;
     const mk=r.mod.m.find(m=>m[0]===o.pick);
     const price=mk?((r.q&&r.q[mk[0]])||(sel===mk[0]?q:null)):null;let note='';
-    if(mk&&price&&mk[1]*price-1<=0.03){o.decision='no_apostar';note='Con la cuota '+price+' no hay valor.'}
+    if(mk&&!price){o.decision='no_apostar';note='Falta una cuota real de la casa para calcular valor esperado.'}
+    if(mk&&price&&(mk[1]*price-1<0.05||mk[1]*price-1>0.25)){o.decision='no_apostar';note='La ventaja estimada no está en el rango prudente (5%-25%); puede ser ruido o un error del modelo.'}
     const aj=Math.max(-2,Math.min(0,Math.round(+o.ajuste_stake||0)));
     const rl=x=>x?x.titulares_recientes.length:0,nb=Math.max(inf?rl(inf.bajas_local)+rl(inf.bajas_visitante):0,Math.min(2,Math.round(+(news&&news.bajas_clave_total)||0)));
     let stk=mk?baseStake(r,mk[0],price):1;
@@ -827,7 +840,7 @@ async function ai(i){
     box.innerHTML=`<div class="pickhd"><small>PICK</small><b>${esc(o.pick)}</b></div>
 <div class="meter${stk>=8?' hi':''}" role="img" aria-label="Stake ${stk} de 10">${Array.from({length:10},(_,k)=>`<i class="${k<stk?'f':''}"></i>`).join('')}</div>
 <div class="kv"><span>Stake <b>${stk}/10</b></span><span>${pct.toFixed(1)}% del bankroll${amt?' ≈ <b>'+amt.toLocaleString('es')+'</b>':''}</span><span>Cuota mín. <b>${esc(o.cuota_minima||(mk?(1.05/mk[1]).toFixed(2):''))}</b></span>${price?`<span>Cuota casa <b>${price}</b> · valor <b>${Math.round((mk[1]*price-1)*100)}%</b></span>`:''}</div>
-<p><small>Stake calculado por la app (probabilidad, valor, nivel, muestra y bajas)${aj?' · la IA lo bajó '+(-aj):''}.</small></p>
+<p><small>Stake orientativo (máximo 1,8% del bankroll en esta versión; no es garantía de ventaja)${aj?' · la IA lo bajó '+(-aj):''}.</small></p>
 <p>${esc(o.resumen||'')}</p>${lista(o.razones,'Razones')}${lista(o.riesgos,'Riesgos')}${inf&&!inf.alineaciones?'<p><small>Alineaciones sin confirmar: stake máximo 7. Vuelve a analizar cuando salgan (≈1 h antes).</small></p>':''}
 ${mk?`<div class="ctl" style="grid-template-columns:1fr auto;margin-top:12px;align-items:center"><input id="pq${i}" type="number" step="0.01" placeholder="Cuota real" value="${price||''}"><button class="btn s" style="margin:6px 0 0" onclick="regPick(${i})">Agregar al seguimiento</button></div>`:''}`;
   }catch(e){box.textContent='Error: '+e.message}
@@ -872,9 +885,9 @@ function regPick(i){
   const q=+$('#pq'+i).value;
   if(!q||q<=1){toast('Escribe la cuota real de tu casa.');return}
   const p=(r.mod.m.find(x=>x[0]===mk)||[0,0])[1],e=p*q-1;
-  if(e<=0.03&&!confirm(`Con la cuota ${q} no hay valor (el modelo da ${Math.round(p*100)}%). ¿Agregarlo de todas formas?`))return;
+  if(e<0.05||e>0.25){if(!confirm(`El valor estimado es ${Math.round(e*100)}%, fuera del rango prudente de 5%-25%. ¿Registrar solo para seguimiento, sin que eso signifique recomendación?`))return;}
   const id=addPick(r,mk,q,r.sk||0,false),P=LS('picks',[]),k=P.find(x=>x.id===id);
-  if(k){k.qr=true;if(e<=0.03)k.nv=true;else delete k.nv;SV('picks',P)}
+  if(k){k.qr=true;if(e<0.05||e>0.25)k.nv=true;else delete k.nv;SV('picks',P)}
   toast('Agregado al seguimiento.');
 }
 function delPick(id){
@@ -893,7 +906,7 @@ async function settle(){
   for(const k of P){
     if(k.res||k.man||new Date(k.ko).getTime()>Date.now()-3*36e5)continue;
     let f=null;try{f=await final(k.slug,k.ev)}catch{}
-    if(!f||f.pending){if(Date.now()-new Date(k.ko).getTime()>4*864e5){k.res='v';ch++}continue}
+    if(!f||f.pending)continue; // Un dato no disponible no significa apuesta nula; queda pendiente para revisión manual.
     const ok=evalMk(k.mk,f.h,f.a,f.cor,f.crd);if(ok===null)continue;
     k.res=ok?'w':'l';k.sc=f.h+'-'+f.a;ch++;
     const b=bets.find(x=>x.pid===k.id);if(b)b.r=k.res;
@@ -903,7 +916,7 @@ async function settle(){
 const grp=n=>/^Córners/.test(n)?'Córners':/^Tarjetas/.test(n)?'Tarjetas':/^(Local|Visitante) (marca|deja)/.test(n)?'Goles de un equipo':/^Ambos/.test(n)?'Ambos marcan':/^(Over|Under)/.test(n)?'Goles totales':'Resultado';
 function drawModel(){
   const P=LS('picks',[]),D=P.filter(k=>k.res==='w'||k.res==='l'),pend=P.filter(k=>!k.res).length;
-  const hit=a=>a.length?Math.round(100*a.filter(k=>k.res==='w').length/a.length):0,pr=a=>a.length?Math.round(100*a.reduce((t,k)=>t+k.p,0)/a.length):0;
+  const hit=a=>a.length?Math.round(100*a.filter(k=>k.res==='w').length/a.length):0,pr=a=>a.length?Math.round(100*a.reduce((t,k)=>t+k.p,0)/a.length):0,brier=D.length?D.reduce((t,k)=>t+Math.pow(k.p-(k.res==='w'?1:0),2),0)/D.length:null;
   const row=(t,a)=>{if(!a.length)return '';const h=hit(a),p=pr(a);return `<div class="cal"><div class="cal-t"><span>${t} <small>(${a.length})</small></span><span>${h}%</span></div><div class="bar p"><i style="width:${p}%"></i></div><div class="bar h ${h>=p?'good':h<p-8?'low':''}"><i style="width:${h}%"></i></div><div class="cal-l"><span>Prometía ${p}%</span><span>Acertó ${h}%</span></div></div>`};
   const conQ=D.filter(k=>k.bet&&k.q),inv=conQ.reduce((t,k)=>t+(k.s||1),0),gan=conQ.reduce((t,k)=>t+(k.res==='w'?(k.s||1)*(k.q-1):-(k.s||1)),0);
   const bk=[[0,.6,'50-60%'],[.6,.7,'60-70%'],[.7,.8,'70-80%'],[.8,1.01,'80% o más'],[0,.5,'menos de 50%']];
@@ -913,9 +926,10 @@ function drawModel(){
   const item=k=>`<div class="bet"><div class="bet-h"><b>${esc(k.m)}</b><span class="st ${k.res||'p'}">${{w:'Ganó',l:'Perdió',v:'Nulo'}[k.res]||'Pendiente'}</span></div>
   <small>${esc(k.mk)} · modelo ${Math.round(k.p*100)}%${k.q?' · cuota '+k.q+(k.qr?' (tuya)':' (de la casa)'):''}${k.nv?' · sin valor con tu cuota':''}${k.sc?' · '+k.sc:''}${k.man?' · manual':''}</small>
   <div>${B(k,'w','Ganó')}${B(k,'l','Perdió')}${B(k,'v','Nulo')}<button class="btn s" onclick="setPick('${k.id}',null)">↺</button><button class="btn s" onclick="delPick('${k.id}')">Borrar</button></div></div>`;
-  $('#mdl').innerHTML=`<div class="tiles">
+  $('#mdl').innerHTML=`<p class="status">Importante: el porcentaje de acierto por sí solo no demuestra rentabilidad. Evalúa ROI con cuotas reales, suficientes picks y resultados automáticos/manuales verificados; no cambies reglas mirando solo los resultados recientes.</p><div class="tiles">
   <div class="tile"><small>Resueltos</small><b>${D.length}</b><span>${pend} pendientes</span></div>
   <div class="tile"><small>Acierto</small><b>${D.length?hit(D)+'%':'—'}</b><span>${D.length?'prometía '+pr(D)+'%':'sin datos aún'}</span></div>
+  <div class="tile"><small>Brier (menor es mejor)</small><b>${brier!=null?brier.toFixed(3):'—'}</b><span>Calidad probabilística · ${D.length} picks</span></div>
   ${conQ.length?`<div class="tile"><small>Ganancia (apuestas)</small><b class="${gan>=0?'ok':'bad'}">${gan>=0?'+':''}${gan.toFixed(1)}</b><span>unidades · ${conQ.length} apuestas</span></div>
   <div class="tile"><small>ROI</small><b class="${gan>=0?'ok':'bad'}">${(100*gan/inv).toFixed(1)}%</b><span>solo apuestas registradas</span></div>`:''}</div>
   ${D.length&&D.length<30?'<p class="status">Son pocos datos: hacen falta 30 o más para sacar conclusiones.</p>':''}
@@ -924,7 +938,7 @@ function drawModel(){
   ${D.length?`<div class="card"><h2>Por probabilidad</h2>${bk.map(([a,b,t])=>row(t,D.filter(k=>k.p>=a&&k.p<b))).join('')}</div>
   <div class="card"><h2>Por tipo de mercado</h2>${gs.map(g=>row(g,D.filter(k=>grp(k.mk)===g))).join('')}</div>
   <div class="card"><h2>Por nivel (A, B, C)</h2>${['A','B','C'].map(t=>row('Nivel '+t,D.filter(k=>k.t===t))).join('')}<small>Si el nivel A no acierta más que el C, el contraste con Pinnacle no está aportando.</small></div>`:''}
-  <div class="card"><h2>Pendientes</h2><small>Marca el resultado tú si ya lo sabes. Lo manual no lo cambia la app; ↺ lo devuelve a automático.</small>
+  <div class="card"><h2>Pendientes</h2><small>Los mercados de córners/tarjetas pueden quedar pendientes si ESPN no publica esas estadísticas; la app ya no los marcará nulos solo por pasar días. Marca el resultado manualmente si lo confirmas; ↺ devuelve a automático.</small>
   ${LSTP.map(item).join('')||'<p class="mut">No hay picks pendientes.</p>'}</div>
   ${LSTR.length?`<details class="card" ${openRes?'open':''} ontoggle="openRes=this.open"><summary>Resueltos (${P.filter(k=>k.res).length})</summary>${LSTR.map(item).join('')}${P.filter(k=>k.res).length>30?'<small>Se muestran los 30 más recientes; las estadísticas cuentan todos.</small>':''}</details>`:''}`;
   $('#mrf').onclick=refreshModel;
@@ -940,7 +954,7 @@ function reg(i){
   const r=R[i],m=($('#mk'+i).value||r.pk||'').trim(),q=+$('#od'+i).value||(r.q&&r.q[m])||0,s=+$('#sk'+i).value||r.sk||0;
   if(!q||!s||!m){toast('Escribe mercado, cuota y monto.');return}
   const pm=(r.mod.m.find(x=>x[0]===m)||[0,0])[1];
-  if(pm*q-1<=0.03&&!confirm('Con esa cuota no hay valor según el modelo. ¿Registrar la apuesta de todas formas?'))return;
+  if(pm*q-1<0.05||pm*q-1>0.25){if(!confirm('El valor estimado está fuera del rango prudente de 5%-25%. ¿Registrar solo para seguimiento?'))return;}
   const pid=addPick(r,m,q,s,true);
   bets.unshift({id:Date.now(),m:R[i].m+' · '+m,q,s,r:'p',pid});SV('bets',bets);toast('Apuesta registrada.');
 }
