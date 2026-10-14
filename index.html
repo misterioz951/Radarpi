@@ -149,6 +149,19 @@ details.dd>summary::after{font-size:18px}
 details.hint>summary{font:700 15px Archivo}
 details.hint p{margin:8px 0 0;font-size:13.5px;color:var(--mut)}details.hint b{color:var(--ink)}
 .news h4{margin-top:14px}
+.seg.m{gap:2px}
+.seg.m button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:12px;line-height:1.1;min-height:50px;padding:4px 2px}
+.seg.m button b{font:700 17px 'Archivo Narrow',sans-serif;color:var(--ink)}.seg.m button b.ok{color:var(--ok)}.seg.m button b.bad{color:var(--bad)}
+.vhero{display:flex;align-items:center;gap:16px}
+.ring{width:118px;height:118px;flex:none}.ring .rt{font:700 22px 'Archivo Narrow',sans-serif;fill:var(--ink)}.ring .rs{font:600 8px Archivo;fill:var(--mut)}
+.vhero h2{font-size:20px}.vhero p{margin:4px 0 0;font-size:13px;color:var(--mut);line-height:1.4}
+.counts{display:flex;gap:16px;margin-top:10px;font-size:12px;color:var(--mut)}.counts b{display:block;font:700 24px/1.1 'Archivo Narrow',sans-serif}
+.prog{height:8px;border-radius:6px;background:var(--s2);overflow:hidden;margin-top:8px}.prog i{display:block;height:100%;background:var(--acc);border-radius:6px}
+.chart{width:100%;height:auto;margin-top:8px}.chart .ax{font:600 9px Archivo;fill:var(--mut)}.chart .pn{font:700 9px Archivo;fill:#fff}
+.delta{display:inline-block;margin-left:4px;padding:1px 7px;border-radius:8px;font:700 11px Archivo;background:var(--s2);color:var(--mut)}
+.delta.ok{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}.delta.bad{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
+.dots{margin-top:10px}
+.mchips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 2px}.mchips span{padding:4px 10px;border-radius:20px;background:var(--s2);border:1px solid var(--ln);font:600 12px Archivo;color:var(--mut)}.mchips b{color:var(--ink)}
 @keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -217,7 +230,7 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const LG={"Colombia":"col.1","Premier":"eng.1","Championship":"eng.2","La Liga":"esp.1","Serie A":"ita.1","Bundesliga":"ger.1","Ligue 1":"fra.1","Liga MX":"mex.1","Argentina":"arg.1","Brasileirão":"bra.1","Eredivisie":"ned.1","Primeira Liga":"por.1","Champions":"uefa.champions","Libertadores":"conmebol.libertadores","Sudamericana":"conmebol.sudamericana","MLS":"usa.1"};
 let cfg=Object.assign({fd:'',gq:'',g:3,b:70,m:12,u:2,qm:1.5,dd:1,sm:5,r:75,co:5,ta:5,ex:true,au:false,aa:false,iv:60,ok:'',bm:'',pn:true,lg:['col.1','eng.1','esp.1']},LS('cfg',{}));
 cfg.lg=cfg.lg.filter(x=>Object.values(LG).includes(x));if(!cfg.lg.length)cfg.lg=['col.1','eng.1','esp.1'];
-let openRes=false,autoRun=false,hunt=false;
+let openRes=false,autoRun=false,hunt=false,mdlTab='res',mdlAll=false;
 let MODEL='openai/gpt-oss-120b';
 let R=[],bets=LS('bets',[]);
 const pad=n=>String(n).padStart(2,'0');
@@ -431,7 +444,11 @@ async function loadOdds(bm,lg){
   const MK=await mkMap(),T=await tourIds(),P=await cached('oppart',30,()=>op('participants',{sportId:10}));
   const ids=lg.map(x=>T[x]).filter(Boolean);
   if(!ids.length)throw new Error('no encontré esas ligas en OddsPapi');
-  const arr=await op('odds-by-tournaments',{bookmaker:bm,tournamentIds:ids.join(',')});
+  let size=+(LS('opchunk',5))||5;const arr=[];
+  for(let i=0;i<ids.length;){
+    try{arr.push(...await op('odds-by-tournaments',{bookmaker:bm,tournamentIds:ids.slice(i,i+size).join(',')}));i+=size}
+    catch(e){if(/too many/i.test(e.message)&&size>1){size=Math.max(1,Math.floor(size/2));SV('opchunk',size)}else throw e}
+  }
   const keys=new Set(Object.values(MK).map(x=>x.split('_')[0])),out=[];
   for(const f of arr){
     const b=f.bookmakerOdds&&f.bookmakerOdds[bm];if(!b)continue;
@@ -520,8 +537,14 @@ $('#go').onclick=async()=>{
   if(hunt&&(!cfg.ok||!cfg.bm)){msg.textContent='Para buscar picks con cuota necesitas la llave de OddsPapi y tu casa en Ajustes.';hunt=false;return}
   $('#go').disabled=true;$('#go').classList.add('busy');
   try{
-    const leagues=hunt?Object.values(LG):cfg.lg,cap=hunt?40:cfg.m;
-    const names=Object.fromEntries(Object.entries(LG).map(([n,s])=>[s,n])),names0=names,bad0=[];let OD=null,ODP=null,diag='',mq=0;const STD={};
+    let leagues=hunt?Object.values(LG):cfg.lg;const cap=hunt?40:cfg.m;
+    if(hunt){ // solo se piden cuotas de las ligas que tienen partidos en el periodo elegido (ahorra peticiones de OddsPapi)
+      msg.textContent='Buscando ligas con partidos…';
+      const ok=await Promise.all(leagues.map(async sl=>{try{for(const n of Array.from({length:cfg.dd||1},(_,k)=>k)){const j=await espn(`${sl}/scoreboard?dates=${iso(new Date(Date.now()+n*864e5)).replace(/-/g,'')}`);if((j.events||[]).some(x=>x.status.type.state==='pre'&&okDay(x.date)))return true}}catch{}return false}));
+      leagues=leagues.filter((_,i)=>ok[i]);
+      if(!leagues.length){msg.textContent='No hay partidos pendientes en ninguna liga para el periodo elegido.';return}
+    }
+    const names=Object.fromEntries(Object.entries(LG).map(([n,s])=>[s,n])),names0=names,bad0=[];let OD=null,ODP=null,diag='',mq=0,nShort=0;const enames=[];const STD={};
     if(cfg.ok){
       if(!cfg.bm)msg.textContent='Elige tu casa en Ajustes para traer cuotas.';
       else{msg.textContent='Cargando cuotas…';try{OD=await loadOdds(undefined,leagues);const T=(LS('optour',null)||{}).v||{},sin=leagues.filter(x=>!T[x]).map(x=>names0[x]||x);if(cfg.pn){try{ODP=await loadOdds('pinnacle',leagues);diag+=` Pinnacle: ${ODP.fx.length} partidos.`}catch(e){ODP=null;bad0.push('Pinnacle ('+e.message.slice(0,60)+')')}}
@@ -565,13 +588,14 @@ $('#go').onclick=async()=>{
           if(B.cf!=null&&B.cf>=cfg.co)p.push(`${wn} promedia ${B.cf.toFixed(1)} córners a favor por partido`);
           if(A.y!=null&&B.y!=null&&A.y+B.y>=cfg.ta)p.push(`Tarjetas: promedian ${A.y.toFixed(1)} y ${B.y.toFixed(1)} por partido (suman ${(A.y+B.y).toFixed(1)})`);
         }
-        const mod=model(A,B),q=A.n>=5&&B.n>=5?oddsQ(OD,hf,wf,e.date):null;
-        const qp=(ODP&&A.n>=5&&B.n>=5)?oddsQ(ODP,hf,wf,e.date):null,fair=qp?fairP(qp):null;
+        const mod=model(A,B),q=oddsQ(OD,hf,wf,e.date);
+        if(A.n<5||B.n<5)nShort++;enames.push(hn+' vs '+wn);
+        const qp=ODP?oddsQ(ODP,hf,wf,e.date):null,fair=qp?fairP(qp):null;
         // Mantener separadas las probabilidades del modelo y las probabilidades justas del mercado.
         // No mezclarlas con pesos arbitrarios hasta calibrar el modelo con resultados fuera de muestra.
         if(fair&&Object.keys(fair).length){mod.raw=mod.m;mod.f=fair}
         if(!mod.raw&&q&&Object.keys(q).length){const fc=fairP(q);if(Object.keys(fc).length){mod.m0=mod.m;mod.fc=fc}}
-        const bv=best({mod,q}),hasT=!!(mod.raw&&q&&mod.m.some(m=>['A','B'].includes(tierOf({q,mod},m[0]))));
+        const bv=best({mod,q}),hasT=!!(A.n>=5&&B.n>=5&&mod.raw&&q&&mod.m.some(m=>['A','B'].includes(tierOf({q,mod},m[0]))));
         if(q&&Object.keys(q).length)mq++;
         if(hunt||p.length||hasT||(!mod.raw&&bv&&bv.e>=0.05))R.push({m:`${hn} vs ${wn}`,liga:names[slug],
           hora:dlab(e.date)+new Date(e.date).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}),p,A,B,h:hn,w:wn,mod,q,casa:cfg.bm,ev:e.id,slug,ko:e.date,hid:H.team.id,wid:W.team.id});
@@ -583,7 +607,7 @@ $('#go').onclick=async()=>{
       R=R.map(r=>({r,b:bestOf(r)})).filter(x=>x.b&&x.b.q&&baseStake(x.r,x.b.n,x.b.q)>=cfg.sm).sort((a,b)=>b.b.sc-a.b.sc).slice(0,3).map(x=>x.r);
       huntTxt=R.length?`Búsqueda en todas las ligas: ${tot} partidos con cuotas, ${R.length} cumplen (cuota de ${cfg.qm} o más y stake de ${cfg.sm} o más).`:`Búsqueda en todas las ligas: de ${tot} partidos con cuotas, ninguno cumple cuota de ${cfg.qm} o más y stake de ${cfg.sm} o más. Es normal: casi nunca hay uno.`;
     }
-    msg.textContent=(huntTxt||(rev?`${rev} partidos revisados, ${R.length} con patrones.`:'No hay partidos pendientes ('+((cfg.dd||1)>=2?'hoy y mañana':'hoy')+') en esas ligas.'))+(bad.length?' No cargaron: '+bad.join('; ')+'.':'')+diag+(OD&&rev&&!mq?' Ningún partido se emparejó con la casa. OddsPapi trae: '+(OD.fx.slice(0,4).map(x=>x.h+' vs '+x.w).join('; ')||'nada')+'.':'');
+    msg.textContent=(huntTxt||(rev?`${rev} partidos revisados, ${R.length} con patrones.`:'No hay partidos pendientes ('+((cfg.dd||1)>=2?'hoy y mañana':'hoy')+') en esas ligas.'))+(bad.length?' No cargaron: '+bad.join('; ')+'.':'')+diag+(OD&&rev&&!mq?' Ningún partido se emparejó con la casa. ESPN trae: '+enames.slice(0,4).join('; ')+'. OddsPapi trae: '+(OD.fx.slice(0,4).map(x=>x.h+' vs '+x.w).join('; ')||'nada')+'.':'')+(nShort?' '+nShort+' partidos tienen menos de 5 partidos de historial y no se analizan.':'');
     drawRes();SV('scan',{d:today(),t:Date.now(),R,msg:msg.textContent});afterScan();
   }catch(e){msg.textContent='Error: '+e.message}
   finally{$('#go').disabled=false;$('#go').classList.remove('busy');autoRun=false;hunt=false}
@@ -706,6 +730,7 @@ async function showInfo(i){
 // ===== El mejor pick de cada partido lo elige la app con criterios fijos (así siempre sale el mismo) =====
 const supports=(r,n)=>r.p.some(t=>(/^Over:/.test(t)&&/^Over [123]\.5$/.test(n))||(/^Ambos marcan/.test(t)&&n==='Ambos marcan: sí')||(/^(Under:|Partido cerrado)/.test(t)&&/^Under [12]\.5$/.test(n))||(/córners/i.test(t)&&/^Córners Over/.test(n))||(/^Tarjetas/.test(t)&&/^Tarjetas Over/.test(n)));
 function cands(r){
+  if(r.A.n<5||r.B.n<5)return [];          // con tan poco historial el modelo no es fiable
   const out=[],conC=!!(r.q&&Object.keys(r.q).length),qm=cfg.qm||1.5;
   for(const [n,p] of r.mod.m){
     if(!Number.isFinite(p)||p<0.50||p>0.90)continue;
@@ -914,33 +939,81 @@ async function settle(){
   SV('picks',P);SV('bets',bets);return ch;
 }
 const grp=n=>/^Córners/.test(n)?'Córners':/^Tarjetas/.test(n)?'Tarjetas':/^(Local|Visitante) (marca|deja)/.test(n)?'Goles de un equipo':/^Ambos/.test(n)?'Ambos marcan':/^(Over|Under)/.test(n)?'Goles totales':'Resultado';
+function setMdlTab(t){mdlTab=t;mdlAll=false;drawModel()}
+const delta=(h,p)=>{const d=h-p;return `<span class="delta ${d>=-3?'ok':d<-8?'bad':''}">${d>=0?'+':''}${d} pts</span>`};
+function ringSvg(w,l){
+  const n=w+l,f=n?w/n:0,C=2*Math.PI*42;
+  return `<svg class="ring" viewBox="0 0 100 100" role="img" aria-label="${w} acertados y ${l} fallados"><circle cx="50" cy="50" r="42" style="fill:none;stroke:${n?'var(--bad)':'var(--ln)'};stroke-width:12"/>${n?`<circle cx="50" cy="50" r="42" style="fill:none;stroke:var(--ok);stroke-width:12" stroke-dasharray="${(f*C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 50 50)"/>`:''}<text x="50" y="52" text-anchor="middle" class="rt">${n?Math.round(f*100)+'%':'—'}</text><text x="50" y="66" text-anchor="middle" class="rs">de acierto</text></svg>`;
+}
+function calSvg(D){
+  const bk=[[0,.5],[.5,.6],[.6,.7],[.7,.8],[.8,1.01]];
+  const pts=bk.map(([a,b])=>{const x=D.filter(k=>k.p>=a&&k.p<b);return x.length?{n:x.length,p:x.reduce((t,k)=>t+k.p,0)/x.length,h:x.filter(k=>k.res==='w').length/x.length}:null}).filter(Boolean);
+  if(!pts.length)return '';
+  const X=v=>34+v*240,Y=v=>166-v*146;
+  const grid=[0,.25,.5,.75,1].map(v=>`<line x1="34" x2="274" y1="${Y(v)}" y2="${Y(v)}" style="stroke:var(--ln);stroke-width:1"/><text x="28" y="${Y(v)+3}" text-anchor="end" class="ax">${Math.round(v*100)}</text>`).join('');
+  const dots=pts.map(q=>{const d=q.h-q.p,c=d>=-.05?'var(--ok)':d<-.1?'var(--bad)':'var(--acc)';return `<circle cx="${X(q.p).toFixed(1)}" cy="${Y(q.h).toFixed(1)}" r="${5+Math.min(7,q.n/2)}" style="fill:${c};fill-opacity:.9;stroke:var(--card);stroke-width:2"/><text x="${X(q.p).toFixed(1)}" y="${(Y(q.h)+3.5).toFixed(1)}" text-anchor="middle" class="pn">${q.n}</text>`}).join('');
+  return `<svg class="chart" viewBox="0 0 300 200" role="img" aria-label="Probabilidad prometida contra acierto real">${grid}<line x1="${X(0)}" y1="${Y(0)}" x2="${X(1)}" y2="${Y(1)}" style="stroke:var(--mut);stroke-width:1.5;stroke-dasharray:4 4"/>${dots}<text x="154" y="194" text-anchor="middle" class="ax">Lo que prometía el modelo (%)</text><text transform="translate(9 96) rotate(-90)" text-anchor="middle" class="ax">Lo que acertó (%)</text></svg>`;
+}
+function profitSvg(bs){
+  if(bs.length<2)return '';
+  let c=0;const pts=[0,...bs.map(k=>c+=(k.res==='w'?(k.s||1)*(k.q-1):-(k.s||1)))];
+  const mn=Math.min(...pts),mx=Math.max(...pts),rg=(mx-mn)||1,X=i=>20+i*260/(pts.length-1),Y=v=>110-(v-mn)/rg*90,last=pts[pts.length-1],col=last>=0?'var(--ok)':'var(--bad)';
+  const d=pts.map((v,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)).join(' ');
+  return `<svg class="chart" viewBox="0 0 300 130" role="img" aria-label="Evolución de la ganancia"><line x1="20" x2="280" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}" style="stroke:var(--ln);stroke-dasharray:3 3"/><path d="${d}" style="fill:none;stroke:${col};stroke-width:2.5;stroke-linejoin:round"/><circle cx="${X(pts.length-1)}" cy="${Y(last).toFixed(1)}" r="4.5" style="fill:${col}"/></svg>`;
+}
 function drawModel(){
   const P=LS('picks',[]),D=P.filter(k=>k.res==='w'||k.res==='l'),pend=P.filter(k=>!k.res).length;
-  const hit=a=>a.length?Math.round(100*a.filter(k=>k.res==='w').length/a.length):0,pr=a=>a.length?Math.round(100*a.reduce((t,k)=>t+k.p,0)/a.length):0,brier=D.length?D.reduce((t,k)=>t+Math.pow(k.p-(k.res==='w'?1:0),2),0)/D.length:null;
-  const row=(t,a)=>{if(!a.length)return '';const h=hit(a),p=pr(a);return `<div class="cal"><div class="cal-t"><span>${t} <small>(${a.length})</small></span><span>${h}%</span></div><div class="bar p"><i style="width:${p}%"></i></div><div class="bar h ${h>=p?'good':h<p-8?'low':''}"><i style="width:${h}%"></i></div><div class="cal-l"><span>Prometía ${p}%</span><span>Acertó ${h}%</span></div></div>`};
-  const conQ=D.filter(k=>k.bet&&k.q),inv=conQ.reduce((t,k)=>t+(k.s||1),0),gan=conQ.reduce((t,k)=>t+(k.res==='w'?(k.s||1)*(k.q-1):-(k.s||1)),0);
-  const bk=[[0,.6,'50-60%'],[.6,.7,'60-70%'],[.7,.8,'70-80%'],[.8,1.01,'80% o más'],[0,.5,'menos de 50%']];
+  const nW=D.filter(k=>k.res==='w').length,nL=D.length-nW,nV=P.filter(k=>k.res==='v').length;
+  if(mdlTab==='v'&&!nV)mdlTab='res';
+  const hit=a=>a.length?Math.round(100*a.filter(k=>k.res==='w').length/a.length):0,pr=a=>a.length?Math.round(100*a.reduce((t,k)=>t+k.p,0)/a.length):0;
+  const brier=D.length?D.reduce((t,k)=>t+Math.pow(k.p-(k.res==='w'?1:0),2),0)/D.length:null;
+  const row=(t,a)=>{if(!a.length)return '';const w=a.filter(k=>k.res==='w').length,h=hit(a),p=pr(a);return `<div class="cal"><div class="cal-t"><span>${t}</span><span><b>${w}</b> de ${a.length} · ${h}%${delta(h,p)}</span></div><div class="bar p"><i style="width:${p}%"></i></div><div class="bar h ${h>=p-3?'good':h<p-8?'low':''}"><i style="width:${h}%"></i></div><div class="cal-l"><span>Prometía ${p}%</span><span>Acertó ${h}%</span></div></div>`};
+  const betsR=D.filter(k=>k.bet&&k.q),inv=betsR.reduce((t,k)=>t+(k.s||1),0),gan=betsR.reduce((t,k)=>t+(k.res==='w'?(k.s||1)*(k.q-1):-(k.s||1)),0);
+  const bk=[[0,.5,'Menos de 50%'],[.5,.6,'50-60%'],[.6,.7,'60-70%'],[.7,.8,'70-80%'],[.8,1.01,'80% o más']];
   const gs=[...new Set(D.map(k=>grp(k.mk)))];
-  const LSTP=P.filter(k=>!k.res).reverse(),LSTR=P.filter(k=>k.res).reverse().slice(0,30);
   const B=(k,r,t)=>`<button class="btn s ${k.res===r?'on':''}" onclick="setPick('${k.id}','${r}')">${t}</button>`;
-  const item=k=>`<div class="bet"><div class="bet-h"><b>${esc(k.m)}</b><span class="st ${k.res||'p'}">${{w:'Ganó',l:'Perdió',v:'Nulo'}[k.res]||'Pendiente'}</span></div>
-  <small>${esc(k.mk)} · modelo ${Math.round(k.p*100)}%${k.q?' · cuota '+k.q+(k.qr?' (tuya)':' (de la casa)'):''}${k.nv?' · sin valor con tu cuota':''}${k.sc?' · '+k.sc:''}${k.man?' · manual':''}</small>
-  <div>${B(k,'w','Ganó')}${B(k,'l','Perdió')}${B(k,'v','Nulo')}<button class="btn s" onclick="setPick('${k.id}',null)">↺</button><button class="btn s" onclick="delPick('${k.id}')">Borrar</button></div></div>`;
-  $('#mdl').innerHTML=`<p class="status">Importante: el porcentaje de acierto por sí solo no demuestra rentabilidad. Evalúa ROI con cuotas reales, suficientes picks y resultados automáticos/manuales verificados; no cambies reglas mirando solo los resultados recientes.</p><div class="tiles">
-  <div class="tile"><small>Resueltos</small><b>${D.length}</b><span>${pend} pendientes</span></div>
-  <div class="tile"><small>Acierto</small><b>${D.length?hit(D)+'%':'—'}</b><span>${D.length?'prometía '+pr(D)+'%':'sin datos aún'}</span></div>
-  <div class="tile"><small>Brier (menor es mejor)</small><b>${brier!=null?brier.toFixed(3):'—'}</b><span>Calidad probabilística · ${D.length} picks</span></div>
-  ${conQ.length?`<div class="tile"><small>Ganancia (apuestas)</small><b class="${gan>=0?'ok':'bad'}">${gan>=0?'+':''}${gan.toFixed(1)}</b><span>unidades · ${conQ.length} apuestas</span></div>
-  <div class="tile"><small>ROI</small><b class="${gan>=0?'ok':'bad'}">${(100*gan/inv).toFixed(1)}%</b><span>solo apuestas registradas</span></div>`:''}</div>
-  ${D.length&&D.length<30?'<p class="status">Son pocos datos: hacen falta 30 o más para sacar conclusiones.</p>':''}
-  ${D.length?'':'<p class="status">Aún no hay picks resueltos. Agrega los picks de la IA al seguimiento o registra apuestas y aquí verás si el modelo acierta lo que promete.</p>'}
-  <button class="btn" id="mrf">Actualizar resultados</button>
-  ${D.length?`<div class="card"><h2>Por probabilidad</h2>${bk.map(([a,b,t])=>row(t,D.filter(k=>k.p>=a&&k.p<b))).join('')}</div>
-  <div class="card"><h2>Por tipo de mercado</h2>${gs.map(g=>row(g,D.filter(k=>grp(k.mk)===g))).join('')}</div>
-  <div class="card"><h2>Por nivel (A, B, C)</h2>${['A','B','C'].map(t=>row('Nivel '+t,D.filter(k=>k.t===t))).join('')}<small>Si el nivel A no acierta más que el C, el contraste con Pinnacle no está aportando.</small></div>`:''}
-  <div class="card"><h2>Pendientes</h2><small>Los mercados de córners/tarjetas pueden quedar pendientes si ESPN no publica esas estadísticas; la app ya no los marcará nulos solo por pasar días. Marca el resultado manualmente si lo confirmas; ↺ devuelve a automático.</small>
-  ${LSTP.map(item).join('')||'<p class="mut">No hay picks pendientes.</p>'}</div>
-  ${LSTR.length?`<details class="card" ${openRes?'open':''} ontoggle="openRes=this.open"><summary>Resueltos (${P.filter(k=>k.res).length})</summary>${LSTR.map(item).join('')}${P.filter(k=>k.res).length>30?'<small>Se muestran los 30 más recientes; las estadísticas cuentan todos.</small>':''}</details>`:''}`;
+  const item=k=>`<div class="bet"><div class="bet-h"><b>${esc(k.m)}</b><span class="st ${k.res||'p'}">${{w:'Acertó',l:'Falló',v:'Nulo'}[k.res]||'Pendiente'}</span></div>
+  <small>${new Date(k.ko).toLocaleDateString('es',{day:'numeric',month:'short'})} · ${esc(k.mk)} · modelo ${Math.round(k.p*100)}%${k.q?' · cuota '+k.q+(k.qr?' (tuya)':' (de la casa)'):''}${k.nv?' · sin ventaja con tu cuota':''}${k.sc?' · marcador '+k.sc:''}${k.man?' · manual':''}</small>
+  <div>${B(k,'w','Acertó')}${B(k,'l','Falló')}${B(k,'v','Nulo')}<button class="btn s" onclick="setPick('${k.id}',null)">↺</button><button class="btn s" onclick="delPick('${k.id}')">Borrar</button></div></div>`;
+  const tabs=[['res','Resumen',''],['w','Acertó',nW],['l','Falló',nL],['p','Pendientes',pend]];if(nV)tabs.push(['v','Nulos',nV]);
+  const menu=`<div class="seg m" role="tablist" aria-label="Secciones del modelo">${tabs.map(([k,t,n])=>`<button type="button" role="tab" aria-selected="${mdlTab===k}" class="${mdlTab===k?'on':''}" onclick="setMdlTab('${k}')"><span>${t}</span>${n!==''?`<b class="${k==='w'?'ok':k==='l'?'bad':''}">${n}</b>`:''}</button>`).join('')}</div>`;
+  let body='';
+  if(mdlTab==='res'){
+    const gap=hit(D)-pr(D);
+    const V=D.length<10?{t:'Aún sin conclusiones',d:`Faltan ${Math.max(0,30-D.length)} picks resueltos para sacar conclusiones. Mientras tanto no cambies reglas por rachas.`}
+      :gap>=-3?{t:'Acierta lo que promete',d:'Las probabilidades del modelo parecen razonables. Confírmalo con el ROI.'}
+      :gap>=-8?{t:'Algo optimista',d:'Acierta un poco menos de lo que dice. Conviene ser prudente con el stake.'}
+      :{t:'Demasiado optimista',d:'Acierta bastante menos de lo que promete. No te fíes de sus probabilidades altas.'};
+    const rec=[...D].sort((a,b)=>new Date(a.ko)-new Date(b.ko)).slice(-12).map(k=>`<i class="dot ${k.res==='w'?'G':'P'}">${k.res==='w'?'G':'P'}</i>`).join('');
+    body=`<p class="status">Importante: el porcentaje de acierto por sí solo no demuestra rentabilidad. Evalúa el ROI con cuotas reales, suficientes picks y resultados verificados; no cambies reglas mirando solo los resultados recientes.</p>
+    <div class="card"><div class="vhero">${ringSvg(nW,nL)}<div><h2>${V.t}</h2><p>${V.d}</p></div></div>
+    <div class="counts"><span><b class="ok">${nW}</b>acertó</span><span><b class="bad">${nL}</b>falló</span><span><b>${pend}</b>pendientes</span>${nV?`<span><b>${nV}</b>nulos</span>`:''}</div>
+    <div class="prog" role="progressbar" aria-valuenow="${Math.min(30,D.length)}" aria-valuemin="0" aria-valuemax="30"><i style="width:${Math.min(100,Math.round(D.length/30*100))}%"></i></div>
+    <small>${Math.min(30,D.length)} de 30 picks resueltos para sacar conclusiones</small>
+    ${rec?`<div class="dots"><small>Últimos resultados (de más viejo a más nuevo)</small><br>${rec}</div>`:''}</div>
+    <div class="tiles">
+    <div class="tile"><small>Prometía</small><b>${D.length?pr(D)+'%':'—'}</b><span>probabilidad media</span></div>
+    <div class="tile"><small>Acertó</small><b>${D.length?hit(D)+'%':'—'}</b><span>${D.length?delta(hit(D),pr(D)).replace('delta','delta'):'sin datos aún'}</span></div>
+    <div class="tile"><small>Brier (menor es mejor)</small><b>${brier!=null?brier.toFixed(3):'—'}</b><span>0.25 equivale a adivinar</span></div>
+    ${betsR.length?`<div class="tile"><small>ROI (apuestas)</small><b class="${gan>=0?'ok':'bad'}">${(100*gan/inv).toFixed(1)}%</b><span>${gan>=0?'+':''}${gan.toFixed(1)} unidades · ${betsR.length} apuestas</span></div>`:`<div class="tile"><small>ROI (apuestas)</small><b>—</b><span>registra apuestas para verlo</span></div>`}</div>
+    ${D.length?`<div class="card"><h2>¿Acierta lo que promete?</h2><small>Cada círculo es un grupo de picks (el número es cuántos). Sobre la línea punteada: acierta lo que dice. Por debajo: es optimista. Verde bien, amarillo algo optimista, rojo muy optimista.</small>${calSvg(D)}</div>`:''}
+    ${betsR.length>=2?`<div class="card"><h2>Evolución de la ganancia</h2><small>Suma de ganancias y pérdidas de tus apuestas registradas, en orden de fecha.</small>${profitSvg([...betsR].sort((a,b)=>new Date(a.ko)-new Date(b.ko)))}</div>`:''}
+    ${D.length?`<div class="card"><h2>Por probabilidad</h2><small>Si el modelo dice 60%, de cada 10 picks debería acertar unos 6. Barra gris: lo que prometía. Barra de color: lo que acertó.</small>${bk.map(([x,y,t])=>row(t,D.filter(k=>k.p>=x&&k.p<y))).join('')}</div>
+    <div class="card"><h2>Por tipo de mercado</h2><small>Dónde le va mejor y dónde peor.</small>${gs.map(g=>row(g,D.filter(k=>grp(k.mk)===g))).join('')}</div>
+    <div class="card"><h2>Por nivel (A, B, C)</h2>${['A','B','C'].map(t=>row('Nivel '+t,D.filter(k=>k.t===t))).join('')}<small>Si el nivel A no acierta más que el C, el contraste con Pinnacle no está aportando.</small></div>`:`<p class="status">Aún no hay picks resueltos. Agrega los picks de la IA al seguimiento o registra apuestas y aquí verás si el modelo acierta lo que promete.</p>`}`;
+  }else{
+    const sel=mdlTab==='p'?P.filter(k=>!k.res):mdlTab==='v'?P.filter(k=>k.res==='v'):P.filter(k=>k.res===mdlTab);
+    sel.sort((a,b)=>new Date(b.ko)-new Date(a.ko));
+    const shown=mdlAll?sel:sel.slice(0,30);
+    const T={w:['Picks que acertó','No hay picks acertados todavía.'],l:['Picks que falló','No hay picks fallados todavía.'],p:['Pendientes','No hay picks pendientes.'],v:['Picks nulos','No hay picks nulos.']}[mdlTab];
+    const gc={};sel.forEach(k=>{const g=grp(k.mk);gc[g]=(gc[g]||0)+1});
+    body=`<div class="card"><h2>${T[0]} <small>(${sel.length})</small></h2>
+    ${mdlTab==='p'?'<small>Se resuelven solos unas 3 horas después del partido. Los córners y tarjetas pueden quedar pendientes si ESPN no publica esas estadísticas: márcalos tú si ya sabes el resultado. ↺ devuelve a automático.</small>':'<small>Si algún resultado está mal, corrígelo con los botones de cada pick.</small>'}
+    ${sel.length&&mdlTab!=='p'?`<div class="mchips">${Object.entries(gc).sort((a,b)=>b[1]-a[1]).map(([g,n])=>`<span>${g} <b>${n}</b></span>`).join('')}</div>`:''}
+    ${shown.map(item).join('')||`<p class="mut">${T[1]}</p>`}
+    ${sel.length>30&&!mdlAll?`<button class="btn s" style="width:100%" onclick="mdlAll=true;drawModel()">Mostrar los ${sel.length}</button>`:''}</div>`;
+  }
+  $('#mdl').innerHTML=menu+`<button class="btn" id="mrf">Actualizar resultados</button>`+body;
   $('#mrf').onclick=refreshModel;
 }
 async function refreshModel(){
