@@ -162,6 +162,24 @@ details.hint p{margin:8px 0 0;font-size:13.5px;color:var(--mut)}details.hint b{c
 .delta.ok{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}.delta.bad{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
 .dots{margin-top:10px}
 .mchips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 2px}.mchips span{padding:4px 10px;border-radius:20px;background:var(--s2);border:1px solid var(--ln);font:600 12px Archivo;color:var(--mut)}.mchips b{color:var(--ink)}
+.mt{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;margin:9px 0 0;font:700 22px/1.15 'Archivo Narrow',sans-serif}
+.mt em{font:600 11px Archivo;color:var(--mut);font-style:normal;text-transform:uppercase;letter-spacing:.1em}
+.tk{margin-top:12px;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,var(--acc) 13%,transparent);border:1px solid color-mix(in srgb,var(--acc) 40%,transparent);border-left:5px solid var(--acc)}
+.tk.A{border-left-color:var(--ok)}.tk.B{border-left-color:var(--blue)}
+.tk1{display:flex;align-items:center;gap:6px}.tk1 .n{font:700 24px/1.15 'Archivo Narrow',sans-serif}
+.tk2{display:flex;flex-wrap:wrap;gap:3px 16px;margin-top:5px;font-size:13px;color:var(--mut)}.tk2 b{color:var(--ink);font-variant-numeric:tabular-nums}
+.tk .meter{margin:9px 0 2px}
+.tkw{margin-top:8px;font-size:12.5px;line-height:1.35;color:var(--bad)}
+.nopick{margin:10px 0 0;font-size:13px;color:var(--mut)}
+details.more{margin-top:12px;border-top:1px solid var(--ln);padding-top:8px}
+details.more>summary{font:700 14px Archivo;min-height:36px}
+details.more>summary::after{font-size:20px}
+.tools{display:flex;gap:8px}.tools .btn.s{margin:0 0 4px}
+.seg.rv{margin:12px 0 4px}
+.cfgbox{padding:12px 15px;margin:10px 0 4px}
+.cfgbox>summary{font:700 15px Archivo;min-height:34px}.cfgbox>summary small{font-weight:500;margin-left:6px}
+.cfgbox .chips{margin:0 -15px;padding:2px 15px 8px}.cfgbox .sec{margin-top:8px}
+.mc .acts{gap:6px}.mc .acts .btn{flex:1 1 0;min-width:0;padding:0 8px;font-size:13.5px}.mc .acts .btn:first-child{flex:1.8}
 @keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -170,10 +188,12 @@ details.hint p{margin:8px 0 0;font-size:13.5px;color:var(--mut)}details.hint b{c
 <div><h1>Radar de patrones</h1><small>Fútbol · análisis exigente, tú decides</small></div></header>
 
 <section id="s-f">
+<details class="card cfgbox" id="scanbox" open><summary>Ligas y días <small id="scansum"></small></summary>
 <div class="sec">Ligas</div>
 <div class="chips" id="lg"></div>
 <div class="sec">Días</div>
 <div class="seg" id="dd" role="group" aria-label="Días a escanear"><button type="button" data-d="1">Hoy</button><button type="button" data-d="2">Hoy y mañana</button></div>
+</details>
 <button class="btn" id="go"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 12l5.5-5.5"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg><span>Escanear partidos</span></button>
 <button class="btn s" id="hunt" type="button" style="width:100%;min-height:46px;margin:10px 0 0">Buscar el mejor pick en todas las ligas</button>
 <p class="status" id="msg"></p>
@@ -252,7 +272,8 @@ function drawLg(){$('#lg').innerHTML=Object.entries(LG).map(([n,id])=>
   $('#lg').querySelectorAll('button').forEach(b=>b.onclick=()=>{
     const id=b.dataset.id;cfg.lg=cfg.lg.includes(id)?cfg.lg.filter(x=>x!==id):[...cfg.lg,id];SV('cfg',cfg);drawLg()})}
 drawLg();
-function drawDd(){document.querySelectorAll('#dd button').forEach(b=>b.classList.toggle('on',+b.dataset.d===(cfg.dd||1)))}
+function updScan(){const e=$('#scansum');if(e)e.textContent='· '+cfg.lg.length+' ligas · '+((cfg.dd||1)>=2?'hoy y mañana':'hoy')}
+function drawDd(){updScan();document.querySelectorAll('#dd button').forEach(b=>b.classList.toggle('on',+b.dataset.d===(cfg.dd||1)))}
 document.querySelectorAll('#dd button').forEach(b=>b.onclick=()=>{cfg.dd=+b.dataset.d;SV('cfg',cfg);drawDd()});
 drawDd();
 
@@ -608,7 +629,7 @@ $('#go').onclick=async()=>{
       huntTxt=R.length?`Búsqueda en todas las ligas: ${tot} partidos con cuotas, ${R.length} cumplen (cuota de ${cfg.qm} o más y stake de ${cfg.sm} o más).`:`Búsqueda en todas las ligas: de ${tot} partidos con cuotas, ninguno cumple cuota de ${cfg.qm} o más y stake de ${cfg.sm} o más. Es normal: casi nunca hay uno.`;
     }
     msg.textContent=(huntTxt||(rev?`${rev} partidos revisados, ${R.length} con patrones.`:'No hay partidos pendientes ('+((cfg.dd||1)>=2?'hoy y mañana':'hoy')+') en esas ligas.'))+(bad.length?' No cargaron: '+bad.join('; ')+'.':'')+diag+(OD&&rev&&!mq?' Ningún partido se emparejó con la casa. ESPN trae: '+enames.slice(0,4).join('; ')+'. OddsPapi trae: '+(OD.fx.slice(0,4).map(x=>x.h+' vs '+x.w).join('; ')||'nada')+'.':'')+(nShort?' '+nShort+' partidos tienen menos de 5 partidos de historial y no se analizan.':'');
-    drawRes();SV('scan',{d:today(),t:Date.now(),R,msg:msg.textContent});afterScan();
+    drawRes();SV('scan',{d:today(),t:Date.now(),R,msg:msg.textContent});afterScan();$('#scanbox').open=false;updScan();
   }catch(e){msg.textContent='Error: '+e.message}
   finally{$('#go').disabled=false;$('#go').classList.remove('busy');autoRun=false;hunt=false}
 };
@@ -631,9 +652,23 @@ function cmpRows(r){
   add('Goles a favor',A.gf,B.gf);add('Goles en contra',A.t-A.gf,B.t-B.gf);add('Victorias de 10',A.w,B.w,x=>x);add('Ambos marcan',A.b,B.b,x=>x+'%');add('Córners a favor',A.cf,B.cf);add('Tarjetas',A.y,B.y);
   return rows.join('');
 }
-function bestStrip(r){
-  const b=bestOf(r);if(!b)return '';
-  return `<div class="best"><small>MEJOR PICK DE LA APP</small><b class="n">${esc(b.n)}</b><span><b>${Math.round(b.p*100)}%</b>${b.q?' · cuota <b>@'+b.q+'</b> · valor <b>'+(b.e>=0?'+':'')+Math.round(b.e*100)+'%</b>':' · cuota mínima <b>@'+(1.05/b.p).toFixed(2)+'</b>'}${b.t?' · nivel <b>'+b.t+'</b>':''} · stake <b>${baseStake(r,b.n,b.q)}/10</b></span></div>`;
+function conflictOf(r,n){
+  const g=/^(Over|Under) [123]\.5$/.test(n)?n.split(' ')[0]:null;
+  for(const t of r.p){
+    if(g==='Under'&&/^Over:/.test(t))return 'Over';
+    if(g==='Over'&&/^(Under:|Partido cerrado)/.test(t))return 'Under o cerrado';
+    if(n==='Ambos marcan: no'&&/^Ambos marcan/.test(t))return 'Ambos marcan';
+  }
+  return '';
+}
+function ticket(r){
+  const b=bestOf(r);
+  if(!b)return `<p class="nopick">Sin pick con ventaja clara.${r.p.length?' '+r.p.length+' patrón(es) detectado(s); míralos en el análisis.':''}</p>`;
+  const st=baseStake(r,b.n,b.q),c=conflictOf(r,b.n);
+  return `<div class="tk ${b.t||''}"><div class="tk1">${b.t?`<span class="tier tier${b.t}">${b.t}</span>`:''}<b class="n">${esc(b.n)}</b></div>
+<div class="tk2"><span><b>${Math.round(b.p*100)}%</b> prob.</span>${b.q?`<span>cuota <b>@${b.q}</b></span><span>valor <b>${b.e>=0?'+':''}${Math.round(b.e*100)}%</b></span>`:`<span>cuota mínima <b>@${(1.05/b.p).toFixed(2)}</b></span>`}<span>stake <b>${st}/10</b></span></div>
+<div class="meter${st>=5?' hi':''}" role="img" aria-label="Stake ${st} de 10">${Array.from({length:10},(_,k)=>`<i class="${k<st?'f':''}"></i>`).join('')}</div>
+${c?`<div class="tkw">⚠ Va contra el patrón detectado (${c}). Confírmalo con la IA antes de apostar.</div>`:''}</div>`;
 }
 const GUIA=`<details class="card hint"><summary>¿Cómo leer las tarjetas?</summary>
 <p><b>Barra azul, gris y amarilla:</b> probabilidad de que gane el local, empate o gane el visitante.</p>
@@ -641,9 +676,11 @@ const GUIA=`<details class="card hint"><summary>¿Cómo leer las tarjetas?</summ
 <p><b>Mercados:</b> la barra es la probabilidad que calcula el modelo. La <b>cuota justa</b> es 1 ÷ probabilidad: si tu casa paga más que eso, hay <b>valor</b> (verde).</p>
 <p><b>Nivel A, B o C:</b> cuánto confirma Pinnacle ese valor. A es la mejor confirmación.</p>
 <p><b>Stake de 1 a 10:</b> confianza calculada con probabilidad, valor, cantidad de datos y bajas. No es una garantía.</p></details>`;
-function drawRes(){
-  if(!R.length){$('#res').innerHTML='<div class="empty"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="32" cy="32" r="26"/><circle cx="32" cy="32" r="15"/><path d="M32 32l16-16"/></svg><b>Nada que destacar</b>No hay partidos con patrones ni valor claro. Prueba con más ligas o ajusta los umbrales.</div>';return}
-  $('#res').innerHTML=topHtml()+GUIA+R.map((r,i)=>{
+let resView='picks';
+function setView(v){resView=v;drawRes()}
+function toggleAll(o){document.querySelectorAll('details.more').forEach(d=>d.open=o)}
+function card(i){
+  const r=R[i];
     let lst;
     if(r.q&&Object.keys(r.q).length){
       const od={A:0,B:1,C:2},vl=r.mod.m.filter(x=>r.q[x[0]]&&x[1]>=0.35&&x[1]<=0.9).map(x=>({n:x[0],p:x[1],q:r.q[x[0]],e:x[1]*r.q[x[0]]-1,t:tierOf(r,x[0]),f:r.mod.f&&r.mod.f[x[0]]})).sort((a,b)=>(od[a.t]??3)-(od[b.t]??3)||b.e-a.e).slice(0,4);
@@ -652,19 +689,33 @@ function drawRes(){
       const top=r.mod.m.filter(x=>x[1]>=0.4&&x[1]<=0.85).sort((a,b)=>b[1]-a[1]).slice(0,6);
       lst=`<div class="sec">${cfg.ok?'Sin cuotas de la casa: escribe la cuota a mano':'Probabilidades del modelo'}</div>`+top.map(([n,p])=>mrow(n,p,`Cuota justa @${(1/p).toFixed(2)} · mínima con valor <b>@${(1.05/p).toFixed(2)}</b>`,false,null)).join('');
     }
-    return `<article class="card"><div class="mh"><span class="pill">${esc(r.liga)}</span><span class="ko">${r.hora}</span></div>
-  <div class="teams"><span>${esc(r.h)}</span><em>vs</em><span>${esc(r.w)}</span></div>
+    return `<article class="card mc"><div class="mh"><span class="pill">${esc(r.liga)}</span><span class="ko">${r.hora}</span></div>
+  <div class="mt"><b>${esc(r.h)}</b><em>vs</em><b>${esc(r.w)}</b></div>
+  ${ticket(r)}
+  <div class="acts"><button class="btn" onclick="ai(${i})">Analizar con IA</button><button class="btn s" onclick="showInfo(${i})">Noticias</button><button class="btn s" onclick="reg(${i})">Registrar</button></div>
+  <div class="ai news" id="in${i}" hidden></div><div class="ai" id="ai${i}" hidden></div>
+  <details class="more"><summary>Ver análisis del partido</summary>
   ${x12(r)}
   <p class="lect">${lectura(r)}</p>
   ${(r.A.fm||r.B.fm)?`<div class="forms"><div><small>${esc(r.h)}</small>${formH(r.A.fm)}</div><div><small>${esc(r.w)}</small>${formH(r.B.fm)}</div></div>`:''}
-  ${bestStrip(r)}
   ${r.p.length?`<div class="tags">${r.p.map(x=>`<div class="tg ${tagc(x)}">${esc(x)}</div>`).join('')}</div>`:''}
   <div class="mkts">${lst}</div>
   <details class="dd"><summary>Datos de los últimos 10 partidos</summary><div class="cmphd"><span>${esc(r.h)}</span><span>${esc(r.w)}</span></div>${cmpRows(r)}</details>
   <div class="ctl"><select id="mk${i}" onchange="pick(${i})" aria-label="Mercado"><option value="">Que la IA elija</option>${r.mod.m.map(([n])=>`<option>${n}</option>`).join('')}</select><input id="od${i}" type="number" step="0.01" placeholder="Cuota" oninput="calc(${i})" aria-label="Cuota"><input id="sk${i}" type="number" placeholder="Monto" aria-label="Monto"></div>
   <div class="cx" id="cx${i}"></div>
-  <div class="acts"><button class="btn" onclick="ai(${i})">Analizar con IA</button><button class="btn s" onclick="showInfo(${i})">Bajas y noticias</button><button class="btn s" onclick="reg(${i})">Registrar apuesta</button></div>
-  <div class="ai news" id="in${i}" hidden></div><div class="ai" id="ai${i}" hidden></div></article>`}).join('');
+  </details></article>`;
+}
+function drawRes(){
+  if(!R.length){$('#res').innerHTML='<div class="empty"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="32" cy="32" r="26"/><circle cx="32" cy="32" r="15"/><path d="M32 32l16-16"/></svg><b>Nada que destacar</b>No hay partidos con patrones ni valor claro. Prueba con más ligas o ajusta los umbrales.</div>';return}
+  const info=R.map((r,i)=>({i,b:bestOf(r)})),withP=info.filter(x=>x.b).sort((a,b)=>b.b.sc-a.b.sc),nP=withP.length;
+  const view=(resView==='picks'&&!nP)?'all':resView;
+  const list=view==='picks'?withP.map(x=>x.i):info.map(x=>x.i);
+  const menu=`<div class="seg m rv" role="tablist" aria-label="Qué mostrar"><button type="button" class="${view==='picks'?'on':''}" onclick="setView('picks')"><span>Picks</span><b>${nP}</b></button><button type="button" class="${view==='all'?'on':''}" onclick="setView('all')"><span>Todos los partidos</span><b>${R.length}</b></button></div>`;
+  const hint=view==='picks'
+    ?'<p class="status">Solo picks con cuota real y ventaja estimada de 5% a 25%. Es una estimación, no una garantía.</p>'
+    :`<div class="tools"><button class="btn s" onclick="toggleAll(true)">Abrir todo</button><button class="btn s" onclick="toggleAll(false)">Cerrar todo</button></div>${nP?'':'<p class="status">Ningún partido tiene un pick con ventaja clara. Aquí están todos para que los revises.</p>'}`;
+  const rest=(view==='picks'&&R.length>nP)?`<button class="btn s" style="width:100%" onclick="setView('all')">Ver los ${R.length-nP} partidos sin pick</button>`:'';
+  $('#res').innerHTML=menu+hint+list.map(card).join('')+rest+GUIA;
 }
 function pick(i){const r=R[i],q=$('#mk'+i).value&&r.q&&r.q[$('#mk'+i).value];$('#od'+i).value=q||'';calc(i)}
 
@@ -758,6 +809,7 @@ function baseStake(r,n,price){
   if(e<0.08)b=Math.min(b,3);
   else if(e<0.12)b=Math.min(b,5);
   else b=Math.min(b,6);
+  if(conflictOf(r,n))b-=1;
   return Math.max(1,Math.min(6,b));
 }
 function topHtml(){
