@@ -229,6 +229,13 @@ details.more>summary::after{font-size:20px}
 <div class="g2"><label>Goles/partido mín.<input id="c-g" type="number" step="0.1"></label><label>Ambos marcan % mín.<input id="c-b" type="number"></label>
 <label>Under: goles máx.<input id="c-u" type="number" step="0.1"></label><label>Victorias % mín.<input id="c-r" type="number"></label>
 <label>Córners por equipo mín.<input id="c-co" type="number" step="0.1"></label><label>Tarjetas (suma) mín.<input id="c-ta" type="number" step="0.1"></label></div></details>
+<details class="card grp" open><summary>Respaldo y restauración</summary>
+<p><b>Protege RadarPi:</b> descarga una copia después de cambiar ajustes, ligas, registrar apuestas o modificar el modelo. Incluye todos los datos que RadarPi guarda en el almacenamiento local de este navegador.</p>
+<p><small><b>Importante:</b> la copia puede incluir llaves API. Guárdala en un lugar privado. No la compartas. Una copia guardada solo en Chrome no protege contra borrar los datos del sitio: descarga el JSON y consérvalo en Descargas, Drive privado o en otro dispositivo.</small></p>
+<div class="tools"><button class="btn" id="backupOut" type="button">Descargar copia de seguridad</button><button class="btn s" id="backupInBtn" type="button">Restaurar desde una copia</button></div>
+<input id="backupFile" type="file" accept="application/json,.json" hidden>
+<p class="status" id="backupMsg" role="status" aria-live="polite">Consejo: conserva dos copias y actualízalas después de cambios importantes.</p>
+</details>
 <button class="btn" id="save">Guardar ajustes</button>
 </section>
 
@@ -1183,6 +1190,57 @@ function drawBets(){
   <small>Cuota ${b.q} · Monto ${b.s.toLocaleString('es')}</small>
   <div>${b.r==='p'?`<button class="btn s" onclick="setR(${b.id},'w')">Ganó</button><button class="btn s" onclick="setR(${b.id},'l')">Perdió</button><button class="btn s" onclick="setR(${b.id},'v')">Nula</button>`:''}<button class="btn s" onclick="delB(${b.id})">Borrar</button></div></div>`).join('')||'<div class="empty"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="8" width="36" height="48" rx="5"/><path d="M23 22h18M23 32h18M23 42h10"/></svg><b>Sin apuestas todavía</b>Las que registres desde las tarjetas aparecerán aquí.</div>';
 }
+// ===== Copia de seguridad de RadarPi: exporta todas las claves locales =====
+function exportRadarBackup(){
+  const msg=$('#backupMsg');
+  try{
+    const storage={};
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i); if(k!==null) storage[k]=localStorage.getItem(k);
+    }
+    if(!Object.keys(storage).length){msg.textContent='No se encontraron datos guardados para respaldar.';return;}
+    const data={app:'Radar de patrones',format:2,createdAt:new Date().toISOString(),storage};
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download='radarpi-copia-'+new Date().toISOString().slice(0,10)+'.json';
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);
+    try{localStorage.setItem('radarpi_backup_last_export',new Date().toISOString())}catch{}
+    msg.textContent='Copia preparada con '+Object.keys(storage).length+' elementos. Verifica que el archivo JSON aparezca en Descargas y guárdalo fuera de Chrome.';
+  }catch(e){msg.textContent='No se pudo crear la copia: '+(e&&e.message?e.message:'error desconocido');}
+}
+$('#backupOut').addEventListener('click',exportRadarBackup);
+$('#backupInBtn').addEventListener('click',()=>$('#backupFile').click());
+$('#backupFile').addEventListener('change',async e=>{
+  const file=e.target.files&&e.target.files[0];if(!file)return;
+  const msg=$('#backupMsg');
+  try{
+    const data=JSON.parse(await file.text());
+    if(data.app!=='Radar de patrones')throw new Error('El archivo no parece una copia de RadarPi.');
+    // Compatibilidad con las copias previas (format 1/storage o entries) y la nueva.
+    const source=(data.storage&&typeof data.storage==='object')?data.storage:
+      ((data.entries&&typeof data.entries==='object')?data.entries:null);
+    if(!source||Array.isArray(source))throw new Error('La copia no contiene datos reconocidos.');
+    const pairs=Object.entries(source).filter(([k,v])=>typeof k==='string'&&k.length>0&&(typeof v==='string'||v===null));
+    if(!pairs.length)throw new Error('La copia está vacía o tiene un formato no compatible.');
+    if(!confirm('Se restaurarán '+pairs.length+' claves de la copia. Las claves coincidentes actuales serán reemplazadas. Se recomienda exportar primero una copia del estado actual. ¿Continuar?'))return;
+    for(const [k,v] of pairs){if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v);}
+    msg.textContent='Restauración completada ('+pairs.length+' claves). RadarPi se recargará.';
+    setTimeout(()=>location.reload(),900);
+  }catch(err){msg.textContent='No se pudo restaurar la copia: '+(err&&err.message?err.message:'archivo inválido');}
+  finally{e.target.value='';}
+});
+// Recordatorio al abrir la app; el archivo debe guardarse fuera del almacenamiento del navegador.
+setTimeout(()=>{
+  try{
+    const last=localStorage.getItem('radarpi_backup_last_export');
+    const age=last?Date.now()-Date.parse(last):Infinity;
+    if(!Number.isFinite(age)||age>7*24*60*60*1000){
+      const msg=$('#backupMsg');
+      if(msg)msg.textContent='Recordatorio: no consta una copia descargada en los últimos 7 días. Pulsa “Descargar copia de seguridad” y conserva el JSON fuera de Chrome.';
+    }
+  }catch{}
+},1500);
+
 // ===== Alertas dentro de la app (funcionan con la app abierta) =====
 function afterScan(){
   const S=LS('seen',null),k=(S&&S.d===today())?S.k:[],fresh=R.filter(r=>!k.includes(r.ev));
