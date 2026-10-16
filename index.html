@@ -761,7 +761,9 @@ function card(i){
     return `<article class="card mc"><div class="mh"><span class="pill">${esc(r.liga)}</span><span class="ko">${r.hora}</span></div>
   <div class="mt"><b>${esc(r.h)}</b><em>vs</em><b>${esc(r.w)}</b></div>
   ${ticket(r)}
-  <div class="acts"><button class="btn" onclick="ai(${i})">Analizar con IA</button><button class="btn s" onclick="showInfo(${i})">Noticias</button><button class="btn s" onclick="reg(${i})">Registrar</button></div>
+  <div class="acts"><button class="btn" onclick="regModel(${i})">Registrar en Modelo</button><button class="btn s" onclick="ai(${i})">Analizar con IA</button><button class="btn s" onclick="showInfo(${i})">Noticias</button><button class="btn s" onclick="reg(${i})">Registrar apuesta $</button></div>
+  <p class="status mini">“Registrar en Modelo” guarda el pronóstico para medir aciertos, sin exigir monto ni apostar dinero. “Registrar apuesta $” conserva el registro económico.</p>
+  ${!bestOf(r)?`<div class="status"><b>Diagnóstico:</b> ${esc(diagnose(r))}</div>`:''}
   <div class="ai news" id="in${i}" hidden></div><div class="ai" id="ai${i}" hidden></div>
   <details class="more"><summary>Ver análisis del partido</summary>
   ${x12(r)}
@@ -786,7 +788,7 @@ function drawRes(){
   const rest=(view==='picks'&&R.length>nP)?`<button class="btn s" style="width:100%" onclick="setView('all')">Ver los ${R.length-nP} partidos sin pick</button>`:'';
   $('#res').innerHTML=menu+hint+list.map(card).join('')+rest+GUIA;
 }
-function pick(i){const r=R[i],q=$('#mk'+i).value&&r.q&&r.q[$('#mk'+i).value];$('#od'+i).value=q||'';calc(i)}
+function pick(i){const r=R[i],mk=$('#mk'+i).value;r.userMk=mk;const q=mk&&r.q&&r.q[mk];$('#od'+i).value=q||'';calc(i)}
 
 // Stake: Kelly fraccionado (25%), máximo 3% del bankroll, solo si hay valor
 function calc(i){
@@ -869,6 +871,43 @@ function cands(r){
   return out.sort((a,b)=>b.sc-a.sc);
 }
 const bestOf=r=>cands(r)[0]||null;
+function diagnose(r){
+  if(r.A.n<5||r.B.n<5)return `Historial insuficiente: local ${r.A.n} y visitante ${r.B.n} partidos útiles; el modelo exige al menos 5 por equipo.`;
+  const ms0=(r.mod&&r.mod.m)||[];
+  const usable=ms0.filter(([n,p])=>!isHalfMarket(n)&&Number.isFinite(p)&&p>=0.50&&p<=0.90);
+  if(!usable.length)return 'Ningún mercado no experimental alcanza el rango de probabilidad usado por el escáner (50%-90%).';
+  if(!r.q||!Object.keys(r.q).length)return 'No hay cuotas reales de la casa para calcular valor. Puedes guardar un pronóstico sin cuota y añadirla después.';
+  const withOdds=usable.map(([n,p])=>({n,p,q:+r.q[n]})).filter(x=>x.q>1);
+  if(!withOdds.length)return 'Hay probabilidades del modelo, pero no cuotas para esos mercados. Revisa la casa o registra el pronóstico sin cuota.';
+  const qm=cfg.qm||1.5;
+  const lowOdds=withOdds.filter(x=>x.q<qm);
+  const edge=withOdds.map(x=>({...x,e:x.p*x.q-1}));
+  if(!edge.some(x=>x.q>=qm)&&lowOdds.length)return `Las cuotas disponibles son inferiores al mínimo configurado (@${qm.toFixed(2)}).`;
+  const qualified=edge.filter(x=>x.q>=qm&&x.e>=0.05&&x.e<=0.25);
+  if(qualified.length)return 'Hay al menos un mercado que cumple los filtros; debería aparecer como pick.';
+  const high=edge.filter(x=>x.q>=qm&&x.e>0.25);
+  if(high.length)return `Se descartó por ventaja estimada superior al 25% en ${high.length} mercado(s); podría ser una cuota o probabilidad errónea y conviene verificarla.`;
+  const low=edge.filter(x=>x.q>=qm&&x.e<0.05);
+  if(low.length)return `Ningún mercado llega al valor mínimo del 5%; la mejor ventaja es ${Math.round(Math.max(...low.map(x=>x.e))*100)}%.`;
+  return 'No hay datos suficientes para confirmar valor. Verifica cuotas, mercado y estadísticas.';
+}
+function regModel(i){
+  const r=R[i];if(!r||!r.mod||!r.mod.m||!r.mod.m.length){toast('No hay mercados calculados para guardar.');return}
+  const chosen=r.userMk||r.pk||null;
+  const candidates=r.mod.m.filter(([n,p])=>!isHalfMarket(n)&&Number.isFinite(p)&&p>0&&p<1);
+  let mk=chosen&&r.mod.m.some(x=>x[0]===chosen)?chosen:null;
+  if(!mk){const b=bestOf(r);if(b)mk=b.n;}
+  if(!mk){const withQ=candidates.filter(([n])=>r.q&&+r.q[n]>1).sort((a,b)=>(b[1]*(+r.q[b[0]])-1)-(a[1]*(+r.q[a[0]])-1));
+    mk=(withQ[0]||candidates.slice().sort((a,b)=>b[1]-a[1])[0]||[])[0];}
+  if(!mk){toast('No hay un mercado válido para guardar.');return}
+  const typed=(r.userMk===mk&&$('#od'+i)&&+$('#od'+i).value>1)?+$('#od'+i).value:null;
+  const q=typed||((r.pk===mk&&r.pq>1)?+r.pq:null)||(r.q&&+r.q[mk])||null;
+  const id=addPick(r,mk,q,0,false);
+  if(!id){toast('No se pudo guardar el pronóstico.');return}
+  const P=LS('picks',[]),k=P.find(x=>x.id===id);
+  if(k){k.source='escaneo';k.savedAt=k.savedAt||new Date().toISOString();if(q){k.q=+q;k.qr=!!($('#od'+i)&&+$('#od'+i).value>0)}SV('picks',P)}
+  drawModel();toast(`Pronóstico guardado: ${mk}${q?' · cuota @'+q:' · sin cuota'}. No se registró dinero apostado.`);
+}
 function baseStake(r,n,price){
   const m=r.mod.m.find(x=>x[0]===n);if(!m)return 1;
   if(!price||price<=1)return 1;
@@ -992,7 +1031,7 @@ async function ai(i){
 <div class="kv"><span>Stake <b>${stk}/10</b></span><span>${pct.toFixed(1)}% del bankroll${amt?' ≈ <b>'+amt.toLocaleString('es')+'</b>':''}</span><span>Cuota mín. <b>${esc(o.cuota_minima||(mk?(1.05/mk[1]).toFixed(2):''))}</b></span>${price?`<span>Cuota casa <b>${price}</b> · valor <b>${Math.round((mk[1]*price-1)*100)}%</b></span>`:''}</div>
 <p><small>Stake orientativo (máximo 1,8% del bankroll en esta versión; no es garantía de ventaja)${aj?' · la IA lo bajó '+(-aj):''}.</small></p>
 <p>${esc(o.resumen||'')}</p>${lista(o.razones,'Razones')}${lista(o.riesgos,'Riesgos')}${inf&&!inf.alineaciones?'<p><small>Alineaciones sin confirmar: stake máximo 7. Vuelve a analizar cuando salgan (≈1 h antes).</small></p>':''}
-${mk?`<div class="ctl" style="grid-template-columns:1fr auto;margin-top:12px;align-items:center"><input id="pq${i}" type="number" step="0.01" placeholder="Cuota real" value="${price||''}"><button class="btn s" style="margin:6px 0 0" onclick="regPick(${i})">Agregar al seguimiento</button></div>`:''}`;
+${mk?`<div class="ctl" style="grid-template-columns:1fr auto;margin-top:12px;align-items:center"><input id="pq${i}" type="number" step="0.01" placeholder="Cuota real" value="${price||''}"><button class="btn s" style="margin:6px 0 0" onclick="regModel(${i})">Registrar en Modelo</button></div>`:''}`;
   }catch(e){box.textContent='Error: '+e.message}
 }
 
@@ -1138,7 +1177,7 @@ function drawModel(){
     ${betsR.length>=2?`<div class="card"><h2>Evolución de la ganancia</h2><small>Suma de ganancias y pérdidas de tus apuestas registradas, en orden de fecha.</small>${profitSvg([...betsR].sort((a,b)=>new Date(a.ko)-new Date(b.ko)))}</div>`:''}
     ${D.length?`<div class="card"><h2>Por probabilidad</h2><small>Si el modelo dice 60%, de cada 10 picks debería acertar unos 6. Barra gris: lo que prometía. Barra de color: lo que acertó.</small>${bk.map(([x,y,t])=>row(t,D.filter(k=>k.p>=x&&k.p<y))).join('')}</div>
     <div class="card"><h2>Por tipo de mercado</h2><small>Dónde le va mejor y dónde peor.</small>${gs.map(g=>row(g,D.filter(k=>grp(k.mk)===g))).join('')}</div>
-    <div class="card"><h2>Por nivel (A, B, C)</h2>${['A','B','C'].map(t=>row('Nivel '+t,D.filter(k=>k.t===t))).join('')}<small>Si el nivel A no acierta más que el C, el contraste con Pinnacle no está aportando.</small></div>`:`<p class="status">Aún no hay picks resueltos. Agrega los picks de la IA al seguimiento o registra apuestas y aquí verás si el modelo acierta lo que promete.</p>`}`;
+    <div class="card"><h2>Por nivel (A, B, C)</h2>${['A','B','C'].map(t=>row('Nivel '+t,D.filter(k=>k.t===t))).join('')}<small>Si el nivel A no acierta más que el C, el contraste con Pinnacle no está aportando.</small></div>`:`<p class="status">Aún no hay picks resueltos. Usa “Registrar en Modelo” desde cualquier partido para medir pronósticos sin apostar dinero, o registra apuestas reales por separado.</p>`}`;
   }else{
     const sel=mdlTab==='p'?P.filter(k=>!k.res):mdlTab==='v'?P.filter(k=>k.res==='v'):P.filter(k=>k.res===mdlTab);
     sel.sort((a,b)=>new Date(b.ko)-new Date(a.ko));
