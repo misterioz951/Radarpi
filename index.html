@@ -227,7 +227,10 @@ details.more>summary::after{font-size:20px}
 <label class="tg-row"><span>Contrastar con Pinnacle<small>Usa 1 petición extra por escaneo</small></span><input id="c-pn" type="checkbox"></label></details>
 <details class="card grp"><summary>Inteligencia artificial</summary><p>La IA de contexto buscará motivación competitiva, escenarios de clasificación/eliminación, rotaciones, suplentes, lesiones, descanso, viajes y declaraciones recientes. Las claves quedan en el almacenamiento local del navegador; no es un almacén seguro frente a alguien con acceso al dispositivo o a las herramientas del navegador.</p>
 <label>Llave Groq (análisis y pick)<input id="k-gq" type="password" autocomplete="off"></label>
-<label>Llave Gemini (noticias y bajas buscadas en Google)<input id="k-gm" type="password" autocomplete="off"></label></details>
+<label>Llave Gemini (noticias y contexto, opcional)<input id="k-gm" type="password" autocomplete="off"></label>
+<label>Llave OpenRouter (IA alternativa gratuita)<input id="k-or" type="password" autocomplete="off"></label>
+<label>Llave Brave Search (noticias alternativas)<input id="k-br" type="password" autocomplete="off"></label>
+<p><small>OpenRouter ofrece modelos gratuitos con límites diarios. Brave Search da créditos mensuales gratuitos, pero requiere verificar la cuenta con tarjeta. Las claves quedan en este navegador; en un HTML público no pueden mantenerse secretas.</small></p></details>
 <details class="card grp"><summary>Umbrales de alertas (avanzado)</summary><p>Qué tan exigente es el escáner con los patrones.</p>
 <div class="g2"><label>Goles/partido mín.<input id="c-g" type="number" step="0.1"></label><label>Ambos marcan % mín.<input id="c-b" type="number"></label>
 <label>Under: goles máx.<input id="c-u" type="number" step="0.1"></label><label>Victorias % mín.<input id="c-r" type="number"></label>
@@ -265,7 +268,7 @@ const LG={
   "Bélgica":"bel.1","Turquía":"tur.1","Escocia":"sco.1","Grecia":"gre.1","Austria":"aut.1","Suiza":"sui.1","Dinamarca":"den.1","Noruega":"nor.1","Suecia":"swe.1",
   "Chile":"chi.1","Uruguay":"uru.1","Paraguay":"par.1","Perú":"per.1","Ecuador":"ecu.1"
 };
-let cfg=Object.assign({fd:'',gq:'',g:3,b:70,m:12,u:2,qm:1.5,dd:1,sm:5,hm:false,r:75,co:5,ta:5,ex:true,au:false,aa:false,iv:60,ok:'',bm:'',pn:true,lg:['col.1','eng.1','esp.1']},LS('cfg',{}));
+let cfg=Object.assign({fd:'',gq:'',or:'',br:'',g:3,b:70,m:12,u:2,qm:1.5,dd:1,sm:5,hm:false,r:75,co:5,ta:5,ex:true,au:false,aa:false,iv:60,ok:'',bm:'',pn:true,lg:['col.1','eng.1','esp.1']},LS('cfg',{}));
 cfg.lg=cfg.lg.filter(x=>Object.values(LG).includes(x));if(!cfg.lg.length)cfg.lg=['col.1','eng.1','esp.1'];
 let openRes=false,autoRun=false,hunt=false,mdlTab='res',mdlAll=false;
 let MODEL='openai/gpt-oss-120b';
@@ -295,8 +298,8 @@ document.querySelectorAll('#dd button').forEach(b=>b.onclick=()=>{cfg.dd=+b.data
 drawDd();
 
 // ajustes
-$('#k-gq').value=cfg.gq;$('#k-gm').value=cfg.gk||'';$('#c-g').value=cfg.g;$('#c-b').value=cfg.b;$('#c-m').value=cfg.m;$('#c-qm').value=cfg.qm;$('#c-sm').value=cfg.sm;$('#c-hm').checked=cfg.hm;$('#c-u').value=cfg.u;$('#c-r').value=cfg.r;$('#c-k').value=cfg.bk||'';$('#c-co').value=cfg.co;$('#c-ta').value=cfg.ta;$('#c-x').checked=cfg.ex;$('#c-au').checked=cfg.au;$('#c-aa').checked=cfg.aa;$('#c-iv').value=cfg.iv;$('#c-pn').checked=cfg.pn;$('#c-ok').value=cfg.ok;$('#c-bm').value=cfg.bm;
-$('#save').onclick=()=>{cfg.gq=$('#k-gq').value.trim();cfg.gk=$('#k-gm').value.trim();
+$('#k-gq').value=cfg.gq;$('#k-gm').value=cfg.gk||'';$('#k-or').value=cfg.or||'';$('#k-br').value=cfg.br||'';$('#c-g').value=cfg.g;$('#c-b').value=cfg.b;$('#c-m').value=cfg.m;$('#c-qm').value=cfg.qm;$('#c-sm').value=cfg.sm;$('#c-hm').checked=cfg.hm;$('#c-u').value=cfg.u;$('#c-r').value=cfg.r;$('#c-k').value=cfg.bk||'';$('#c-co').value=cfg.co;$('#c-ta').value=cfg.ta;$('#c-x').checked=cfg.ex;$('#c-au').checked=cfg.au;$('#c-aa').checked=cfg.aa;$('#c-iv').value=cfg.iv;$('#c-pn').checked=cfg.pn;$('#c-ok').value=cfg.ok;$('#c-bm').value=cfg.bm;
+$('#save').onclick=()=>{cfg.gq=$('#k-gq').value.trim();cfg.gk=$('#k-gm').value.trim();cfg.or=$('#k-or').value.trim();cfg.br=$('#k-br').value.trim();
   cfg.g=+$('#c-g').value||3;cfg.b=+$('#c-b').value||70;cfg.m=+$('#c-m').value||8;cfg.qm=+$('#c-qm').value||1.5;cfg.sm=+$('#c-sm').value||5;cfg.hm=$('#c-hm').checked;cfg.u=+$('#c-u').value||2;cfg.r=+$('#c-r').value||75;cfg.bk=+$('#c-k').value||0;cfg.co=+$('#c-co').value||5;cfg.ta=+$('#c-ta').value||5;cfg.ex=$('#c-x').checked;cfg.au=$('#c-au').checked;cfg.aa=$('#c-aa').checked;cfg.iv=Math.max(15,+$('#c-iv').value||60);cfg.pn=$('#c-pn').checked;cfg.ok=$('#c-ok').value.trim();cfg.bm=$('#c-bm').value.trim();SV('cfg',cfg);$('#save').textContent='Guardado'};
 
 // ESPN (API pública no oficial, sin llave). Sin rangos de fechas: partidos de hoy + calendario de cada equipo
@@ -481,22 +484,34 @@ async function tourIds(){
   });
 }
 async function mkMap(){
-  return cached('opmk_v3',30,async()=>{
+  return cached('opmk_v5',30,async()=>{
     const ms=await op('markets'),o={};
     for(const m of ms){
-      if(m.sportId!==10||m.playerProp)continue;
+      if(+m.sportId!==10||m.playerProp)continue;
       const nm=m.marketName||'',h=m.handicap,oc=m.outcomes||[],ky=i=>m.marketId+'_'+oc[i].outcomeId;
-      const per=String(m.period||'').toLowerCase().replace(/[^a-z0-9]/g,''),first=/firsthalf|1sthalf|half1|period1/.test(per)||/first half|1st half/i.test(nm),second=/secondhalf|2ndhalf|half2|period2/.test(per)||/second half|2nd half/i.test(nm),full=m.period==='fulltime';
-      const idx=(re,ids)=>{let i=oc.findIndex(x=>re.test(String(x.outcomeName||'').trim().toLowerCase()));if(i<0&&ids)i=oc.findIndex(x=>ids.includes(+x.outcomeId));return i};
+      const per=String(m.period||'').toLowerCase().replace(/[^a-z0-9]/g,''),first=/firsthalf|1sthalf|half1|period1/.test(per)||/first half|1st half/i.test(nm),second=/secondhalf|2ndhalf|half2|period2/.test(per)||/second half|2nd half/i.test(nm),full=!first&&!second&&(!per||/^(fulltime|fullmatch|match|90min|regulation)$/.test(per));
+      // Mapear por el nombre semántico del resultado, nunca por outcomeId supuesto:
+      // los IDs pueden variar entre mercados/proveedores y podrían intercambiar Sí/No.
+      const idx=re=>oc.findIndex(x=>re.test(String(x.outcomeName||'').trim().toLowerCase()));
       const isRes=!first&&!second&&(m.marketId===101||/^(full time result|match result|1x2|match winner|three way)/i.test(nm));
-      const isBtts=!first&&!second&&(m.marketId===104||/both teams to score|btts/i.test(nm))&&!/team total/i.test(nm);
+      // No basta el marketId: exigimos que el nombre identifique realmente BTTS.
+      const isBtts=!first&&!second&&/both teams to score|\bbtts\b/i.test(nm)&&!/team total/i.test(nm);
       if(full&&isRes&&oc.length===3){
-        const hi=idx(/^(1|home|local)$/,[101]),di=idx(/^(x|draw|empate)$/,[102]),ai=idx(/^(2|away|visitante)$/,[103]);
+        const hi=idx(/^(1|home|local)$/),di=idx(/^(x|draw|empate)$/),ai=idx(/^(2|away|visitante)$/);
         if(hi>=0&&di>=0&&ai>=0&&new Set([hi,di,ai]).size===3){o['Local gana']=ky(hi);o['Empate']=ky(di);o['Visitante gana']=ky(ai)}
       }
       else if(full&&isBtts&&oc.length===2){
-        const yi=idx(/^(yes|sí|si)$/,[104]),ni=idx(/^no$/,[105]);
+        const yi=idx(/^(yes|sí|si)$/),ni=idx(/^no$/);
+        // Si los nombres no permiten distinguir ambos resultados, no importamos esas cuotas.
         if(yi>=0&&ni>=0&&yi!==ni){o['Ambos marcan: sí']=ky(yi);o['Ambos marcan: no']=ky(ni)}
+      }
+      else if(full&&oc.length===2&&idx(/^over/)>=0&&idx(/^under/)>=0){
+        // Mercados de goles por equipo: solo se aceptan si el nombre identifica explícitamente local/visitante.
+        const homeTotal=/(home|host).*(team|total|goal)|(team|total|goal).*(home|host)/i.test(nm);
+        const awayTotal=/(away|visitor|visiting).*(team|total|goal)|(team|total|goal).*(away|visitor|visiting)/i.test(nm);
+        const line=Number(h),oi=idx(/^over/),ui=idx(/^under/);
+        if(homeTotal&&[0.5,1.5].includes(line)){if(line===0.5){o['Local marca 1+ gol']=ky(oi);o['Visitante deja arco en cero']=ky(ui)}else o['Local marca 2+ goles']=ky(oi)}
+        else if(awayTotal&&[0.5,1.5].includes(line)){if(line===0.5){o['Visitante marca 1+ gol']=ky(oi);o['Local deja arco en cero']=ky(ui)}else o['Visitante marca 2+ goles']=ky(oi)}
       }
       else if(full&&/double chance/i.test(nm)&&oc.length===3){
         oc.forEach((x,i)=>{const n=String(x.outcomeName).replace(/\s/g,'').toUpperCase();
@@ -507,16 +522,16 @@ async function mkMap(){
         if(pre===null||(!full&&!first&&!second&&pre===''))continue;
         o[`${pre}Over ${h}`]=ky(idx(/^over/));o[`${pre}Under ${h}`]=ky(idx(/^under/));
       }
-      if((first||second)&&oc.length===2&&/both teams to score|btts|ambos marcan/i.test(nm)){
-        const yes=oc.findIndex(x=>/^(yes|sí|si)$/i.test(String(x.outcomeName||''))),no=oc.findIndex(x=>/^no$/i.test(String(x.outcomeName||''))),pre=first?'1er tiempo':'2do tiempo';
-        if(yes>=0&&no>=0){o[`Ambos marcan: sí (${pre})`]=ky(yes);/* no se usa para estimación automática hasta tener modelo equivalente */}
+      if((first||second)&&oc.length===2&&/both teams to score|\bbtts\b|ambos marcan/i.test(nm)){
+        const yes=oc.findIndex(x=>/^(yes|sí|si)$/i.test(String(x.outcomeName||'').trim())),no=oc.findIndex(x=>/^no$/i.test(String(x.outcomeName||'').trim())),pre=first?'1er tiempo':'2do tiempo';
+        if(yes>=0&&no>=0&&yes!==no){o[`Ambos marcan: sí (${pre})`]=ky(yes);/* experimental: no se usa para pick automático */}
       }
     }
     return o;
   });
 }
 async function loadOdds(bm,lg){
-  bm=bm||cfg.bm;lg=lg||cfg.lg;const key=bm+'|'+lg.join(','),c=LS('odds_'+bm,null);
+  bm=bm||cfg.bm;lg=lg||cfg.lg;const key='btts-map-v5|'+bm+'|'+lg.join(','),cacheKey='odds_v5_'+bm,c=LS(cacheKey,null);
   if(autoRun&&!(c&&c.k===key))throw new Error('el escaneo automático no gasta cuotas; haz un escaneo manual');
   if(c&&c.k===key&&(Date.now()-c.t<3*36e5||autoRun))return c.v;
   const MK=await mkMap(),T=await tourIds(),P=await cached('oppart',30,()=>op('participants',{sportId:10}));
@@ -538,7 +553,7 @@ async function loadOdds(bm,lg){
     }
     out.push({h:P[f.participant1Id]||'',w:P[f.participant2Id]||'',t,pr});
   }
-  const v={fx:out,mk:MK};SV('odds_'+bm,{k:key,t:Date.now(),v});return v;
+  const v={fx:out,mk:MK};SV(cacheKey,{k:key,t:Date.now(),v});return v;
 }
 const ALIAS={koln:'cologne',munchen:'munich',muenchen:'munich',wien:'vienna',praha:'prague',kobenhavn:'copenhagen',beograd:'belgrade',lisboa:'lisbon',internazionale:'inter',sankt:'st',saint:'st'};
 const nz=s=>String(s).toLowerCase().replace(/ø/g,'o').replace(/æ/g,'ae').replace(/ß/g,'ss').replace(/ł/g,'l').replace(/đ/g,'d').replace(/œ/g,'oe').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\b(fc|cf|afc|sc|ac|cd|club|de|the|1)\b/g,' ').split(/\s+/).filter(Boolean).map(w=>ALIAS[w]||w).join(' ');
@@ -559,6 +574,8 @@ function oddsFx(OD,hf,wf,ko){
 // Si una línea más alta paga menos que una más baja, o el margen es absurdo, el mapeo es dudoso y se descarta.
 function qSane(q){
   const bad=[],drop=(...ns)=>ns.forEach(n=>{if(q[n]!=null){delete q[n];bad.push(n)}});
+  // Cuotas decimales fuera de rango o no numéricas no pasan al modelo.
+  for(const n of Object.keys(q)){const v=Number(q[n]);if(!Number.isFinite(v)||v<1.01||v>100)drop(n);else q[n]=v;}
   const lines=pre=>Object.keys(q).filter(n=>n.startsWith(pre+'Over ')).map(n=>+n.slice(pre.length+5)).filter(Number.isFinite).sort((a,b)=>a-b);
   for(const pre of ['','Córners ','Tarjetas ']){
     const L=lines(pre);
@@ -903,10 +920,10 @@ async function showInfo(i){
     return p.length?p.join('<br>'):'sin bajas reportadas (puede estar incompleto)'};
   const eh=`<h4>Datos de ESPN</h4><p><b>${esc(r.h)}</b><br>${G(f.bajas_local)}<br><b>${esc(r.w)}</b><br>${G(f.bajas_visitante)}</p><p>`+
     (f.alineaciones?f.alineaciones.map(t=>`<b>${t.lado==='home'?esc(r.h):esc(r.w)}</b> ${esc(t.formacion||'')}: ${esc(t.titulares.join(', '))}`).join('<br>'):'Alineaciones aún no publicadas (suelen salir ~1 h antes).')+'</p>';
-  if(!cfg.gk){b.innerHTML=eh+'<p><small>Agrega tu llave de Gemini en Ajustes para ver también noticias y bajas buscadas en Google.</small></p>';return}
-  b.innerHTML=eh+'<h4>Noticias y contexto (Gemini)</h4><p>Buscando en Google…</p>';
+  if(!cfg.gk&&!cfg.br){b.innerHTML=eh+'<p><small>Configura Gemini o Brave Search + OpenRouter en Ajustes para consultar noticias recientes.</small></p>';return}
+  b.innerHTML=eh+'<h4>Noticias y contexto</h4><p>Buscando fuentes recientes…</p>';
   let gh;try{r.news=null;gh=newsHtml(await research(i),r)}catch(e){gh=`<p class="bad">Gemini: ${esc(e.message.slice(0,140))}</p>`}
-  b.innerHTML=eh+'<h4>Noticias y contexto (Gemini)</h4>'+gh;
+  b.innerHTML=eh+'<h4>Noticias y contexto</h4>'+gh;
 }
 
 // ===== El mejor pick de cada partido lo elige la app con criterios fijos (así siempre sale el mismo) =====
@@ -986,24 +1003,55 @@ async function gmodel(){
   SV('gmodel',{t:Date.now(),v});return v;
 }
 async function research(i){
-  const r=R[i];if(r.news)return r.news;if(!cfg.gk)return null;
-  const cacheKey='CTX_'+r.ev,cache=LS(cacheKey,null);if(cache&&cache.v&&Date.now()-cache.t<8*36e5){r.news=cache.v;return r.news;}
-  const mdl=await gmodel(),now=new Date().toLocaleDateString('es',{weekday:'long',day:'numeric',month:'long',year:'numeric'}),f=new Date(r.ko).toLocaleString('es',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
-  const prompt=`Actúa como investigador deportivo prepartido. Fecha actual: ${now}. Partido: ${r.h} vs ${r.w}, competición ${r.liga}, inicio ${f}. Busca en la web noticias publicadas recientemente y fuentes verificables. Investiga especialmente: (1) qué se juega cada equipo, clasificación, eliminación, descenso, título o necesidad de ganar/empatar; calcula el escenario solo si la tabla/reglamento lo permite y cita fuente; (2) si el resultado de otro partido afecta la clasificación; (3) rotaciones, suplentes, posible once, declaraciones del entrenador, copa entre semana, calendario, descanso y viajes; (4) lesiones/sanciones y si son titulares habituales; (5) clima/árbitro solo si afecta mercados relevantes. Distingue CONFIRMADO, PROBABLE y NO VERIFICADO. No deduzcas que un equipo "debe ganar sí o sí" sin respaldo matemático o declaración fiable. Si las fuentes se contradicen, dilo. Devuelve SOLO JSON válido con forma: {"resumen":"1-3 frases","situacion_competitiva":{"local":"...","visitante":"...","escenarios_clasificacion":"...","urgencia_verificada":"alta|media|baja|desconocida"},"bajas_local":["Jugador (motivo; fuente/estado)"],"bajas_visitante":["Jugador (motivo; fuente/estado)"],"bajas_clave_total":0,"dudas":["Jugador (duda; fuente)"],"alineacion_probable_local":null,"alineacion_probable_visitante":null,"rotaciones_y_descanso":["..."],"contexto":["máximo 5 hechos concretos y su posible efecto"],"impacto_en_mercados":{"resultado":"...","goles":"...","corners":"...","tarjetas":"..."},"alertas_contrarias":["hechos que contradigan el pick o lo vuelvan arriesgado"],"fuentes":[{"medio":"...","titulo":"...","fecha":"...","url":"..."}],"confianza":"alta|media|baja"}. No inventes lesiones, citas, fechas, tablas ni enlaces. Si no hay evidencia, dilo y usa confianza baja. No conviertas rumor en hecho.`;
-  const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${mdl}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':cfg.gk},
-    body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],tools:[{google_search:{}}],generationConfig:{temperature:0.1}})});
-  const j=await res.json();
-  if(j.error)throw new Error(j.error.message);
-  const c=j.candidates&&j.candidates[0],txt=((c&&c.content&&c.content.parts)||[]).map(x=>x.text||'').join('');
-  let o=null;try{o=JSON.parse(txt.match(/\{[\s\S]*\}/)[0])}catch{}
-  const src=((c&&c.groundingMetadata&&c.groundingMetadata.groundingChunks)||[]).map(x=>x.web).filter(Boolean).slice(0,4);
-  r.news=o?{...o,fuentes:src}:{resumen:txt.slice(0,400),fuentes:src,confianza:'baja'};
-  SV(cacheKey,{t:Date.now(),v:r.news});return r.news;
+  const r=R[i];if(r.news)return r.news;
+  const cacheKey='CTX2_'+r.ev,cache=LS(cacheKey,null);
+  if(cache&&cache.v&&Date.now()-cache.t<8*36e5){r.news=cache.v;return r.news;}
+  // Si Gemini se quedó sin cuota, se pausa por 24 horas para no repetir errores en cada partido.
+  const gPause=LS('gemini_pause_until',0);
+  if(cfg.gk&&Date.now()>gPause){
+    try{
+      const mdl=await gmodel(),now=new Date().toLocaleDateString('es',{weekday:'long',day:'numeric',month:'long',year:'numeric'}),f=new Date(r.ko).toLocaleString('es',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
+      const prompt=`Actúa como investigador deportivo prepartido. Fecha actual: ${now}. Partido: ${r.h} vs ${r.w}, competición ${r.liga}, inicio ${f}. Busca en la web noticias recientes y fuentes verificables. Investiga situación competitiva, escenarios de clasificación/eliminación, rotaciones, descanso, lesiones/sanciones y alineaciones. Distingue CONFIRMADO, PROBABLE y NO VERIFICADO. No inventes datos ni deduzcas que un equipo debe ganar sin respaldo. Devuelve SOLO JSON válido con forma: {"resumen":"1-3 frases","situacion_competitiva":{"local":"...","visitante":"...","escenarios_clasificacion":"...","urgencia_verificada":"alta|media|baja|desconocida"},"bajas_local":["..."],"bajas_visitante":["..."],"bajas_clave_total":0,"dudas":["..."],"alineacion_probable_local":null,"alineacion_probable_visitante":null,"rotaciones_y_descanso":["..."],"contexto":["..."],"impacto_en_mercados":{"resultado":"...","goles":"...","corners":"...","tarjetas":"..."},"alertas_contrarias":["..."],"fuentes":[{"medio":"...","titulo":"...","fecha":"...","url":"..."}],"confianza":"alta|media|baja"}. No inventes enlaces ni hechos. Si no hay evidencia, dilo y usa confianza baja.`;
+      const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${mdl}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':cfg.gk},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],tools:[{google_search:{}}],generationConfig:{temperature:0.1}})});
+      const j=await res.json();
+      if(!res.ok||j.error){const msg=(j.error&&j.error.message)||('Gemini HTTP '+res.status);if(res.status===429||/quota|rate limit|resource exhausted|limit/i.test(msg))SV('gemini_pause_until',Date.now()+24*36e5);throw new Error(msg)}
+      const c=j.candidates&&j.candidates[0],txt=((c&&c.content&&c.content.parts)||[]).map(x=>x.text||'').join('');
+      let o=null;try{o=JSON.parse(txt.match(/\{[\s\S]*\}/)[0])}catch{}
+      const src=((c&&c.groundingMetadata&&c.groundingMetadata.groundingChunks)||[]).map(x=>x.web).filter(Boolean).slice(0,4);
+      r.news=o?{...o,fuentes:src}:{resumen:txt.slice(0,400),fuentes:src,confianza:'baja'};
+      SV(cacheKey,{t:Date.now(),v:r.news});return r.news;
+    }catch(e){
+      // El error se conserva para el mensaje final si no hay proveedor alternativo.
+      r._geminiError=e&&e.message?e.message:'Gemini no disponible';
+    }
+  }
+  if(cfg.br&&cfg.or){
+    try{
+      const q=`(${r.h} OR ${r.w}) fútbol noticias lesiones bajas alineaciones rotaciones ${r.liga}`;
+      const u='https://api.search.brave.com/res/v1/news/search?'+new URLSearchParams({q,count:'8',country:'CO',search_lang:'es',freshness:'pw'});
+      const sr=await fetch(u,{headers:{Accept:'application/json','X-Subscription-Token':cfg.br}});
+      const sj=await sr.json();if(!sr.ok)throw new Error((sj&&sj.message)||('Brave Search HTTP '+sr.status));
+      const articles=(sj.results||[]).slice(0,8).map(a=>({titulo:a.title||'',url:a.url||'',fecha:a.age||a.page_age||a.published||'',resumen:a.description||a.extra_snippets?.join(' ')||''})).filter(a=>a.titulo&&a.url);
+      if(!articles.length)throw new Error('Brave no devolvió noticias útiles para este partido');
+      const prompt=`Eres investigador deportivo. Resume SOLO la evidencia contenida en estos resultados reales de noticias para ${r.h} vs ${r.w} (${r.liga}), partido del ${new Date(r.ko).toLocaleString('es')}. No inventes datos ni afirmes que una noticia confirma algo si el titular/snippet no lo respalda. Marca hechos como CONFIRMADO, PROBABLE o NO VERIFICADO. Devuelve SOLO JSON válido con campos: resumen, situacion_competitiva {local,visitante,escenarios_clasificacion,urgencia_verificada}, bajas_local[], bajas_visitante[], bajas_clave_total, dudas[], alineacion_probable_local, alineacion_probable_visitante, rotaciones_y_descanso[], contexto[], impacto_en_mercados {resultado,goles,corners,tarjetas}, alertas_contrarias[], confianza. No inventes fuentes; los enlaces se añadirán desde la lista original. Si no hay evidencia suficiente, explica que no se pudo confirmar y usa confianza baja. Noticias encontradas: ${JSON.stringify(articles)}`;
+      const rr=await fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+cfg.or,'HTTP-Referer':'https://github.com/','X-Title':'RadarPi'},body:JSON.stringify({model:'openrouter/free',temperature:0,max_tokens:1800,messages:[{role:'system',content:'No inventes hechos, lesiones, fechas, alineaciones ni escenarios matemáticos. Devuelve JSON válido.'},{role:'user',content:prompt}]})});
+      const rj=await rr.json();if(!rr.ok||!rj.choices)throw new Error((rj.error&&rj.error.message)||('OpenRouter HTTP '+rr.status));
+      const txt=rj.choices[0].message.content||'';let o=null;try{o=JSON.parse(txt.match(/\{[\s\S]*\}/)[0])}catch{}
+      if(!o)throw new Error('OpenRouter no devolvió JSON válido');
+      o.fuentes=articles.slice(0,5).map(a=>({medio:new URL(a.url).hostname,titulo:a.titulo,fecha:a.fecha,url:a.url}));
+      o.proveedor='Brave Search + OpenRouter';
+      r.news=o;SV(cacheKey,{t:Date.now(),v:r.news});return r.news;
+    }catch(e){r._altError=e&&e.message?e.message:'La alternativa no está disponible'}
+  }
+  if(r._geminiError&&r._altError)throw new Error('Gemini: '+r._geminiError.slice(0,90)+' · Alternativa: '+r._altError.slice(0,110));
+  if(r._geminiError)throw new Error('Gemini: '+r._geminiError.slice(0,140)+(cfg.br&&cfg.or?'':' · Configura OpenRouter y Brave Search en Ajustes para activar el respaldo.'));
+  if(!cfg.gk&&!cfg.br)throw new Error('Configura Gemini o Brave Search + OpenRouter en Ajustes.');
+  throw new Error(r._altError||'No fue posible recuperar noticias.');
 }
 function newsHtml(n,r){
   if(!n)return '';
   const L=a=>(a&&a.length)?esc(a.join('; ')):'sin datos';
-  return `<p>${esc(n.resumen||'')}</p>
+  return `${n.proveedor?`<p><small>Proveedor: ${esc(n.proveedor)}</small></p>`:''}<p>${esc(n.resumen||'')}</p>
 <p><b>Bajas ${esc(r.h)}:</b> ${L(n.bajas_local)}<br><b>Bajas ${esc(r.w)}:</b> ${L(n.bajas_visitante)}</p>
 ${n.dudas&&n.dudas.length?`<p><b>Dudas:</b> ${L(n.dudas)}</p>`:''}
 ${n.alineacion_probable_local?`<p><b>Alineación probable ${esc(r.h)}:</b> ${esc(n.alineacion_probable_local)}</p>`:''}${n.alineacion_probable_visitante?`<p><b>Alineación probable ${esc(r.w)}:</b> ${esc(n.alineacion_probable_visitante)}</p>`:''}
@@ -1024,7 +1072,7 @@ function techo(r,m){
 const lista=(a,t)=>a&&a.length?`<h4>${t}</h4><ul>${a.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'';
 async function ai(i){
   const r=R[i],box=$('#ai'+i);box.hidden=false;box.style.whiteSpace='normal';
-  if(!cfg.gq){box.textContent='Falta la llave de Groq (Ajustes).';return}
+  if(!cfg.gq&&!cfg.or){box.textContent='Falta una llave de IA: configura Groq o OpenRouter en Ajustes.';return}
   box.textContent='Analizando…';
   let inf=null,news=null;try{inf=await info(i)}catch{}
   try{news=await research(i)}catch{}
@@ -1038,22 +1086,26 @@ async function ai(i){
     [r.w+' (visitante)']:{ultimos10:pk(r.B),de_visita:r.B.an+' jugados, '+r.B.aw+' ganados'},
     modelo:{goles_esperados:{local:+r.mod.lh.toFixed(2),visitante:+r.mod.la.toFixed(2)},
       mercados:r.mod.m.map(m=>({mercado:m[0],prob_pct:Math.round(m[1]*100),cuota_minima:+(1.05/m[1]).toFixed(2),techo_stake:techo(r,m),prob_modelo_pct:Math.round(((r.mod.raw||r.mod.m0||r.mod.m).find(x=>x[0]===m[0])||m)[1]*100),prob_pinnacle_pct:(r.mod.f&&r.mod.f[m[0]]!=null)?Math.round(r.mod.f[m[0]]*100):null,nivel:tierOf(r,m[0]),cuota_casa:(r.q&&r.q[m[0]])||null,valor_pct:(r.q&&r.q[m[0]])?Math.round((m[1]*r.q[m[0]]-1)*100):null}))},
-    cuota_del_usuario:(sel&&q)?{mercado:sel,cuota:q}:null,bajas_y_alineaciones:inf,noticias_gemini:news,contexto_calidad:{muestra_local:r.A.n,muestra_visitante:r.B.n,cuota_real_disponible:!!(sel?q:bestOf(r)?.q),alineacion_confirmada:!!(inf&&inf.alineaciones),modelo_validado_fuera_de_muestra:false},pick_de_la_app:bp?{mercado:bp.n,prob_pct:Math.round(bp.p*100),cuota:bp.q,valor_pct:bp.e!=null?Math.round(bp.e*100):null,nivel:bp.t}:null};
+    cuota_del_usuario:(sel&&q)?{mercado:sel,cuota:q}:null,bajas_y_alineaciones:inf,noticias_y_contexto:news,contexto_calidad:{muestra_local:r.A.n,muestra_visitante:r.B.n,cuota_real_disponible:!!(sel?q:bestOf(r)?.q),alineacion_confirmada:!!(inf&&inf.alineaciones),modelo_validado_fuera_de_muestra:false},pick_de_la_app:bp?{mercado:bp.n,prob_pct:Math.round(bp.p*100),cuota:bp.q,valor_pct:bp.e!=null?Math.round(bp.e*100):null,nivel:bp.t}:null};
   try{
-    const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',
-      headers:{'Content-Type':'application/json',Authorization:'Bearer '+cfg.gq},
-      body:JSON.stringify({model:MODEL,temperature:0,max_completion_tokens:2500,messages:[
-        {role:'system',content:'Eres analista escéptico de apuestas deportivas. Usa las estadísticas y el contexto recibido; no inventes datos ni trates ausencia de noticia como confirmación. Las probabilidades son estimaciones no calibradas todavía, basadas en una muestra pequeña, así que no las presentes como certezas. Comprueba si el contexto competitivo (eliminación/clasificación/descenso/título), posibles rotaciones, bajas y descanso contradicen la señal estadística. Una necesidad de ganar no significa automáticamente que ganará ni que habrá muchos goles. Si contexto clave está sin verificar, la alineación no está confirmada, faltan datos del mercado, el valor estimado es menor de 5% o mayor de 25%, o hay contradicciones fuertes, recomienda no apostar. Solo recomienda el pick_de_la_app o el mercado exacto seleccionado; no cambies de mercado. No conviertas una probabilidad alta en valor si la cuota no compensa. Las razones deben incluir datos numéricos del JSON y, cuando aplique, hechos contextuales con fuente/estado. Devuelve máximo 3 razones y 3 riesgos. ajuste_stake debe ser 0, -1 o -2. Responde SOLO JSON válido: {"decision":"apostar"|"no_apostar","pick":"nombre exacto del mercado","ajuste_stake":0|-1|-2,"cuota_minima":número,"resumen":"una frase","razones":["..."],"riesgos":["..."]}. Nunca prometas ganancias.'},
-        {role:'system',content:modo+' Los datos de bajas_y_alineaciones vienen de ESPN y pueden estar incompletos: sin bajas reportadas no significa que no haya bajas. Solo las bajas en titulares_recientes son relevantes (evalúa a qué lado favorecen o perjudican); baja_larga ya está reflejada en la forma reciente y no_titulares casi no importa. Si las alineaciones no están confirmadas, dilo en los riesgos y no pongas un stake alto. noticias_gemini viene de una búsqueda web hecha por otra IA y puede tener errores: úsalo solo para señalar riesgos o contexto (rotaciones, motivación, bajas) y para ajuste_stake; nunca para inventar números.'},
-        {role:'user',content:JSON.stringify(data)}]})});
-    const j=await res.json();
-    if(j.error&&/model/i.test(j.error.message||'')){
-      const m=await (await fetch('https://api.groq.com/openai/v1/models',{headers:{Authorization:'Bearer '+cfg.gq}})).json();
-      const ids=(m.data||[]).map(x=>x.id).filter(x=>!/guard|whisper|tts|orpheus|prompt/i.test(x));
-      const pick=ids.find(x=>/gpt-oss-120b/.test(x))||ids.find(x=>/qwen|llama|gpt-oss/.test(x));
-      if(pick&&pick!==MODEL){MODEL=pick;return ai(i)}
+    const messages=[
+      {role:'system',content:'Eres analista escéptico de apuestas deportivas. Usa las estadísticas y el contexto recibido; no inventes datos ni trates ausencia de noticia como confirmación. Las probabilidades son estimaciones no calibradas todavía, basadas en una muestra pequeña, así que no las presentes como certezas. Comprueba si el contexto competitivo (eliminación/clasificación/descenso/título), posibles rotaciones, bajas y descanso contradicen la señal estadística. Una necesidad de ganar no significa automáticamente que ganará ni que habrá muchos goles. Si contexto clave está sin verificar, la alineación no está confirmada, faltan datos del mercado, el valor estimado es menor de 5% o mayor de 25%, o hay contradicciones fuertes, recomienda no apostar. Solo recomienda el pick_de_la_app o el mercado exacto seleccionado; no cambies de mercado. No conviertas una probabilidad alta en valor si la cuota no compensa. Las razones deben incluir datos numéricos del JSON y, cuando aplique, hechos contextuales con fuente/estado. Devuelve máximo 3 razones y 3 riesgos. ajuste_stake debe ser 0, -1 o -2. Responde SOLO JSON válido: {"decision":"apostar"|"no_apostar","pick":"nombre exacto del mercado","ajuste_stake":0|-1|-2,"cuota_minima":número,"resumen":"una frase","razones":["..."],"riesgos":["..."]}. Nunca prometas ganancias.'},
+      {role:'system',content:modo+' Los datos de bajas_y_alineaciones vienen de ESPN y pueden estar incompletos: sin bajas reportadas no significa que no haya bajas. Solo las bajas en titulares_recientes son relevantes (evalúa a qué lado favorecen o perjudican); baja_larga ya está reflejada en la forma reciente y no_titulares casi no importa. Si las alineaciones no están confirmadas, dilo en los riesgos y no pongas un stake alto. noticias_y_contexto viene de una búsqueda web y puede tener errores: úsalo solo para señalar riesgos o contexto (rotaciones, motivación, bajas) y para ajuste_stake; nunca para inventar números.'},
+      {role:'user',content:JSON.stringify(data)}];
+    let j=null,providerError='';
+    if(cfg.gq){
+      try{
+        const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+cfg.gq},body:JSON.stringify({model:MODEL,temperature:0,max_completion_tokens:2500,messages})});
+        const gj=await res.json();if(res.ok&&gj.choices)j=gj;else providerError='Groq: '+((gj.error&&gj.error.message)||('HTTP '+res.status));
+      }catch(e){providerError='Groq: '+e.message}
     }
-    if(!j.choices){box.textContent='Error: '+(j.error?.message||'sin respuesta');return}
+    if(!j&&cfg.or){
+      try{
+        const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+cfg.or,'HTTP-Referer':'https://github.com/','X-Title':'RadarPi'},body:JSON.stringify({model:'openrouter/free',temperature:0,max_tokens:2500,messages})});
+        const oj=await res.json();if(res.ok&&oj.choices)j=oj;else providerError+=(providerError?' · ':'')+'OpenRouter: '+((oj.error&&oj.error.message)||('HTTP '+res.status));
+      }catch(e){providerError+=(providerError?' · ':'')+'OpenRouter: '+e.message}
+    }
+    if(!j){box.textContent='Error de IA. '+(providerError||'Configura Groq u OpenRouter en Ajustes.');return}
     const txt=j.choices[0].message.content||'';
     let o=null;try{o=JSON.parse(txt.match(/\{[\s\S]*\}/)[0])}catch{}
     if(!o){box.style.whiteSpace='pre-wrap';box.textContent=txt||'La IA no devolvió respuesta. Intenta de nuevo.';return}
@@ -1086,8 +1138,8 @@ function addPick(r,mk,q,s,bet){
   const m=r.mod.m.find(x=>x[0]===mk);if(!m)return null;
   const P=LS('picks',[]);
   let k=P.find(x=>x.ev===r.ev&&x.mk===mk);
-  if(!k){k={id:Date.now()+'-'+Math.floor(Math.random()*1e4),ev:r.ev,slug:r.slug,m:r.m,ko:r.ko,mk,p:+m[1].toFixed(3),res:null};P.push(k)}
-  if(q)k.q=q;if(s)k.s=s;if(bet)k.bet=true;
+  if(!k){k={id:Date.now()+'-'+Math.floor(Math.random()*1e4),ev:r.ev,slug:r.slug,m:r.m,liga:r.liga||'Liga no guardada',ko:r.ko,mk,p:+m[1].toFixed(3),res:null};P.push(k)}
+  if(!k.liga)k.liga=r.liga||'Liga no guardada';if(q)k.q=q;if(s)k.s=s;if(bet)k.bet=true;
   const raw=(r.mod.raw||r.mod.m0||r.mod.m).find(x=>x[0]===mk);k.pm=raw?+raw[1].toFixed(3):k.p;k.pf=r.mod.f&&r.mod.f[mk]!=null?+r.mod.f[mk].toFixed(3):null;k.t=tierOf(r,mk);k.experimental=isHalfMarket(mk);
   SV('picks',P);return k.id;
 }
@@ -1222,6 +1274,9 @@ function drawModel(){
     ${betsR.length>=2?`<div class="card"><h2>Evolución de la ganancia</h2><small>Suma de ganancias y pérdidas de tus apuestas registradas, en orden de fecha.</small>${profitSvg([...betsR].sort((a,b)=>new Date(a.ko)-new Date(b.ko)))}</div>`:''}
     ${D.length?`<div class="card"><h2>Por probabilidad</h2><small>Si el modelo dice 60%, de cada 10 picks debería acertar unos 6. Barra gris: lo que prometía. Barra de color: lo que acertó.</small>${bk.map(([x,y,t])=>row(t,D.filter(k=>k.p>=x&&k.p<y))).join('')}</div>
     <div class="card"><h2>Por tipo de mercado</h2><small>Dónde le va mejor y dónde peor.</small>${gs.map(g=>row(g,D.filter(k=>grp(k.mk)===g))).join('')}</div>
+    <div class="card"><h2>Por liga</h2><small>Solo cuenta pronósticos guardados con liga; los antiguos sin ese dato aparecerán como Liga no guardada. Se necesitan muestras suficientes antes de sacar conclusiones.</small>${[...new Set(D.map(k=>k.liga||'Liga no guardada'))].sort().map(g=>row(g,D.filter(k=>(k.liga||'Liga no guardada')===g))).join('')}</div>
+    <div class="card"><h2>ROI por mercado (apuestas reales registradas)</h2><small>Solo picks marcados como apuesta real, con cuota y resultado. No incluye pronósticos de seguimiento sin dinero.</small>${[...new Set(betsR.map(k=>grp(k.mk)))].map(g=>{const a=betsR.filter(k=>grp(k.mk)===g),st=a.reduce((t,k)=>t+(k.s||1),0),prf=a.reduce((t,k)=>t+(k.res==='w'?(k.s||1)*(k.q-1):-(k.s||1)),0);return `<div class="cal"><div class="cal-t"><span>${esc(g)}</span><span class="${prf>=0?'ok':'bad'}">${st?(100*prf/st).toFixed(1):'0.0'}% ROI · ${a.length} picks</span></div></div>`}).join('')||'<p class="mut">Todavía no hay apuestas reales resueltas.</p>'}</div>
+    <div class="card"><h2>ROI por liga (apuestas reales registradas)</h2>${[...new Set(betsR.map(k=>k.liga||'Liga no guardada'))].map(g=>{const a=betsR.filter(k=>(k.liga||'Liga no guardada')===g),st=a.reduce((t,k)=>t+(k.s||1),0),prf=a.reduce((t,k)=>t+(k.res==='w'?(k.s||1)*(k.q-1):-(k.s||1)),0);return `<div class="cal"><div class="cal-t"><span>${esc(g)}</span><span class="${prf>=0?'ok':'bad'}">${st?(100*prf/st).toFixed(1):'0.0'}% ROI · ${a.length} picks</span></div></div>`}).join('')||'<p class="mut">Todavía no hay apuestas reales resueltas.</p>'}</div>
     <div class="card"><h2>Por nivel (A, B, C)</h2>${['A','B','C'].map(t=>row('Nivel '+t,D.filter(k=>k.t===t))).join('')}<small>Si el nivel A no acierta más que el C, el contraste con Pinnacle no está aportando.</small></div>`:`<p class="status">Aún no hay picks resueltos. Usa “Registrar en Modelo” desde cualquier partido para medir pronósticos sin apostar dinero, o registra apuestas reales por separado.</p>`}`;
   }else{
     const sel=mdlTab==='p'?P.filter(k=>!k.res):mdlTab==='v'?P.filter(k=>k.res==='v'):P.filter(k=>k.res===mdlTab);
