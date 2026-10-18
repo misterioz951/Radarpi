@@ -184,6 +184,35 @@ details.more>summary::after{font-size:20px}
 .x12t{margin-top:12px;font:700 10px Archivo;letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}.x12t+.x12{margin-top:5px}
 .x12.mk{height:24px;opacity:.9}.x12.mk div{font-size:12px}.x12tab{margin-top:10px}
 .mc .acts{display:grid;grid-template-columns:1fr 1fr;gap:6px}.mc .acts .btn{flex:none;width:100%;margin:0;min-height:44px;line-height:1.15}.mc .acts .btn.s{margin:0}
+.acts2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.acts2 .btn{margin:0;width:100%;min-height:46px;line-height:1.15}.acts2 .btn:first-child{grid-column:1/-1;min-height:50px}.acts2 .btn.s{margin:0}
+.cpanel{margin-top:12px;border-top:1px solid var(--ln);padding-top:10px}
+.cpanel[hidden],.tp[hidden]{display:none}
+.seg.ct{margin:0 0 10px}.seg.ct button{min-height:42px;font-size:12.5px}.seg.ct button.x{flex:0 0 40px;color:var(--mut)}
+.phd{margin:6px 2px;font-size:13.5px;color:var(--mut);line-height:1.45}
+.ai:not([hidden])~.phd{display:none}
+.nopick2{margin-top:12px;padding:11px 13px;border-radius:13px;background:var(--s2);border:1px solid var(--ln);font-size:13px;color:var(--mut);line-height:1.45}.nopick2 b{color:var(--ink)}.nopick2 p{margin:3px 0 0}
+.vd{display:flex;flex-direction:column;gap:10px}.vd p{margin:0}
+.vh{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.chip3{display:inline-block;padding:4px 10px;border-radius:20px;font:700 11px Archivo;letter-spacing:.08em;text-transform:uppercase;background:var(--s2);color:var(--mut);border:1px solid var(--ln)}
+.chip3.ok{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok);border-color:transparent}
+.chip3.bad{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad);border-color:transparent}
+.vp{font:700 24px/1.15 'Archivo Narrow',sans-serif}
+.vgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.vgrid div{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:8px 4px;text-align:center}
+.vgrid small{display:block;font-size:10.5px}.vgrid b{display:block;font:700 18px 'Archivo Narrow',sans-serif;font-variant-numeric:tabular-nums}
+.ch{display:inline-block;padding:4px 9px;border-radius:20px;background:var(--s2);border:1px solid var(--ln);font:600 12px Archivo;margin:0 5px 5px 0}
+.ch.bad{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad);border-color:transparent}.ch.am{background:color-mix(in srgb,var(--acc) 24%,transparent);border-color:transparent}.ch.mut{color:var(--mut)}
+.n2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.n2>div>small{display:block;font:700 12px Archivo;color:var(--ink)}.n2 b{font:700 10.5px Archivo;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);display:block;margin:2px 0 6px}
+.nh{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.nsum{margin:10px 0 0;padding:10px 12px;border-left:4px solid var(--acc);background:color-mix(in srgb,var(--acc) 10%,transparent);border-radius:0 10px 10px 0}
+.nwarn{margin-top:10px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--bad) 12%,transparent)}.nwarn b{color:var(--bad)}.nwarn ul{margin:4px 0 0}
+details.ns{margin-top:8px;border-top:1px solid var(--ln);padding-top:6px}details.ns>summary{font:700 13px Archivo;min-height:32px}details.ns>summary::after{font-size:18px}
+.nsep{height:1px;background:var(--ln);margin:14px 0 6px}
+.nsrc{margin:10px 0 0}
+a{color:var(--blue)}.nsrc a{color:var(--blue);text-decoration:underline;text-underline-offset:2px}
+.n2 .mut{font-size:13px;line-height:1.4}
+.ai .mut{font-size:13px}
 @keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -803,10 +832,10 @@ function selOpts(r){
 }
 function ticket(r){
   const b=bestOf(r);
-  if(!b)return `<p class="nopick"><b>Sin pick con ventaja clara.</b>${r.p.length?' Hay '+r.p.length+' patrón(es) en el análisis.':''}</p>`;
+  if(!b)return `<div class="nopick2"><b>Sin pick con ventaja clara</b><p>${diagnose(r)}</p>${r.p.length?`<p>Hay ${r.p.length} patrón(es) detectado(s) en la pestaña Datos.</p>`:''}</div>`;
   const st=baseStake(r,b.n,b.q),c=conflictOf(r,b.n);
   return `<div class="tk ${b.t||''}"><small class="tkl">PICK DE LA APP · SEGÚN REGLAS</small><div class="tk1">${b.t?`<span class="tier tier${b.t}">${b.t}</span>`:''}<b class="n">${esc(b.n)}</b></div>
-<div class="tk2"><span><b>${Math.round(b.p*100)}%</b> prob.</span>${b.q?`<span>cuota <b>@${b.q}</b></span><span>valor <b>${b.e>=0?'+':''}${Math.round(b.e*100)}%</b></span>`:`<span>cuota mínima <b>@${(1.05/b.p).toFixed(2)}</b></span>`}<span>stake <b>${st}/10</b></span></div>
+<div class="tk2"><span><b>${Math.round(b.p*100)}%</b> prob.</span>${b.q?`<span>cuota <b>@${b.q}</b></span><span>valor <b>${b.e>=0?'+':''}${Math.round(b.e*100)}%</b></span>`:`<span>cuota mínima <b>@${(1.05/b.p).toFixed(2)}</b></span>`}<span>stake base <b>${st}/10</b></span></div>
 <div class="meter${st>=5?' hi':''}" role="img" aria-label="Stake ${st} de 10">${Array.from({length:10},(_,k)=>`<i class="${k<st?'f':''}"></i>`).join('')}</div>
 ${c?`<div class="tkw">⚠ Va contra el patrón detectado (${c}). Confírmalo con la IA antes de apostar.</div>`:''}</div>`;
 }
@@ -818,7 +847,16 @@ const GUIA=`<details class="card hint"><summary>¿Cómo leer las tarjetas?</summ
 <p><b>Stake de 1 a 10:</b> confianza calculada con probabilidad, valor, cantidad de datos y bajas. No es una garantía.</p></details>`;
 let resView='picks';
 function setView(v){resView=v;drawRes()}
-function toggleAll(o){document.querySelectorAll('details.more').forEach(d=>d.open=o)}
+async function ai(i){cardTab(i,'v');try{await aiRun(i)}finally{const b=$('#ai'+i);if(b&&R[i]&&!b.hidden)R[i].aiH=b.innerHTML}}
+async function showInfo(i){cardTab(i,'n');try{await showInfoRun(i)}finally{const b=$('#in'+i);if(b&&R[i]&&!b.hidden)R[i].inH=b.innerHTML}}
+function cardTab(i,t){
+  const r=R[i];if(!r)return;r.cardT=t||null;
+  const p=document.querySelector('#cp'+i);if(!p)return;
+  p.hidden=!t;
+  p.querySelectorAll('.tp').forEach(x=>{x.hidden=x.dataset.t!==t});
+  p.querySelectorAll('.ct button[data-t]').forEach(b=>{const on=b.dataset.t===t;b.classList.toggle('on',on);b.setAttribute('aria-selected',on?'true':'false')});
+}
+function toggleAll(o){R.forEach((_,i)=>cardTab(i,o?'d':null))}
 function card(i){
   const r=R[i];
     let lst;
@@ -835,22 +873,28 @@ function card(i){
     return `<article class="card mc"><div class="mh"><span class="pill">${esc(r.liga)}</span><span class="ko">${r.hora}</span></div>
   <div class="mt"><b>${esc(r.h)}</b><em>vs</em><b>${esc(r.w)}</b></div>
   ${ticket(r)}
-  <div class="acts"><button class="btn" onclick="regModel(${i})">Registrar en Modelo</button><button class="btn s" onclick="ai(${i})">Analizar con IA</button><button class="btn s" onclick="showInfo(${i})">Noticias</button><button class="btn s" onclick="reg(${i})">Registrar apuesta $</button></div>
-  <p class="status mini">“Registrar en Modelo” guarda el pronóstico para medir aciertos, sin exigir monto ni apostar dinero. “Registrar apuesta $” conserva el registro económico.</p>
-  ${!bestOf(r)?`<div class="status"><b>Diagnóstico:</b> ${diagnose(r)}</div>`:''}
-  <div class="ai news" id="in${i}" hidden></div><div class="ai" id="ai${i}" hidden></div>
-  <details class="more"><summary>Ver análisis del partido</summary>
+  <div class="acts2"><button class="btn" onclick="ai(${i})">Analizar con IA</button><button class="btn s" onclick="showInfo(${i})">Noticias y bajas</button><button class="btn s" onclick="regModel(${i})">Registrar en Modelo</button></div>
+  <div class="cpanel" id="cp${i}" ${r.cardT?'':'hidden'}>
+    <div class="seg m ct" role="tablist" aria-label="Análisis del partido">${[['v','Veredicto'],['n','Noticias'],['d','Datos'],['a','Mercados']].map(([k,t])=>`<button type="button" role="tab" data-t="${k}" aria-selected="${r.cardT===k}" class="${r.cardT===k?'on':''}" onclick="cardTab(${i},'${k}')"><span>${t}</span></button>`).join('')}<button type="button" class="x" aria-label="Cerrar panel" onclick="cardTab(${i},null)">✕</button></div>
+    <div class="tp" data-t="v" ${r.cardT==='v'?'':'hidden'}><div class="ai" id="ai${i}" ${r.aiH?'':'hidden'}>${r.aiH||''}</div><p class="phd">Pulsa <b>Analizar con IA</b> para que valide el pick de la app, o elige otro mercado en la pestaña Mercados y analízalo.</p></div>
+    <div class="tp" data-t="n" ${r.cardT==='n'?'':'hidden'}><div class="ai news" id="in${i}" ${r.inH?'':'hidden'}>${r.inH||''}</div><p class="phd">Pulsa <b>Noticias y bajas</b> para ver alineaciones, lesionados y noticias recientes del partido.</p></div>
+    <div class="tp" data-t="d" ${r.cardT==='d'?'':'hidden'}>
   ${x12(r)}
   ${x12m(r)}
   ${x12tab(r)}
   <p class="lect">${lectura(r)}</p>
   ${(r.A.fm||r.B.fm)?`<div class="forms"><div><small>${esc(r.h)}</small>${formH(r.A.fm)}</div><div><small>${esc(r.w)}</small>${formH(r.B.fm)}</div></div>`:''}
   ${r.p.length?`<div class="tags">${r.p.map(x=>`<div class="tg ${tagc(x)}">${esc(x)}</div>`).join('')}</div>`:''}
-  <div class="mkts">${lst}</div>
   <details class="dd"><summary>Datos de los últimos 10 partidos</summary><div class="cmphd"><span>${esc(r.h)}</span><span>${esc(r.w)}</span></div>${cmpRows(r)}</details>
+    </div>
+    <div class="tp" data-t="a" ${r.cardT==='a'?'':'hidden'}>
+  <div class="mkts">${lst}</div>
   <div class="ctl"><select id="mk${i}" onchange="pick(${i})" aria-label="Mercado">${selOpts(r)}</select><input id="od${i}" type="number" step="0.01" placeholder="Cuota" oninput="calc(${i})" aria-label="Cuota"><input id="sk${i}" type="number" placeholder="Monto" aria-label="Monto"></div>${r.mod.m.some(([n])=>isHalfMarket(n))?'<p class="status">Mercados por mitades: cálculo provisional con reparto 45%/55% de los goles esperados; no se incluyen en los picks automáticos hasta validarlos con datos históricos de cada tiempo. Para registrarlos, introduce la cuota real y verifica el marcador por mitades.</p>':''}
   <div class="cx" id="cx${i}"></div>
-  </details></article>`;
+      <div class="acts2" style="margin-top:10px"><button class="btn" onclick="reg(${i})">Registrar apuesta $</button></div>
+      <p class="phd">“Registrar en Modelo” guarda el pronóstico para medir aciertos, sin monto. “Registrar apuesta $” guarda también el dinero apostado.</p>
+    </div>
+  </div></article>`;
 }
 function drawRes(){
   if(!R.length){$('#res').innerHTML='<div class="empty"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="32" cy="32" r="26"/><circle cx="32" cy="32" r="15"/><path d="M32 32l16-16"/></svg><b>Nada que destacar</b>No hay partidos con patrones ni valor claro. Prueba con más ligas o ajusta los umbrales.</div>';return}
@@ -909,21 +953,22 @@ async function info(i){
   r.inf={bajas_local:cls(r.A.sx,ih),bajas_visitante:cls(r.B.sx,iw),alineaciones:conf?lu:null};
   return r.inf;
 }
-async function showInfo(i){
+async function showInfoRun(i){
   const b=$('#in'+i);b.hidden=false;b.style.whiteSpace='normal';b.textContent='Buscando…';
   const r=R[i];r.inf=null;const f=await info(i);
-  const G=o=>{const p=[];
-    if(o.titulares_recientes.length)p.push('<b>Titulares recientes:</b> '+esc(o.titulares_recientes.join(', ')));
-    if(o.baja_larga.length)p.push('Bajas largas (ya reflejadas en su forma): '+esc(o.baja_larga.join(', ')));
-    if(o.no_titulares.length)p.push('No titulares habituales: '+esc(o.no_titulares.join(', ')));
-    if(o.sin_clasificar.length)p.push('Sin clasificar: '+esc(o.sin_clasificar.join(', ')));
-    return p.length?p.join('<br>'):'sin bajas reportadas (puede estar incompleto)'};
-  const eh=`<h4>Datos de ESPN</h4><p><b>${esc(r.h)}</b><br>${G(f.bajas_local)}<br><b>${esc(r.w)}</b><br>${G(f.bajas_visitante)}</p><p>`+
-    (f.alineaciones?f.alineaciones.map(t=>`<b>${t.lado==='home'?esc(r.h):esc(r.w)}</b> ${esc(t.formacion||'')}: ${esc(t.titulares.join(', '))}`).join('<br>'):'Alineaciones aún no publicadas (suelen salir ~1 h antes).')+'</p>';
-  if(!cfg.gk&&!cfg.br){b.innerHTML=eh+'<p><small>Configura Gemini o Brave Search + OpenRouter en Ajustes para consultar noticias recientes.</small></p>';return}
-  b.innerHTML=eh+'<h4>Noticias y contexto</h4><p>Buscando fuentes recientes…</p>';
+  const G=o=>{const c=[];
+    (o.titulares_recientes||[]).forEach(x=>c.push(`<span class="ch bad" title="Titular reciente">${esc(x)}</span>`));
+    (o.baja_larga||[]).forEach(x=>c.push(`<span class="ch mut" title="Baja larga: ya está reflejada en su forma">${esc(x)} · larga</span>`));
+    (o.no_titulares||[]).forEach(x=>c.push(`<span class="ch mut">${esc(x)} · no titular</span>`));
+    (o.sin_clasificar||[]).forEach(x=>c.push(`<span class="ch am">${esc(x)}</span>`));
+    return c.length?`<div>${c.join('')}</div>`:'<span class="mut">sin bajas reportadas (puede estar incompleto)</span>'};
+  const eh=`<div class="nh"><span class="chip3">Datos de ESPN</span></div>
+<div class="n2"><div><small>${esc(r.h)}</small><b>Bajas</b>${G(f.bajas_local)}</div><div><small>${esc(r.w)}</small><b>Bajas</b>${G(f.bajas_visitante)}</div></div>
+<div class="n2" style="grid-template-columns:1fr"><div><b>Alineaciones</b>`+(f.alineaciones?f.alineaciones.map(t=>`<p class="mr-s"><b style="display:inline;letter-spacing:0;text-transform:none;font-size:12px;color:var(--ink)">${t.lado==='home'?esc(r.h):esc(r.w)}</b> ${esc(t.formacion||'')}: ${esc(t.titulares.join(', '))}</p>`).join(''):'<span class="mut">Aún no publicadas (suelen salir ~1 h antes).</span>')+`</div></div>`;
+  if(!cfg.gk&&!cfg.br){b.innerHTML=eh+'<div class="nsep"></div><p class="mr-s">Configura Gemini o Brave Search + OpenRouter en Ajustes para consultar también noticias recientes.</p>';return}
+  b.innerHTML=eh+'<div class="nsep"></div><div class="nh"><span class="chip3">Noticias y contexto</span></div><p class="mr-s">Buscando fuentes recientes…</p>';
   let gh;try{r.news=null;gh=newsHtml(await research(i),r)}catch(e){gh=`<p class="bad">Gemini: ${esc(e.message.slice(0,140))}</p>`}
-  b.innerHTML=eh+'<h4>Noticias y contexto</h4>'+gh;
+  b.innerHTML=eh+'<div class="nsep"></div>'+gh;
 }
 
 // ===== El mejor pick de cada partido lo elige la app con criterios fijos (así siempre sale el mismo) =====
@@ -1048,16 +1093,22 @@ async function research(i){
   if(!cfg.gk&&!cfg.br)throw new Error('Configura Gemini o Brave Search + OpenRouter en Ajustes.');
   throw new Error(r._altError||'No fue posible recuperar noticias.');
 }
+const ul=a=>a&&a.length?`<ul>${a.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'';
+const chs=(a,c)=>(a&&a.length)?`<div>${a.map(x=>`<span class="ch ${c||''}">${esc(x)}</span>`).join('')}</div>`:'<span class="mut">sin datos</span>';
 function newsHtml(n,r){
   if(!n)return '';
-  const L=a=>(a&&a.length)?esc(a.join('; ')):'sin datos';
-  return `${n.proveedor?`<p><small>Proveedor: ${esc(n.proveedor)}</small></p>`:''}<p>${esc(n.resumen||'')}</p>
-<p><b>Bajas ${esc(r.h)}:</b> ${L(n.bajas_local)}<br><b>Bajas ${esc(r.w)}:</b> ${L(n.bajas_visitante)}</p>
-${n.dudas&&n.dudas.length?`<p><b>Dudas:</b> ${L(n.dudas)}</p>`:''}
-${n.alineacion_probable_local?`<p><b>Alineación probable ${esc(r.h)}:</b> ${esc(n.alineacion_probable_local)}</p>`:''}${n.alineacion_probable_visitante?`<p><b>Alineación probable ${esc(r.w)}:</b> ${esc(n.alineacion_probable_visitante)}</p>`:''}
-${n.situacion_competitiva?`<h4>Motivación y clasificación</h4><p><b>${esc(r.h)}:</b> ${esc(n.situacion_competitiva.local||'Sin datos')}<br><b>${esc(r.w)}:</b> ${esc(n.situacion_competitiva.visitante||'Sin datos')}<br><b>Escenarios:</b> ${esc(n.situacion_competitiva.escenarios_clasificacion||'No verificados')}<br><b>Urgencia verificada:</b> ${esc(n.situacion_competitiva.urgencia_verificada||'desconocida')}</p>`:''}
-${lista(n.rotaciones_y_descanso,'Rotaciones y descanso')}${lista(n.contexto,'Contexto verificado')}${lista(n.impacto_en_mercados?Object.entries(n.impacto_en_mercados).map(([k,v])=>k+': '+v):[],'Posible impacto por mercado')}${lista(n.alertas_contrarias,'Alertas contra el pick')}
-<p><small>Confianza ${esc(n.confianza||'?')}. La IA puede equivocarse: abre las fuentes y verifica noticias/alineaciones. ${(n.fuentes&&n.fuentes.length)?' Fuentes: '+n.fuentes.map(x=>`<a href="${esc(x.url||x.uri||'#')}" target="_blank" rel="noopener">${esc((x.titulo||x.title||x.medio||'enlace').slice(0,55))}</a>`).join(' · '):''}</small></p>`;
+  const conf=String(n.confianza||'?').toLowerCase(),sc=n.situacion_competitiva;
+  const sec=(t,body)=>body?`<details class="ns"><summary>${t}</summary>${body}</details>`:'';
+  const imp=n.impacto_en_mercados?Object.entries(n.impacto_en_mercados).map(([k,v])=>k+': '+v):[];
+  return `<div class="nh"><span class="chip3 ${conf==='alta'?'ok':conf==='baja'?'bad':''}">Confianza ${esc(n.confianza||'?')}</span>${n.proveedor?`<small>vía ${esc(n.proveedor)}</small>`:''}</div>
+${n.resumen?`<p class="nsum">${esc(n.resumen)}</p>`:''}
+${(n.alertas_contrarias&&n.alertas_contrarias.length)?`<div class="nwarn"><b>⚠ Alertas contra el pick</b>${ul(n.alertas_contrarias)}</div>`:''}
+<div class="n2"><div><small>${esc(r.h)}</small><b>Bajas</b>${chs(n.bajas_local,'bad')}${n.alineacion_probable_local?`<p class="mr-s">XI probable: ${esc(n.alineacion_probable_local)}</p>`:''}</div>
+<div><small>${esc(r.w)}</small><b>Bajas</b>${chs(n.bajas_visitante,'bad')}${n.alineacion_probable_visitante?`<p class="mr-s">XI probable: ${esc(n.alineacion_probable_visitante)}</p>`:''}</div></div>
+${(n.dudas&&n.dudas.length)?`<div style="margin-top:10px"><small><b>Dudas</b></small>${chs(n.dudas,'am')}</div>`:''}
+${sec('Motivación y clasificación',sc?`<p><b>${esc(r.h)}:</b> ${esc(sc.local||'Sin datos')}</p><p><b>${esc(r.w)}:</b> ${esc(sc.visitante||'Sin datos')}</p><p><b>Escenarios:</b> ${esc(sc.escenarios_clasificacion||'No verificados')}</p><p><b>Urgencia verificada:</b> ${esc(sc.urgencia_verificada||'desconocida')}</p>`:'')}
+${sec('Rotaciones y descanso',ul(n.rotaciones_y_descanso))}${sec('Contexto verificado',ul(n.contexto))}${sec('Posible impacto por mercado',ul(imp))}
+<p class="nsrc"><small>La IA puede equivocarse: abre las fuentes y verifica noticias y alineaciones.${(n.fuentes&&n.fuentes.length)?' Fuentes: '+n.fuentes.map(x=>`<a href="${esc(x.url||x.uri||'#')}" target="_blank" rel="noopener">${esc((x.titulo||x.title||x.medio||'enlace').slice(0,55))}</a>`).join(' · '):''}</small></p>`;
 }
 
 // techo de stake (1-10) que permiten los datos: probabilidad, tamaño de muestra y patrones que coinciden
@@ -1070,7 +1121,7 @@ function techo(r,m){
   return Math.max(1,Math.min(9,t));
 }
 const lista=(a,t)=>a&&a.length?`<h4>${t}</h4><ul>${a.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'';
-async function ai(i){
+async function aiRun(i){
   const r=R[i],box=$('#ai'+i);box.hidden=false;box.style.whiteSpace='normal';
   if(!cfg.gq&&!cfg.or){box.textContent='Falta una llave de IA: configura Groq o OpenRouter en Ajustes.';return}
   box.textContent='Analizando…';
@@ -1078,7 +1129,7 @@ async function ai(i){
   try{news=await research(i)}catch{}
   const sel=$('#mk'+i).value,q=+$('#od'+i).value||null;
   const bp=sel?null:bestOf(r);
-  if(!sel&&!bp){box.innerHTML=`<div class="pickhd"><small>SIN PICK DE LA APP</small><b class="bad">No apostar por ahora</b></div><p>${whyNo(r)}</p><button class="btn s" onclick="showInfo(${i})">Investigar contexto</button>`;return}
+  if(!sel&&!bp){box.innerHTML=`<div class="vd"><div class="vh"><span class="chip3 bad">Sin pick de la app</span></div><p>${whyNo(r)}</p><button class="btn s" onclick="showInfo(${i})">Investigar contexto</button></div>`;return}
   const modo=sel?`El usuario eligió el mercado "${sel}": analiza SOLO ese mercado y el pick debe ser exactamente ese. Si no hay valor o respaldo suficiente, decision="no_apostar". Si hay cuota_del_usuario o cuota_casa, úsala. En lugar de stake devuelve ajuste_stake (0, -1 o -2 según los riesgos): la app calcula el stake.`:`La app ya eligió el mejor pick de este partido con criterios fijos (valor, nivel, cuota mínima y respaldo de patrones): "pick_de_la_app". Tu tarea: devolver decision "apostar" o "no_apostar" (no_apostar solo si hay una razón concreta en las bajas, las alineaciones o los datos), el pick EXACTAMENTE igual a pick_de_la_app, ajuste_stake (0, -1 o -2 según los riesgos; la app calcula el stake, ignora el campo stake) y explicar. No cambies de mercado.`;
   const pk=x=>({victorias:x.w,derrotas:x.l,goles_favor_prom:+x.gf.toFixed(2),goles_totales_prom:+x.t.toFixed(2),ambos_marcan_pct:x.b,partidos_2_goles_o_menos_pct:x.low,porterias_en_cero:x.cs,sin_marcar:x.fts,racha_victorias:x.rs,corners_favor:x.cf,corners_contra:x.ca,tarjetas_por_partido:x.y});
   const data={partido:r.m,liga:r.liga,patrones_detectados:r.p,
@@ -1120,15 +1171,16 @@ async function ai(i){
     let stk=mk?baseStake(r,mk[0],price):1;
     if(inf&&!inf.alineaciones)stk=Math.min(stk,7);
     stk=Math.max(1,Math.min(10,stk-(nb>=2?2:nb===1?1:0)+aj));
-    if(o.decision!=='apostar'){box.innerHTML=`<div class="pickhd"><small>VEREDICTO DE LA IA</small><b class="bad">No apostar</b></div><p>${esc(o.resumen||'')}</p>${note?`<p class="bad">${esc(note)}</p>`:''}${lista(o.razones,'Razones')}`;return}
+    if(o.decision!=='apostar'){box.innerHTML=`<div class="vd"><div class="vh"><span class="chip3 bad">No apostar</span></div><p>${esc(o.resumen||'')}</p>${note?`<p class="bad">${esc(note)}</p>`:''}${lista(o.razones,'Razones')}</div>`;return}
     const pct=stk*0.3,amt=cfg.bk?Math.round(cfg.bk*pct/100/100)*100:0;
     r.pk=o.pick;r.sk=amt;r.pq=price;
-    box.innerHTML=`<div class="pickhd"><small>VEREDICTO DE LA IA · APOSTAR</small><b>${esc(o.pick)}</b></div>
+    const pm=mk?mk[1]:null,val=(price&&pm!=null)?Math.round((pm*price-1)*100):null;
+    box.innerHTML=`<div class="vd"><div class="vh"><span class="chip3 ok">Apostar</span><b class="vp">${esc(o.pick)}</b></div>
+<div class="vgrid"><div><small>Stake final</small><b>${stk}/10</b></div><div><small>Probabilidad</small><b>${pm!=null?Math.round(pm*100)+'%':'—'}</b></div><div><small>${price?'Cuota casa':'Cuota mín.'}</small><b>${price?price:esc(o.cuota_minima||(pm?(1.05/pm).toFixed(2):'—'))}</b></div><div><small>Valor</small><b>${val!=null?(val>=0?'+':'')+val+'%':'—'}</b></div></div>
 <div class="meter${stk>=8?' hi':''}" role="img" aria-label="Stake ${stk} de 10">${Array.from({length:10},(_,k)=>`<i class="${k<stk?'f':''}"></i>`).join('')}</div>
-<div class="kv"><span>Stake <b>${stk}/10</b></span><span>${pct.toFixed(1)}% del bankroll${amt?' ≈ <b>'+amt.toLocaleString('es')+'</b>':''}</span><span>Cuota mín. <b>${esc(o.cuota_minima||(mk?(1.05/mk[1]).toFixed(2):''))}</b></span>${price?`<span>Cuota casa <b>${price}</b> · valor <b>${Math.round((mk[1]*price-1)*100)}%</b></span>`:''}</div>
-<p><small>Stake orientativo (máximo 1,8% del bankroll en esta versión; no es garantía de ventaja)${aj?' · la IA lo bajó '+(-aj):''}.</small></p>
-<p>${esc(o.resumen||'')}</p>${lista(o.razones,'Razones')}${lista(o.riesgos,'Riesgos')}${inf&&!inf.alineaciones?'<p><small>Alineaciones sin confirmar: stake máximo 7. Vuelve a analizar cuando salgan (≈1 h antes).</small></p>':''}
-${mk?`<div class="ctl" style="grid-template-columns:1fr auto;margin-top:12px;align-items:center"><input id="pq${i}" type="number" step="0.01" placeholder="Cuota real" value="${price||''}"><button class="btn s" style="margin:6px 0 0" onclick="regModel(${i})">Registrar en Modelo</button></div>`:''}`;
+<p class="mr-s">${pct.toFixed(1)}% del bankroll${amt?' ≈ <b>'+amt.toLocaleString('es')+'</b>':''}. Stake orientativo (máximo 1,8% del bankroll en esta versión; no es garantía de ventaja)${aj?' · la IA lo bajó '+(-aj):''}.</p>
+<p>${esc(o.resumen||'')}</p>${lista(o.razones,'Razones')}${lista(o.riesgos,'Riesgos')}${inf&&!inf.alineaciones?'<p class="mr-s">Alineaciones sin confirmar: stake máximo 7. Vuelve a analizar cuando salgan (≈1 h antes).</p>':''}
+${mk?`<div class="ctl" style="grid-template-columns:1fr auto;margin-top:6px;align-items:center"><input id="pq${i}" type="number" step="0.01" placeholder="Cuota real" value="${price||''}" aria-label="Cuota real"><button class="btn s" style="margin:6px 0 0" onclick="regModel(${i})">Registrar en Modelo</button></div>`:''}</div>`;
   }catch(e){box.textContent='Error: '+e.message}
 }
 
@@ -1319,32 +1371,45 @@ function setR(id,r){
   drawBets();
 }
 function delB(id){if(confirm('¿Borrar esta apuesta?')){bets=bets.filter(b=>b.id!==id);SV('bets',bets);drawBets()}}
+let betTab='p';
+function setBetTab(t){betTab=t;drawBets()}
 function drawBets(){
-  const done=bets.filter(b=>b.r==='w'||b.r==='l');
+  const done=bets.filter(b=>b.r==='w'||b.r==='l'),nP=bets.filter(b=>b.r==='p').length,nW=bets.filter(b=>b.r==='w').length,nL=bets.filter(b=>b.r==='l').length,nV=bets.filter(b=>b.r==='v').length;
   const gan=done.reduce((a,b)=>a+(b.r==='w'?b.s*(b.q-1):-b.s),0),stk=done.reduce((a,b)=>a+b.s,0);
   const ac=done.length?Math.round(100*done.filter(b=>b.r==='w').length/done.length):0;
   $('#sum').innerHTML=`<div class="hero"><small>Ganancia neta</small><div class="big ${gan>=0?'ok':'bad'}">${gan>=0?'+':''}${Math.round(gan).toLocaleString('es')}</div>
-  <div class="sub"><span><b>${done.length}</b>resueltas</span><span><b>${ac}%</b>acierto</span><span><b>${stk?(100*gan/stk).toFixed(1):0}%</b>ROI</span><span><b>${bets.length-done.length}</b>pendientes</span></div></div>`;
-  $('#bets').innerHTML=bets.map(b=>`<div class="card bet"><div class="bet-h"><b>${esc(b.m)}</b><span class="st ${b.r}">${{p:'Pendiente',w:'Ganó',l:'Perdió',v:'Nula'}[b.r]}</span></div>
-  <small>Cuota ${b.q} · Monto ${b.s.toLocaleString('es')}</small>
-  <div>${b.r==='p'?`<button class="btn s" onclick="setR(${b.id},'w')">Ganó</button><button class="btn s" onclick="setR(${b.id},'l')">Perdió</button><button class="btn s" onclick="setR(${b.id},'v')">Nula</button>`:''}<button class="btn s" onclick="delB(${b.id})">Borrar</button></div></div>`).join('')||'<div class="empty"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="8" width="36" height="48" rx="5"/><path d="M23 22h18M23 32h18M23 42h10"/></svg><b>Sin apuestas todavía</b>Las que registres desde las tarjetas aparecerán aquí.</div>';
+  <div class="sub"><span><b>${done.length}</b>resueltas</span><span><b>${ac}%</b>acierto</span><span><b>${stk?(100*gan/stk).toFixed(1):0}%</b>ROI</span><span><b>${nP}</b>pendientes</span></div></div>`;
+  if(betTab==='p'&&!nP&&bets.length)betTab='all';
+  const tabs=[['p','Pendientes',nP],['w','Ganadas',nW],['l','Perdidas',nL],['all','Todas',bets.length]];if(nV)tabs.splice(3,0,['v','Nulas',nV]);
+  const menu=`<div class="seg m" role="tablist" aria-label="Filtrar apuestas">${tabs.map(([k,t,n])=>`<button type="button" role="tab" aria-selected="${betTab===k}" class="${betTab===k?'on':''}" onclick="setBetTab('${k}')"><span>${t}</span><b class="${k==='w'?'ok':k==='l'?'bad':''}">${n}</b></button>`).join('')}</div>`;
+  const sel=(betTab==='all'?bets:bets.filter(b=>b.r===betTab)).slice().sort((a,b)=>b.id-a.id);
+  const item=b=>`<div class="bet"><div class="bet-h"><b>${esc(b.m)}</b><span class="st ${b.r}">${{p:'Pendiente',w:'Ganó',l:'Perdió',v:'Nula'}[b.r]}</span></div>
+  <small>Cuota ${b.q} · Monto ${b.s.toLocaleString('es')}${b.r==='w'?' · ganancia +'+Math.round(b.s*(b.q-1)).toLocaleString('es'):b.r==='l'?' · pérdida −'+b.s.toLocaleString('es'):''}</small>
+  <div>${b.r==='p'?`<button class="btn s" onclick="setR(${b.id},'w')">Ganó</button><button class="btn s" onclick="setR(${b.id},'l')">Perdió</button><button class="btn s" onclick="setR(${b.id},'v')">Nula</button>`:`<button class="btn s" onclick="setR(${b.id},'p')">↺ Pendiente</button>`}<button class="btn s" onclick="delB(${b.id})">Borrar</button></div></div>`;
+  $('#bets').innerHTML=bets.length?menu+`<div class="card">${sel.map(item).join('')||'<p class="mut">No hay apuestas en esta sección.</p>'}</div>`
+    :'<div class="empty"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="8" width="36" height="48" rx="5"/><path d="M23 22h18M23 32h18M23 42h10"/></svg><b>Sin apuestas todavía</b>Las que registres desde las tarjetas aparecerán aquí.</div>';
 }
 // ===== Copia de seguridad de RadarPi: exporta todas las claves locales =====
+const SECRETS=['gq','gk','or','br','ok'];
+const BACKUP_KEYS=['picks','bets','cfg','seen','scan'];
 function exportRadarBackup(){
   const msg=$('#backupMsg');
   try{
     const storage={};
-    for(let i=0;i<localStorage.length;i++){
-      const k=localStorage.key(i); if(k!==null) storage[k]=localStorage.getItem(k);
+    for(const k of BACKUP_KEYS){
+      let v=localStorage.getItem(k);if(v===null)continue;
+      if(k==='cfg'){try{const c=JSON.parse(v);SECRETS.forEach(x=>{c[x]=''});v=JSON.stringify(c)}catch{continue}}   // las llaves de API nunca salen en el archivo
+      storage[k]=v;
     }
     if(!Object.keys(storage).length){msg.textContent='No se encontraron datos guardados para respaldar.';return;}
-    const data={app:'Radar de patrones',format:2,createdAt:new Date().toISOString(),storage};
+    const data={app:'Radar de patrones',format:3,createdAt:new Date().toISOString(),note:'No incluye llaves de API ni cachés.',storage};
     const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
     const url=URL.createObjectURL(blob),a=document.createElement('a');
     a.href=url;a.download='radarpi-copia-'+new Date().toISOString().slice(0,10)+'.json';
     document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);
     try{localStorage.setItem('radarpi_backup_last_export',new Date().toISOString())}catch{}
-    msg.textContent='Copia preparada con '+Object.keys(storage).length+' elementos. Verifica que el archivo JSON aparezca en Descargas y guárdalo fuera de Chrome.';
+    const np=(()=>{try{return JSON.parse(storage.picks||'[]').length}catch{return 0}})(),nb=(()=>{try{return JSON.parse(storage.bets||'[]').length}catch{return 0}})();
+    msg.textContent='Copia preparada: '+np+' picks y '+nb+' apuestas, sin tus llaves de API. Verifica que el JSON aparezca en Descargas y guárdalo fuera de Chrome.';
   }catch(e){msg.textContent='No se pudo crear la copia: '+(e&&e.message?e.message:'error desconocido');}
 }
 $('#backupOut').addEventListener('click',exportRadarBackup);
@@ -1361,8 +1426,15 @@ $('#backupFile').addEventListener('change',async e=>{
     if(!source||Array.isArray(source))throw new Error('La copia no contiene datos reconocidos.');
     const pairs=Object.entries(source).filter(([k,v])=>typeof k==='string'&&k.length>0&&(typeof v==='string'||v===null));
     if(!pairs.length)throw new Error('La copia está vacía o tiene un formato no compatible.');
-    if(!confirm('Se restaurarán '+pairs.length+' claves de la copia. Las claves coincidentes actuales serán reemplazadas. Se recomienda exportar primero una copia del estado actual. ¿Continuar?'))return;
-    for(const [k,v] of pairs){if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v);}
+    if(!confirm('Se restaurarán los datos de la copia (picks, apuestas y ajustes). Las llaves de API que ya tienes se conservan. Los datos actuales con el mismo nombre serán reemplazados. Se recomienda exportar primero una copia del estado actual. ¿Continuar?'))return;
+    for(const [k,v] of pairs){
+      if(!BACKUP_KEYS.includes(k)&&!/^(picks|bets|cfg|seen|scan)$/.test(k)&&data.format>=3)continue;
+      if(v===null){localStorage.removeItem(k);continue}
+      if(k==='cfg'){   // conserva las llaves de API que ya tienes en este dispositivo
+        try{const nw=JSON.parse(v),cur=JSON.parse(localStorage.getItem('cfg')||'{}');SECRETS.forEach(x=>{if(!nw[x]&&cur[x])nw[x]=cur[x]});localStorage.setItem('cfg',JSON.stringify(nw));continue}catch{}
+      }
+      localStorage.setItem(k,v);
+    }
     msg.textContent='Restauración completada ('+pairs.length+' claves). RadarPi se recargará.';
     setTimeout(()=>location.reload(),900);
   }catch(err){msg.textContent='No se pudo restaurar la copia: '+(err&&err.message?err.message:'archivo inválido');}
