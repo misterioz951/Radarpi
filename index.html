@@ -225,7 +225,11 @@ a{color:var(--blue)}.nsrc a{color:var(--blue);text-decoration:underline;text-und
 .stake-markets{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .stake-markets span{display:inline-flex;gap:7px;align-items:center;border:1px solid var(--ln);border-radius:99px;padding:5px 9px;font-size:.78rem}
 
-#comboPanel{margin:14px 0 18px;scroll-margin-top:12px}.combo-page-head{display:flex;align-items:center;gap:12px;margin:5px 0 14px}.combo-page-head h2{margin:0;font-size:1.35rem}.combo-page-head p{margin:4px 0 0;color:var(--mut);font-size:.83rem;line-height:1.45}.combo-page-icon{display:grid;place-items:center;flex:0 0 48px;height:48px;border-radius:15px;background:linear-gradient(145deg,#7657e8,#4b38b5);color:white;font-size:25px}.combo-controls{padding:14px}.combo-control-info p{font-size:.82rem;color:var(--mut);line-height:1.5;margin:6px 0 12px}.combo-control-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:13px}.combo-control-pills span{border:1px solid var(--ln);border-radius:99px;padding:6px 9px;font-size:.7rem;font-weight:700}.combo-controls #comboScanBtn{width:100%;min-height:48px;background:linear-gradient(135deg,#7657e8,#4b38b5);color:white;border:0}.combo-controls #comboMsg{margin-bottom:0}
+#comboPanel{margin:14px 0 18px;scroll-margin-top:12px}
+.combo-best{margin:12px;padding:14px;border:1px solid color-mix(in srgb,#7657e8 55%,var(--ln));border-radius:15px;background:color-mix(in srgb,#7657e8 8%,var(--card))}.combo-best b{display:block;font-size:.95rem}.combo-best p{margin:5px 0;color:var(--mut);font-size:.8rem;line-height:1.45}
+.combo-register{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end;margin-top:12px}.combo-register label{font-size:.72rem;color:var(--mut)}.combo-register input{width:100%;margin-top:4px;min-width:0}
+.combo-record{border:1px solid var(--ln);border-radius:14px;background:var(--card);padding:13px;margin:10px 0}.combo-record h3{font-size:1rem;margin:0 0 7px}.combo-record small{color:var(--mut);line-height:1.5}.combo-record-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.combo-model-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}.combo-model-stats .card{padding:12px}.combo-model-stats b{display:block;font-size:1.25rem;margin-top:4px}.combo-model-stats small{color:var(--mut)}.combo-page-head{display:flex;align-items:center;gap:12px;margin:5px 0 14px}.combo-page-head h2{margin:0;font-size:1.35rem}.combo-page-head p{margin:4px 0 0;color:var(--mut);font-size:.83rem;line-height:1.45}.combo-page-icon{display:grid;place-items:center;flex:0 0 48px;height:48px;border-radius:15px;background:linear-gradient(145deg,#7657e8,#4b38b5);color:white;font-size:25px}.combo-controls{padding:14px}.combo-control-info p{font-size:.82rem;color:var(--mut);line-height:1.5;margin:6px 0 12px}.combo-control-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:13px}.combo-control-pills span{border:1px solid var(--ln);border-radius:99px;padding:6px 9px;font-size:.7rem;font-weight:700}.combo-controls #comboScanBtn{width:100%;min-height:48px;background:linear-gradient(135deg,#7657e8,#4b38b5);color:white;border:0}.combo-controls #comboMsg{margin-bottom:0}
 .combo-wrap{overflow:hidden;border:1px solid color-mix(in srgb,#7657e8 35%,var(--ln));border-radius:20px;background:var(--card);box-shadow:0 8px 28px rgba(39,25,93,.10)}
 .combo-hero{padding:18px 16px 16px;background:linear-gradient(145deg,color-mix(in srgb,#7657e8 17%,var(--card)),var(--card));border-bottom:1px solid var(--ln)}
 .combo-eyebrow{font:800 10px Archivo,sans-serif;letter-spacing:.15em;color:#8b76ef;margin-bottom:7px}.combo-hero h2{margin:0;font-size:1.45rem;letter-spacing:-.025em}.combo-hero p{font-size:.88rem;line-height:1.5;color:var(--mut);margin:7px 0 12px}.combo-pills{display:flex;gap:6px;flex-wrap:wrap}.combo-pills span{border:1px solid color-mix(in srgb,#7657e8 35%,var(--ln));border-radius:99px;padding:5px 9px;font-size:.73rem;font-weight:700;color:var(--ink);background:color-mix(in srgb,#7657e8 7%,var(--card))}
@@ -252,9 +256,11 @@ a{color:var(--blue)}.nsrc a{color:var(--blue);text-decoration:underline;text-und
 </section>
 
 <section id="s-c" hidden>
-  <div class="combo-page-head"><div class="combo-page-icon">✦</div><div><h2>Combi</h2><p>Buscador independiente: vuelve a revisar partidos y mercados por su cuenta. No necesita que primero ejecutes el escáner normal.</p></div></div>
-  <div class="card combo-controls"><div class="combo-control-info"><b>Cómo busca</b><p>Explora las ligas y los días que tienes seleccionados en Fútbol, calcula sus propias probabilidades y busca líneas con cuota individual baja o alta. Cada línea debe superar el filtro de confianza y tener valor positivo; luego forma combinaciones de 2 a 4 partidos.</p></div><div class="combo-control-pills"><span>Stake por línea ≥ 5</span><span>Cuotas individuales desde 1,10</span><span>Partidos distintos</span></div><button class="btn" id="comboScanBtn" type="button">✦ Buscar combinadas</button><p class="status" id="comboMsg" aria-live="polite">La búsqueda de Combi es independiente. Puede tardar porque consulta partidos, historial y cuotas.</p></div>
-  <div id="comboPanel" aria-live="polite"><div class="combo-empty"><div class="combo-empty-icon">✦</div><b>Combi está lista</b><p>Pulsa «Buscar combinadas» para buscar sus propias líneas, sin ejecutar antes el escáner de Fútbol.</p></div></div>
+  <div class="combo-page-head"><div class="combo-page-icon">✦</div><div><h2>Combi</h2><p>Buscador y modelo independientes del escáner normal.</p></div></div>
+  <div class="seg m" id="comboSubnav" role="tablist" aria-label="Secciones de Combi"><button type="button" class="on" data-combi-tab="buscar" onclick="showCombiTab('buscar')">✦ Buscar</button><button type="button" data-combi-tab="modelo" onclick="showCombiTab('modelo')">☷ Modelo <span id="comboCount">0</span></button></div>
+  <div id="comboSearchView"><div class="card combo-controls"><div class="combo-control-info"><b>Cómo busca</b><p>Explora las ligas y los días seleccionados en Fútbol, calcula sus propias probabilidades y combina 2 a 4 partidos. Cada línea debe superar filtros de confianza y valor positivo.</p></div><div class="combo-control-pills"><span>Stake por línea ≥ 5</span><span>Cuotas desde 1,10</span><span>Partidos distintos</span></div><button class="btn" id="comboScanBtn" type="button">✦ Buscar combinadas</button><p class="status" id="comboMsg" aria-live="polite">La búsqueda de Combi es independiente. Puede tardar porque consulta partidos, historial y cuotas.</p></div>
+  <div id="comboPanel" aria-live="polite"><div class="combo-empty"><div class="combo-empty-icon">✦</div><b>Combi está lista</b><p>Pulsa «Buscar combinadas» para buscar sus propias líneas, sin ejecutar antes el escáner de Fútbol.</p></div></div></div>
+  <div id="comboModelView" hidden></div>
 </section>
 
 <section id="s-n" hidden><div class="card empty"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="32" cy="32" r="26"/><path d="M6 32h52M32 6v52M13 13c8 8 8 30 0 38M51 13c-8 8-8 30 0 38"/></svg><b>Módulo NBA en preparación</b>No se reutilizarán las estadísticas de fútbol. La versión NBA necesitará datos propios de lesiones, descanso, minutos, quintetos, ritmo, uso y cuotas. Hasta validar esas fuentes, esta pestaña no genera picks NBA ficticios.</div></section>
@@ -279,7 +285,7 @@ a{color:var(--blue)}.nsrc a{color:var(--blue);text-decoration:underline;text-und
 <label>Casa de apuestas<input id="c-bm" placeholder="rushbet.co"></label>
 <button class="btn s" id="bkfind" type="button">Buscar casas</button><div id="bkres" class="chips wrap"></div>
 <label class="tg-row"><span>Contrastar con Pinnacle<small>Usa 1 petición extra por escaneo</small></span><input id="c-pn" type="checkbox"></label></details>
-<details class="card grp"><summary>Datos extra de fútbol (API-Football)</summary><p>Proveedor opcional para contrastar pronósticos, lesiones y datos del partido. El plan gratuito ofrece 100 solicitudes al día; la cobertura de estadísticas y mercados cambia por liga y partido. RadarPi no reemplazará las cuotas reales de OddsPapi ni usará automáticamente la predicción del proveedor como pick.</p>
+<details class="card grp"><summary>Datos extra de fútbol (API-Football)</summary><p>Proveedor opcional para contrastar pronósticos y lesiones. El plan gratuito publica 100 solicitudes al día. Al consultar un partido, RadarPi compara probabilidades 1X2 y dobles oportunidades; una contradicción fuerte veta ese mercado en escaneos posteriores. No sustituye las cuotas reales de OddsPapi.</p>
 <label>Llave API-Football<input id="c-af" type="password" autocomplete="off" placeholder="Pega aquí tu API key"></label>
 <div class="tools"><button class="btn s" id="af-test" type="button">Probar conexión</button><span id="af-status" class="status" role="status">Opcional. Se consulta solo cuando lo pidas para un partido.</span></div></details>
 <details class="card grp"><summary>Inteligencia artificial</summary><p>La IA de contexto buscará motivación competitiva, escenarios de clasificación/eliminación, rotaciones, suplentes, lesiones, descanso, viajes y declaraciones recientes. Las claves quedan en el almacenamiento local del navegador; no es un almacén seguro frente a alguien con acceso al dispositivo o a las herramientas del navegador.</p>
@@ -329,6 +335,7 @@ const LG={
 let cfg=Object.assign({fd:'',gq:'',or:'',br:'',g:3,b:70,m:12,u:2,qm:1.5,cq:1.5,af:'',dd:1,sm:5,hm:false,r:75,co:5,ta:5,ex:true,au:false,aa:false,iv:60,ok:'',bm:'',pn:true,lg:['col.1','eng.1','esp.1']},LS('cfg',{}));
 cfg.lg=cfg.lg.filter(x=>Object.values(LG).includes(x));if(!cfg.lg.length)cfg.lg=['col.1','eng.1','esp.1'];
 let openRes=false,autoRun=false,hunt=false,mdlTab='res',mdlAll=false;
+let COMBI_CURRENT=[],combiTab='buscar';
 let MODEL='openai/gpt-oss-120b';
 let R=[],Rcombo=[],bets=LS('bets',[]);
 const pad=n=>String(n).padStart(2,'0');
@@ -342,9 +349,11 @@ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
   ['f','c','n','r','m','a'].forEach(t=>{const el=$('#s-'+t);if(el)el.hidden=t!==b.dataset.t});
   if(b.dataset.t==='r')drawBets();
   if(b.dataset.t==='m')refreshModel();
+  if(b.dataset.t==='c'){const cp=LS('combipicks',[]);$('#comboCount').textContent=cp.filter(x=>!x.res).length;if(combiTab==='modelo')drawCombiModel();}
 });
 
 // ligas
+$('#comboCount').textContent=LS('combipicks',[]).filter(x=>!x.res).length;
 function drawLg(){$('#lg').innerHTML=Object.entries(LG).map(([n,id])=>
   `<button class="chip ${cfg.lg.includes(id)?'on':''}" data-id="${id}">${n}</button>`).join('');
   $('#lg').querySelectorAll('button').forEach(b=>b.onclick=()=>{
@@ -894,11 +903,11 @@ function bttsAudit(r){
 function ticket(r){
   const b=bestOf(r);
   if(!b)return `<div class="nopick2"><b>Sin pick con ventaja clara</b><p>${diagnose(r)}</p>${r.p.length?`<p>Hay ${r.p.length} patrón(es) detectado(s) en la pestaña Datos.</p>`:''}</div>`;
-  const st=baseStake(r,b.n,b.q),c=conflictOf(r,b.n);
+  const st=baseStake(r,b.n,b.q),c=conflictOf(r,b.n),afReady=!!(r.afData||LS(afCacheKeyFor(r),null));
   return `<div class="tk ${b.t||''}"><small class="tkl">PICK DE LA APP · SEGÚN REGLAS</small><div class="tk1">${b.t?`<span class="tier tier${b.t}">${b.t}</span>`:''}<b class="n">${esc(b.n)}</b></div>
 <div class="tk2"><span><b>${Math.round(b.p*100)}%</b> prob.</span>${b.q?`<span>cuota <b>@${b.q}</b></span><span>valor <b>${b.e>=0?'+':''}${Math.round(b.e*100)}%</b></span>`:`<span>cuota mínima <b>@${(1.05/b.p).toFixed(2)}</b></span>`}<span>stake base <b>${st}/9</b></span></div>
 <div class="meter${st>=5?' hi':''}" role="img" aria-label="Stake ${st} de 9">${Array.from({length:9},(_,k)=>`<i class="${k<st?'f':''}"></i>`).join('')}</div>
-${c?`<div class="tkw">⚠ Va contra el patrón detectado (${c}). Confírmalo con la IA antes de apostar.</div>`:''}</div>`;
+${c?`<div class="tkw">⚠ Va contra el patrón detectado (${c}). Confírmalo con la IA antes de apostar.</div>`:''}${!afReady&&cfg.af?'<div class="tkw">API-Football aún no contrastado para este partido. Pulsa «Datos API-Football» antes de considerar un pick 1X2.</div>':''}</div>`;
 }
 const GUIA=`<details class="card hint"><summary>¿Cómo leer las tarjetas?</summary>
 <p><b>Barra azul, gris y amarilla:</b> probabilidad de que gane el local, empate o gane el visitante.</p>
@@ -1075,10 +1084,55 @@ function comboHtml(source){
     }
   }
   walk(0,[],1,1);combos.sort((a,b)=>b.score-a.score);
+  combos.sort((a,b)=>b.p-a.p||b.e-a.e);
   const unique=[],seen=new Set();
-  for(const c of combos){const k=c.legs.map(x=>x.event+':'+x.b.n).sort().join('|');if(seen.has(k))continue;seen.add(k);unique.push(c);if(unique.length>=6)break;}
-  const content=unique.length?unique.map((c,i)=>`<article class="combo-item"><div class="combo-title"><span>COMBINADA ${i+1}</span><strong class="combo-odds">@${c.q.toFixed(2)}</strong></div>${c.legs.map((l,j)=>`<div class="combo-pick"><div class="combo-pick-head"><b>${j+1}. ${esc(l.r.h)} <span>vs</span> ${esc(l.r.w)}</b><span class="combo-stake">Stake ${l.st}/9</span></div><div class="combo-meta">${esc(l.b.n)} · cuota individual @${l.b.q.toFixed(2)} · prob. modelo ${Math.round(l.b.p*100)}% · valor estimado ${l.b.e>=0?'+':''}${Math.round(l.b.e*100)}%</div></div>`).join('')}<div class="combo-stats"><div><small>Probabilidad conjunta aprox.</small><b>${Math.round(c.p*100)}%</b></div><div><small>Valor estimado combinado</small><b class="${c.e>0?'ok':'bad'}">${c.e>=0?'+':''}${Math.round(c.e*100)}%</b></div><div><small>N.º de líneas</small><b>${c.legs.length}</b></div></div><p class="combo-note">Cuota teórica. Confirma la cuota final en tu casa antes de apostar.</p></article>`).join(''):`<div class="combo-empty"><div class="combo-empty-icon">✦</div><b>No hay combinadas que pasen los filtros</b><p>Combi revisó sus propios partidos y mercados. Necesita al menos dos encuentros con líneas de stake 5 o superior, probabilidad alta, cuota real y valor positivo. Prueba ampliar las ligas o seleccionar «Hoy y mañana».</p></div>`;
-  return `<div class="combo-wrap"><div class="combo-hero"><div class="combo-eyebrow">BÚSQUEDA INDEPENDIENTE</div><h2>Combinadas RadarPi</h2><p>Combi generó sus candidatos desde los partidos y mercados consultados en esta búsqueda, sin reutilizar la lista de picks normales. Admite cuotas individuales bajas si tienen suficiente probabilidad y valor.</p><div class="combo-pills"><span>2–4 partidos</span><span>Stake por línea 5–9</span><span>Objetivo @${target.toFixed(2)}+</span></div></div><div class="combo-results-head"><b>${unique.length?`${unique.length} combinada${unique.length===1?'':'s'} candidata${unique.length===1?'':'s'}`:'Sin combinadas válidas'}</b><span>Máximo 6 resultados</span></div>${content}<p class="combo-disclaimer">Las probabilidades conjuntas son una aproximación multiplicando las probabilidades de cada partido; el modelo aún necesita validación histórica. Una cuota alta no garantiza rentabilidad.</p></div>`;
+  for(const c of combos){
+    const k=c.legs.map(x=>x.event+':'+x.b.n).sort().join('|');if(seen.has(k))continue;seen.add(k);
+    // Evita publicar a la vez una combinada larga y sus subconjuntos casi idénticos.
+    const evs=new Set(c.legs.map(x=>x.event));
+    if(unique.some(u=>{const ue=new Set(u.legs.map(x=>x.event));return [...evs].filter(e=>ue.has(e)).length===Math.min(evs.size,ue.size)}))continue;
+    unique.push(c);if(unique.length>=6)break;
+  }
+  COMBI_CURRENT=unique.map(c=>({...c,stakeFinal:comboFinalStake(c)}));
+  const best=COMBI_CURRENT.length?COMBI_CURRENT.reduce((a,b)=>b.p>a.p?b:a):null;
+  const bestHtml=best?`<div class="combo-best"><b>★ Combinada de mayor confianza estimada</b><p>${best.legs.map(l=>esc(l.r.h)+' vs '+esc(l.r.w)).join(' · ')} · ${best.legs.length} líneas</p><div class="combo-stats"><div><small>Probabilidad conjunta aprox.</small><b>${Math.round(best.p*100)}%</b></div><div><small>Cuota combinada</small><b>@${best.q.toFixed(2)}</b></div><div><small>Valor estimado</small><b>${best.e>=0?'+':''}${Math.round(best.e*100)}%</b></div></div><p><b>Stake definitivo combinado: ${best.stakeFinal}/9.</b> El stake final es menor que el de cada línea porque combinar partidos reduce la probabilidad conjunta. Es una escala prudente, no una garantía.</p></div>`:'';
+  const content=COMBI_CURRENT.length?COMBI_CURRENT.map((c,i)=>`<article class="combo-item"><div class="combo-title"><span>${best===c?'★ MAYOR CONFIANZA':'COMBINADA '+(i+1)}</span><strong class="combo-odds">@${c.q.toFixed(2)}</strong></div>${c.legs.map((l,j)=>`<div class="combo-pick"><div class="combo-pick-head"><b>${j+1}. ${esc(l.r.h)} <span>vs</span> ${esc(l.r.w)}</b><span class="combo-stake">Línea ${l.st}/9</span></div><div class="combo-meta">${esc(l.b.n)} · cuota individual @${l.b.q.toFixed(2)} · prob. modelo ${Math.round(l.b.p*100)}% · valor estimado ${l.b.e>=0?'+':''}${Math.round(l.b.e*100)}%</div></div>`).join('')}<div class="combo-stats"><div><small>Probabilidad conjunta aprox.</small><b>${Math.round(c.p*100)}%</b></div><div><small>Valor estimado combinado</small><b class="${c.e>0?'ok':'bad'}">${c.e>=0?'+':''}${Math.round(c.e*100)}%</b></div><div><small>Stake final combinado</small><b>${c.stakeFinal}/9</b></div></div><div class="combo-register"><label>Cuota final en tu casa<input id="comboRealQ${i}" type="number" min="1.01" step="0.01" value="${c.q.toFixed(2)}"></label><button class="btn s" type="button" onclick="registerCombo(${i})">＋ Registrar</button></div><p class="combo-note">La cuota inicial es teórica. Corrígela si tu casa ofrece otra.</p></article>`).join(''):`<div class="combo-empty"><div class="combo-empty-icon">✦</div><b>No hay combinadas que pasen los filtros</b><p>Combi necesita al menos dos encuentros con líneas de stake 5 o superior, probabilidad alta, cuota real y valor positivo. Prueba ampliar las ligas o seleccionar «Hoy y mañana».</p></div>`;
+  return `<div class="combo-wrap"><div class="combo-hero"><div class="combo-eyebrow">BÚSQUEDA INDEPENDIENTE</div><h2>Combinadas RadarPi</h2><p>Las combinadas se ordenan por probabilidad conjunta y se intenta evitar repetir casi los mismos partidos. Cada registro queda separado de los picks sencillos.</p><div class="combo-pills"><span>2–4 partidos</span><span>Stake por línea 5–9</span><span>Objetivo @${target.toFixed(2)}+</span></div></div>${bestHtml}<div class="combo-results-head"><b>${COMBI_CURRENT.length?`${COMBI_CURRENT.length} combinada${COMBI_CURRENT.length===1?'':'s'} candidata${COMBI_CURRENT.length===1?'':'s'}`:'Sin combinadas válidas'}</b><span>Máximo 6 resultados</span></div>${content}<p class="combo-disclaimer">Las probabilidades conjuntas se aproximan multiplicando probabilidades individuales; los partidos no son necesariamente independientes. El modelo aún necesita validación histórica. Una cuota alta no garantiza rentabilidad.</p></div>`;
+}
+function comboFinalStake(c){
+  // Stake combinado separado de los stakes de cada selección; escala conservadora 1–3/9.
+  const p=c.p||0,e=c.e||0,n=(c.legs||[]).length;
+  if(e<0.03||p<0.22)return 1;
+  if(n===2&&p>=0.52&&e>=0.05)return 3;
+  if(n===2&&p>=0.40&&e>=0.035)return 2;
+  if(n===3&&p>=0.34&&e>=0.05)return 2;
+  return 1;
+}
+function registerCombo(i){
+  const c=COMBI_CURRENT[i];if(!c)return;const inp=$('#comboRealQ'+i),q=+(inp&&inp.value);
+  if(!q||q<=1){toast('Escribe la cuota combinada real, mayor que 1,00.');return}
+  const P=LS('combipicks',[]),key=c.legs.map(l=>l.event+':'+l.b.n).sort().join('|');
+  if(P.some(k=>k.key===key&&k.res==null)){toast('Esta combinada ya está registrada y sigue pendiente.');showCombiTab('modelo');return}
+  const rec={id:'cb-'+Date.now()+'-'+Math.floor(Math.random()*10000),key,created:new Date().toISOString(),q:+q.toFixed(2),qModel:+c.q.toFixed(2),p:+c.p.toFixed(4),e:+(c.p*q-1).toFixed(4),stake:comboFinalStake({...c,e:c.p*q-1})||1,res:null,legs:c.legs.map(l=>({event:String(l.r.ev||l.event),slug:l.r.slug,match:l.r.h+' vs '+l.r.w,home:l.r.h,away:l.r.w,league:l.r.liga||'',ko:l.r.ko,market:l.b.n,odds:l.b.q,p:+l.b.p.toFixed(4),lineStake:l.st}))};
+  P.unshift(rec);SV('combipicks',P);toast('Combinada guardada en Modelo Combi.');showCombiTab('modelo');
+}
+function setCombiResult(id,res){const P=LS('combipicks',[]),k=P.find(x=>x.id===id);if(!k)return;k.res=res;k.manual=!!res;SV('combipicks',P);drawCombiModel();}
+function deleteCombi(id){if(!confirm('¿Borrar esta combinada del Modelo Combi?'))return;SV('combipicks',LS('combipicks',[]).filter(x=>x.id!==id));drawCombiModel();}
+async function showCombiTab(t){combiTab=t;$('#comboSearchView').hidden=t!=='buscar';$('#comboModelView').hidden=t!=='modelo';document.querySelectorAll('[data-combi-tab]').forEach(b=>b.classList.toggle('on',b.dataset.combiTab===t));if(t==='modelo'){try{await settleCombi()}catch{}drawCombiModel();}}
+function drawCombiModel(){
+  const P=LS('combipicks',[]),done=P.filter(x=>x.res==='w'||x.res==='l'),wins=done.filter(x=>x.res==='w').length,loss=done.length-wins,pending=P.filter(x=>!x.res).length;
+  const units=done.reduce((a,x)=>a+(x.res==='w'?x.stake*(x.q-1):-x.stake),0),risk=done.reduce((a,x)=>a+x.stake,0),roi=risk?units/risk*100:0;
+  $('#comboCount').textContent=pending;
+  const stats=`<div class="combo-model-stats"><div class="card"><small>Registradas</small><b>${P.length}</b></div><div class="card"><small>Pendientes</small><b>${pending}</b></div><div class="card"><small>Acierto</small><b>${done.length?Math.round(wins/done.length*100)+'%':'—'}</b><small>${wins} acertadas · ${loss} falladas</small></div><div class="card"><small>Balance teórico</small><b class="${units>=0?'ok':'bad'}">${done.length?(units>=0?'+':'')+units.toFixed(2):'—'}</b><small>${done.length?'ROI '+roi.toFixed(1)+'%':'Se calcula al resolver resultados'}</small></div></div><p class="status">Seguimiento separado del Modelo de Fútbol. El balance usa unidades de stake y la cuota registrada; no representa dinero real. Los resultados pueden marcarse manualmente cuando falten estadísticas.</p>`;
+  const cards=P.length?P.map(k=>`<article class="combo-record"><h3>${k.legs.length} líneas · @${(+k.q).toFixed(2)} · Stake ${k.stake}/9</h3><small>Registrada ${new Date(k.created).toLocaleString('es')} · Prob. conjunta ${Math.round(k.p*100)}% · valor estimado ${k.e>=0?'+':''}${Math.round(k.e*100)}%${k.auto?' · resultado automático':''}</small>${k.legs.map((l,i)=>`<div class="combo-pick"><div class="combo-pick-head"><b>${i+1}. ${esc(l.match)}</b><span class="combo-stake">@${(+l.odds).toFixed(2)}</span></div><div class="combo-meta">${esc(l.league)} · ${esc(l.market)} · prob. ${Math.round(l.p*100)}%</div></div>`).join('')}<p><b>Resultado:</b> <span class="${k.res==='w'?'ok':k.res==='l'?'bad':''}">${k.res==='w'?'Acertó':k.res==='l'?'Falló':k.res==='v'?'Nula':'Pendiente'}</span></p><div class="combo-record-actions">${k.res?`<button class="btn s" onclick="setCombiResult('${k.id}',null)">↺ Pendiente</button>`:`<button class="btn s" onclick="setCombiResult('${k.id}','w')">✓ Acertó</button><button class="btn s" onclick="setCombiResult('${k.id}','l')">✕ Falló</button><button class="btn s" onclick="setCombiResult('${k.id}','v')">Nula</button>`}<button class="btn s" onclick="deleteCombi('${k.id}')">Borrar</button></div></article>`).join(''):'<div class="combo-empty"><div class="combo-empty-icon">☷</div><b>El Modelo Combi está vacío</b><p>Cuando encuentres una combinada que te interese, pulsa «Registrar». Aquí quedará guardada para medir resultados separada de los picks sencillos y las apuestas reales.</p></div>';
+  $('#comboModelView').innerHTML=`<div class="combo-wrap"><div class="combo-hero"><div class="combo-eyebrow">SEGUIMIENTO SEPARADO</div><h2>Modelo Combi</h2><p>Solo aparecen las combinadas que registres en este menú.</p></div>${stats}${cards}</div>`;
+}
+async function settleCombi(){
+  const P=LS('combipicks',[]);let changed=false;
+  for(const k of P){if(k.res||k.manual||!k.legs?.length)continue;if(k.legs.some(l=>!l.ko||new Date(l.ko).getTime()>Date.now()-3*36e5))continue;let outcomes=[];
+    for(const l of k.legs){let f=null;try{f=await final(l.slug,l.event)}catch{}if(!f||f.pending){outcomes=[];break}const ok=evalMk(l.market,f.h,f.a,f.cor,f.crd,f.hh,f.ha);if(ok===null){outcomes=[];break}outcomes.push(ok)}
+    if(outcomes.length===k.legs.length){k.res=outcomes.every(Boolean)?'w':'l';k.auto=true;changed=true;}
+  }if(changed)SV('combipicks',P);return changed;
 }
 async function scanCombi(){
   if($('#comboScanBtn').disabled)return;
@@ -1089,8 +1143,9 @@ async function scanCombi(){
     const leagues=cfg.lg.slice(),names=Object.fromEntries(Object.entries(LG).map(([n,s])=>[s,n]));
     if(!leagues.length)throw new Error('Selecciona al menos una liga en Fútbol.');
     msg.textContent='Cargando cuotas reales…';
-    const OD=await loadOdds(undefined,leagues);let ODP=null;
-    if(cfg.pn){try{ODP=await loadOdds('pinnacle',leagues)}catch{}}
+    const OD=await loadOdds(undefined,leagues);
+    // A Combi no le pedimos una segunda descarga de cuotas de Pinnacle: multiplica las solicitudes.
+    // Se usa la cuota de la casa configurada, quitándole margen para el contraste interno.
     const results=[],bad=[];let seen=0;
     for(const slug of leagues){
       msg.textContent='Buscando partidos: '+(names[slug]||slug)+'…';let evs=[];
@@ -1108,8 +1163,8 @@ async function scanCombi(){
         A.ss=SL&&SL.t[H.team.id];B.ss=SL&&SL.t[W.team.id];A.mu=SL?SL.mu:null;
         // Combi puede añadir datos de córners/tarjetas si la opción está activa.
         if(cfg.ex){try{const sum=await ev(slug,e.id),a=sum&&sum[H.team.id],b=sum&&sum[W.team.id];if(a&&b){if(a.c!=null){A.cf=A.cf==null?a.c:(A.cf+a.c)/2;A.ca=B.ca==null?b.c:(B.ca+b.c)/2}if(b.c!=null){B.cf=B.cf==null?b.c:(B.cf+b.c)/2;B.ca=A.ca==null?a.c:(A.ca+a.c)/2}if(a.y!=null)A.y=(A.y||0)+a.y;if(b.y!=null)B.y=(B.y||0)+b.y}}catch{}}
-        const mod=model(A,B),qp=ODP?oddsQ(ODP,hf,wf,e.date):null,fair=qp?fairP(qp):null;
-        if(fair&&Object.keys(fair).length)mod.f=fair;else{const fc=fairP(q);if(Object.keys(fc).length)mod.fc=fc}
+        const mod=model(A,B),fc=fairP(q);
+        if(Object.keys(fc).length)mod.fc=fc
         const p=[];if(A.n>=5&&B.n>=5){if(A.b>=cfg.b&&B.b>=cfg.b)p.push('Ambos marcan');if(A.t>=cfg.g&&B.t>=cfg.g)p.push('Over goles');if(A.low>=70&&B.low>=70)p.push('Partido cerrado');if(A.cf!=null&&B.cf!=null)p.push('Córners');if(A.y!=null&&B.y!=null)p.push('Tarjetas')}
         results.push({m:`${hn} vs ${wn}`,liga:names[slug]||slug,h:hn,w:wn,hora:dlab(e.date)+new Date(e.date).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}),p,A,B,mod,q,casa:cfg.bm,ev:e.id,slug,ko:e.date,hid:H.team.id,wid:W.team.id});
       }
@@ -1137,15 +1192,15 @@ $('#af-test').onclick=async()=>{
   catch(e){out.textContent='No se pudo conectar: '+e.message;}
 };
 async function afMore(i){
-  const r=R[i],box=$('#afp'+i);box.hidden=false;box.innerHTML='<p class="status">Consultando API-Football… puede gastar hasta 3 solicitudes para este partido. Los resultados se guardarán en caché.</p>';
+  const r=R[i],box=$('#afp'+i);box.hidden=false;box.innerHTML='<p class="status">Consultando API-Football… puede gastar hasta 3 solicitudes la primera vez. Se reutilizan los datos en caché durante 12–24 horas.</p>';
   if(!cfg.af){box.innerHTML='<p class="status">Para usar esta función, crea una cuenta gratuita en API-Football, copia tu llave en Ajustes y pulsa Guardar. La cuota gratuita publicada es de 100 solicitudes al día.</p>';return}
   const cacheKey='af_match_'+String(r.ev||r.h+'_'+r.w+'_'+iso(new Date(r.ko))).replace(/[^a-z0-9_-]/gi,'_');
   let data=LS(cacheKey,null);
   try{
-    if(!data||Date.now()-data.t>6*36e5){
+    if(!data||Date.now()-data.t>12*36e5){
       const date=iso(new Date(r.ko));
       let fxCache=LS('af_fixtures_'+date,null),fx;
-      if(fxCache&&Date.now()-fxCache.t<12*36e5)fx=fxCache.v;
+      if(fxCache&&Date.now()-fxCache.t<24*36e5)fx=fxCache.v;
       else{const j=await afGet('fixtures',{date,timezone:'America/Bogota'});fx=j.response||[];SV('af_fixtures_'+date,{t:Date.now(),v:fx});}
       const scored=(fx||[]).map(f=>{const h=f.teams&&f.teams.home&&f.teams.home.name||'',a=f.teams&&f.teams.away&&f.teams.away.name||'';return {f,score:sim(r.h,h)+sim(r.w,a),rev:sim(r.h,a)+sim(r.w,h)}}).map(x=>({...x,score:Math.max(x.score,x.rev),reversed:x.rev>x.score})).sort((a,b)=>b.score-a.score);
       const hit=scored[0];if(!hit||hit.score<1.15)throw new Error('No encontré un partido coincidente con suficiente confianza. No se usarán datos de otro encuentro.');
@@ -1153,15 +1208,38 @@ async function afMore(i){
       const [pj,ij]=await Promise.all([afGet('predictions',{fixture:fixtureId}).catch(e=>({__err:e.message})),afGet('injuries',{fixture:fixtureId}).catch(e=>({__err:e.message}))]);
       data={t:Date.now(),fixture:{id:fixtureId,home:f.teams.home.name,away:f.teams.away.name,date:f.fixture.date,league:f.league&&f.league.name},prediction:pj.response&&pj.response[0]||null,injuries:ij.response||[],reversed:!!hit.reversed,predictionError:pj.__err||null,injuryError:ij.__err||null};SV(cacheKey,data);
     }
-    const p=data.prediction&&data.prediction.predictions||{},pct=p.percent||{},inj=data.injuries||[];
+    const p=data.prediction&&data.prediction.predictions||{},pct=p.percent||{},inj=data.injuries||[],previousPick=bestOf(r);r.afData=data;
+    const picked=bestOf(r),apiProb=picked?afMarketProb(r,picked.n):null,conflict=picked?afConflict(r,picked.n,picked.p):null,previousConflict=previousPick?afConflict(r,previousPick.n,previousPick.p):null;
+    const decision=previousConflict&&previousConflict.level==='strong'?`<b>Pick original vetado por contradicción fuerte: ${esc(previousPick.n)}.</b> RadarPi estimaba ${Math.round(previousPick.p*100)}%, pero API-Football solo ${Math.round(previousConflict.api*100)}% para ese mercado. Ese pick ya no pasa los filtros cuando se tiene en cuenta el proveedor.${picked?` Alternativa que sí pasa los filtros: ${esc(picked.n)} (${Math.round(picked.p*100)}% estimado por RadarPi).`:' No hay una alternativa con valor suficiente; mejor no apostar este partido.'}`:!picked?'<b>No hay pick automático válido</b>: con el contraste API-Football no queda una selección que supere los filtros actuales.':!apiProb?'<b>Contraste parcial</b>: API-Football no aporta una probabilidad directamente comparable para el mercado seleccionado; usa sus bajas y consejo como contexto.':conflict&&conflict.level==='strong'?`<b>Contradicción fuerte: descartar el pick actual (${esc(picked.n)}).</b> RadarPi estima ${Math.round(picked.p*100)}%, pero API-Football estima solo ${Math.round(apiProb*100)}% para ese mismo mercado. No lo registres como pick recomendado; busca otra selección o no apuestes.`:conflict?`<b>Contradicción moderada con API-Football.</b> RadarPi estima ${Math.round(picked.p*100)}% y el proveedor ${Math.round(apiProb*100)}%. Reduce la confianza y no subas el stake.`:`<b>Sin contradicción fuerte.</b> Para ${esc(picked.n)}, RadarPi estima ${Math.round(picked.p*100)}% y API-Football ${Math.round(apiProb*100)}%. La coincidencia no garantiza valor ni acierto.`;
     const pctHtml=(label,v)=>`<div><small>${label}</small><b>${esc(v||'—')}</b></div>`,apiHome=data.reversed?pct.away:pct.home,apiAway=data.reversed?pct.home:pct.away;
-    box.innerHTML=`<div class="nh"><b>Contraste API-Football</b><span class="chip3">No modifica el pick automáticamente</span></div><p class="mr-s">Partido emparejado: <b>${esc(data.fixture.home)} vs ${esc(data.fixture.away)}</b> · ${esc(data.fixture.league||'competición sin nombre')} · ${new Date(data.fixture.date).toLocaleString('es',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}. Comprueba que sea el mismo encuentro.</p>${p.percent?`<div class="af-grid">${pctHtml('Local (partido)',apiHome)}${pctHtml('Empate',pct.draw)}${pctHtml('Visitante (partido)',apiAway)}</div>`:''}${p.advice?`<p><b>Consejo del proveedor:</b> ${esc(p.advice)}</p>`:''}${p.under_over?`<p><b>Goles estimados del proveedor:</b> ${esc(p.under_over)}</p>`:''}${p.winner&&p.winner.name?`<p><b>Ganador estimado por proveedor:</b> ${esc(p.winner.name)}${p.winner.comment?' · '+esc(p.winner.comment):''}</p>`:''}${data.predictionError?`<p class="status">Predicción no disponible: ${esc(data.predictionError)}</p>`:''}<p><b>Lesiones/sanciones devueltas:</b> ${inj.length}</p>${inj.length?`<ul>${inj.slice(0,12).map(x=>`<li>${esc(x.player&&x.player.name||'Jugador')} · ${esc(x.player&&x.player.type||x.player&&x.player.reason||'estado sin detalle')} (${esc(x.team&&x.team.name||'equipo no indicado')})</li>`).join('')}</ul>`:'<p class="status">No se devolvieron lesiones para este partido. Eso no confirma que ambos equipos estén sin bajas.</p>'}${data.injuryError?`<p class="status">Lesiones no disponibles: ${esc(data.injuryError)}</p>`:''}<p class="status">Fuente complementaria. La cobertura de predicciones y lesiones cambia por liga; contrasta siempre con cuotas reales y noticias/alineaciones.</p>`;
+    box.innerHTML=`<div class="nh"><b>Contraste combinado RadarPi + API-Football</b><span class="chip3">Revisión de coherencia</span></div><div class="stake-row"><p>${decision}</p><small>El filtro se aplica a las selecciones de resultado 1X2/doble oportunidad cuando hay probabilidades comparables. Para goles, córners y tarjetas, API-Football no ofrece en este endpoint una probabilidad equivalente.</small></div><p class="mr-s">Partido emparejado: <b>${esc(data.fixture.home)} vs ${esc(data.fixture.away)}</b> · ${esc(data.fixture.league||'competición sin nombre')} · ${new Date(data.fixture.date).toLocaleString('es',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}. Comprueba que sea el mismo encuentro.</p>${p.percent?`<div class="af-grid">${pctHtml('Local (partido)',apiHome)}${pctHtml('Empate',pct.draw)}${pctHtml('Visitante (partido)',apiAway)}</div>`:''}${p.advice?`<p><b>Consejo del proveedor:</b> ${esc(p.advice)}</p>`:''}${p.under_over?`<p><b>Goles estimados del proveedor:</b> ${esc(p.under_over)}</p>`:''}${p.winner&&p.winner.name?`<p><b>Ganador estimado por proveedor:</b> ${esc(p.winner.name)}${p.winner.comment?' · '+esc(p.winner.comment):''}</p>`:''}${data.predictionError?`<p class="status">Predicción no disponible: ${esc(data.predictionError)}</p>`:''}<p><b>Lesiones/sanciones devueltas:</b> ${inj.length}</p>${inj.length?`<ul>${inj.slice(0,12).map(x=>`<li>${esc(x.player&&x.player.name||'Jugador')} · ${esc(x.player&&x.player.type||x.player&&x.player.reason||'estado sin detalle')} (${esc(x.team&&x.team.name||'equipo no indicado')})</li>`).join('')}</ul>`:'<p class="status">No se devolvieron lesiones para este partido. Eso no confirma que ambos equipos estén sin bajas.</p>'}${data.injuryError?`<p class="status">Lesiones no disponibles: ${esc(data.injuryError)}</p>`:''}<p class="status">Fuente complementaria. La cobertura de predicciones y lesiones cambia por liga; contrasta siempre con cuotas reales y noticias/alineaciones.</p>`;
+    const savedPanel=box.innerHTML;drawRes();const refreshed=$('#afp'+i);if(refreshed){refreshed.hidden=false;refreshed.innerHTML=savedPanel;}
   }catch(e){box.innerHTML=`<p class="bad">API-Football: ${esc(e.message||'No se pudieron obtener datos.')}</p><p class="status">Si la llave es válida pero falla, puede ser falta de cobertura, límite diario o un problema de coincidencia del partido. No se inventan datos para completar el análisis.</p>`;}
 }
 
 // ===== El mejor pick de cada partido lo elige la app con criterios fijos (así siempre sale el mismo) =====
 const isHalfMarket=n=>/primer tiempo|segundo tiempo|ambas mitades|1er tiempo|2do tiempo/i.test(n);
 const supports=(r,n)=>r.p.some(t=>(/^Over:/.test(t)&&/^Over [123]\.5$/.test(n))||(/^Ambos marcan/.test(t)&&n==='Ambos marcan: sí')||(/^(Under:|Partido cerrado)/.test(t)&&/^Under [12]\.5$/.test(n))||(/córners/i.test(t)&&/^Córners Over/.test(n))||(/^Tarjetas/.test(t)&&/^Tarjetas Over/.test(n)));
+function afCacheKeyFor(r){return 'af_match_'+String(r.ev||r.h+'_'+r.w+'_'+iso(new Date(r.ko))).replace(/[^a-z0-9_-]/gi,'_')}
+function afPctNum(v){if(v==null)return null;const n=parseFloat(String(v).replace('%','').replace(',','.'));return Number.isFinite(n)?(n>1?n/100:n):null}
+function afMarketProb(r,name){
+  const d=r.afData||LS(afCacheKeyFor(r),null),p=d&&d.prediction&&d.prediction.predictions,pct=p&&p.percent;if(!pct)return null;
+  const home=afPctNum(d.reversed?pct.away:pct.home),draw=afPctNum(pct.draw),away=afPctNum(d.reversed?pct.home:pct.away);
+  if(name==='Local gana')return home;if(name==='Empate')return draw;if(name==='Visitante gana')return away;
+  if(name==='Doble oportunidad 1X')return home!=null&&draw!=null?home+draw:null;
+  if(name==='Doble oportunidad X2')return draw!=null&&away!=null?draw+away:null;
+  if(name==='Doble oportunidad 12')return home!=null&&away!=null?home+away:null;
+  return null;
+}
+function afConflict(r,name,p){
+  const ap=afMarketProb(r,name);if(ap==null)return null;
+  const gap=p-ap,oneXtwo=['Local gana','Empate','Visitante gana'].includes(name);
+  // Un resultado directo con solo 15% o menos del proveedor y al menos 25% del modelo es una contradicción fuerte.
+  // También se veta si el modelo excede la probabilidad del proveedor en 20 puntos; no se confunde doble oportunidad con 1X2.
+  if(gap>=0.20||(oneXtwo&&ap<=0.15&&p>=0.25))return {api:ap,model:p,gap,level:'strong'};
+  if(gap>=0.12)return {api:ap,model:p,gap,level:'moderate'};
+  return null;
+}
 function candScan(r){
   const veto=[];
   if(r.A.n<5||r.B.n<5)return {out:[],veto};          // con tan poco historial el modelo no es fiable
@@ -1178,7 +1256,9 @@ function candScan(r){
     // Sanidad frente al mercado: si el modelo supera a Pinnacle (o a la casa sin margen) por más de 10 puntos, casi seguro es error del modelo.
     const ref=(r.mod.f&&r.mod.f[n]!=null)?r.mod.f[n]:(r.mod.fc&&r.mod.fc[n]!=null?r.mod.fc[n]:null);
     if(ref!=null&&p-ref>0.10){veto.push({n,p,ref});continue}
-    const sc=e+({A:.035,B:.015,C:-.025}[t]||0)+(sp?.01:0);
+    const afc=afConflict(r,n,p);
+    if(afc&&afc.level==='strong'){veto.push({n,p,ref:afc.api,source:'API-Football',reason:'Contradicción fuerte con API-Football'});continue}
+    const sc=e+({A:.035,B:.015,C:-.025}[t]||0)+(sp?.01:0)-(afc&&afc.level==='moderate'?.04:0);
     out.push({n,p,q,e,sc,t});
   }
   return {out:out.sort((a,b)=>b.sc-a.sc),veto};
@@ -1195,6 +1275,8 @@ function regModel(i){
   if(!mk){const withQ=candidates.filter(([n])=>r.q&&+r.q[n]>1).sort((a,b)=>(b[1]*(+r.q[b[0]])-1)-(a[1]*(+r.q[a[0]])-1));
     mk=(withQ[0]||candidates.slice().sort((a,b)=>b[1]-a[1])[0]||[])[0];}
   if(!mk){toast('No hay un mercado válido para guardar.');return}
+  const chosenProb=(r.mod.m.find(x=>x[0]===mk)||[null,null])[1],afc=afConflict(r,mk,chosenProb);
+  if(afc&&afc.level==='strong'){toast(`No guardado: API-Football contradice fuertemente «${mk}» (${Math.round(afc.api*100)}% frente a ${Math.round(chosenProb*100)}% del modelo).`);return}
   const typed=(r.userMk===mk&&$('#od'+i)&&+$('#od'+i).value>1)?+$('#od'+i).value:null;
   const q=typed||((r.pk===mk&&r.pq>1)?+r.pq:null)||(r.q&&+r.q[mk])||null;
   const id=addPick(r,mk,q,0,false);
@@ -1331,10 +1413,12 @@ async function aiRun(i){
     [r.w+' (visitante)']:{ultimos10:pk(r.B),de_visita:r.B.an+' jugados, '+r.B.aw+' ganados'},
     modelo:{goles_esperados:{local:+r.mod.lh.toFixed(2),visitante:+r.mod.la.toFixed(2)},
       mercados:r.mod.m.map(m=>({mercado:m[0],prob_pct:Math.round(m[1]*100),cuota_minima:+(1.05/m[1]).toFixed(2),techo_stake:techo(r,m),prob_modelo_pct:Math.round(((r.mod.raw||r.mod.m0||r.mod.m).find(x=>x[0]===m[0])||m)[1]*100),prob_pinnacle_pct:(r.mod.f&&r.mod.f[m[0]]!=null)?Math.round(r.mod.f[m[0]]*100):null,nivel:tierOf(r,m[0]),cuota_casa:(r.q&&r.q[m[0]])||null,valor_pct:(r.q&&r.q[m[0]])?Math.round((m[1]*r.q[m[0]]-1)*100):null}))},
-    cuota_del_usuario:(sel&&q)?{mercado:sel,cuota:q}:null,bajas_y_alineaciones:inf,noticias_y_contexto:news,contexto_calidad:{muestra_local:r.A.n,muestra_visitante:r.B.n,cuota_real_disponible:!!(sel?q:bestOf(r)?.q),alineacion_confirmada:!!(inf&&inf.alineaciones),modelo_validado_fuera_de_muestra:false},pick_de_la_app:bp?{mercado:bp.n,prob_pct:Math.round(bp.p*100),cuota:bp.q,valor_pct:bp.e!=null?Math.round(bp.e*100):null,nivel:bp.t}:null};
+    cuota_del_usuario:(sel&&q)?{mercado:sel,cuota:q}:null,
+    api_football:(()=>{const d=r.afData||LS(afCacheKeyFor(r),null);if(!d)return null;const pp=d.prediction&&d.prediction.predictions||{},pc=pp.percent||{};return {partido_confirmado:`${d.fixture&&d.fixture.home||''} vs ${d.fixture&&d.fixture.away||''}`,probabilidades_1x2:{local:afPctNum(d.reversed?pc.away:pc.home),empate:afPctNum(pc.draw),visitante:afPctNum(d.reversed?pc.home:pc.away)},consejo:pp.advice||null,ganador_estimado:pp.winner&&pp.winner.name||null,bajas:(d.injuries||[]).map(x=>({jugador:x.player&&x.player.name||null,equipo:x.team&&x.team.name||null,motivo:x.player&&(x.player.type||x.player.reason)||null})),error_prediccion:d.predictionError||null};})(),
+    contexto_calidad:{muestra_local:r.A.n,muestra_visitante:r.B.n,cuota_real_disponible:!!(sel?q:bestOf(r)?.q),alineacion_confirmada:!!(inf&&inf.alineaciones),modelo_validado_fuera_de_muestra:false},pick_de_la_app:bp?{mercado:bp.n,prob_pct:Math.round(bp.p*100),cuota:bp.q,valor_pct:bp.e!=null?Math.round(bp.e*100):null,nivel:bp.t}:null};
   try{
     const messages=[
-      {role:'system',content:'Eres analista escéptico de apuestas deportivas. Usa las estadísticas y el contexto recibido; no inventes datos ni trates ausencia de noticia como confirmación. Las probabilidades son estimaciones no calibradas todavía, basadas en una muestra pequeña, así que no las presentes como certezas. Comprueba si el contexto competitivo (eliminación/clasificación/descenso/título), posibles rotaciones, bajas y descanso contradicen la señal estadística. Una necesidad de ganar no significa automáticamente que ganará ni que habrá muchos goles. Si contexto clave está sin verificar, la alineación no está confirmada, faltan datos del mercado, el valor estimado es menor de 5% o mayor de 25%, o hay contradicciones fuertes, recomienda no apostar. Solo recomienda el pick_de_la_app o el mercado exacto seleccionado; no cambies de mercado. No conviertas una probabilidad alta en valor si la cuota no compensa. Las razones deben incluir datos numéricos del JSON y, cuando aplique, hechos contextuales con fuente/estado. Devuelve máximo 3 razones y 3 riesgos. ajuste_stake debe ser 0, -1 o -2. Responde SOLO JSON válido: {"decision":"apostar"|"no_apostar","pick":"nombre exacto del mercado","ajuste_stake":0|-1|-2,"cuota_minima":número,"resumen":"una frase","razones":["..."],"riesgos":["..."]}. Nunca prometas ganancias.'},
+      {role:'system',content:'Eres analista escéptico de apuestas deportivas. Usa las estadísticas y el contexto recibido; no inventes datos ni trates ausencia de noticia como confirmación. Las probabilidades son estimaciones no calibradas todavía, basadas en una muestra pequeña, así que no las presentes como certezas. Comprueba si el contexto competitivo (eliminación/clasificación/descenso/título), posibles rotaciones, bajas y descanso contradicen la señal estadística. Una necesidad de ganar no significa automáticamente que ganará ni que habrá muchos goles. Si contexto clave está sin verificar, la alineación no está confirmada, faltan datos del mercado, el valor estimado es menor de 5% o mayor de 25%, o hay contradicciones fuertes, recomienda no apostar. Si api_football contiene probabilidades comparables y el mercado elegido contradice fuertemente al proveedor, debes recomendar no_apostar, no ignorar el dato ni inventar una alternativa. Solo recomienda el pick_de_la_app o el mercado exacto seleccionado; no cambies de mercado. No conviertas una probabilidad alta en valor si la cuota no compensa. Las razones deben incluir datos numéricos del JSON y, cuando aplique, hechos contextuales con fuente/estado. Devuelve máximo 3 razones y 3 riesgos. ajuste_stake debe ser 0, -1 o -2. Responde SOLO JSON válido: {"decision":"apostar"|"no_apostar","pick":"nombre exacto del mercado","ajuste_stake":0|-1|-2,"cuota_minima":número,"resumen":"una frase","razones":["..."],"riesgos":["..."]}. Nunca prometas ganancias.'},
       {role:'system',content:modo+' Los datos de bajas_y_alineaciones vienen de ESPN y pueden estar incompletos: sin bajas reportadas no significa que no haya bajas. Solo las bajas en titulares_recientes son relevantes (evalúa a qué lado favorecen o perjudican); baja_larga ya está reflejada en la forma reciente y no_titulares casi no importa. Si las alineaciones no están confirmadas, dilo en los riesgos y no pongas un stake alto. noticias_y_contexto viene de una búsqueda web y puede tener errores: úsalo solo para señalar riesgos o contexto (rotaciones, motivación, bajas) y para ajuste_stake; nunca para inventar números.'},
       {role:'user',content:JSON.stringify(data)}];
     let j=null,providerError='';
@@ -1360,6 +1444,8 @@ async function aiRun(i){
     if(mk&&isHalfMarket(mk[0])){o.decision='no_apostar';note='Mercado por mitades experimental: no se recomienda apostar hasta validar el cálculo con datos históricos por periodo.'}
     if(mk&&!price){o.decision='no_apostar';note='Falta una cuota real de la casa para calcular valor esperado.'}
     if(mk&&price&&(mk[1]*price-1<0.05||mk[1]*price-1>0.25)){o.decision='no_apostar';note='La ventaja estimada no está en el rango prudente (5%-25%); puede ser ruido o un error del modelo.'}
+    const afFinal=mk?afConflict(r,mk[0],mk[1]):null;
+    if(afFinal&&afFinal.level==='strong'){o.decision='no_apostar';note=`Contradicción fuerte de API-Football: ${Math.round(afFinal.api*100)}% para este mercado frente a ${Math.round(mk[1]*100)}% del modelo. Se bloquea la recomendación.`}
     const aj=Math.max(-2,Math.min(0,Math.round(+o.ajuste_stake||0)));
     const rl=x=>x?x.titulares_recientes.length:0,nb=Math.max(inf?rl(inf.bajas_local)+rl(inf.bajas_visitante):0,Math.min(2,Math.round(+(news&&news.bajas_clave_total)||0)));
     let stk=mk?baseStake(r,mk[0],price):1;
