@@ -446,9 +446,18 @@ function model(A,B){
     if(i+j>=2)o15+=p;if(i+j>=3)o25+=p;if(i+j>=4)o35+=p;if(i+j>=5)o45+=p;if(i>0&&j>0)bt+=p;
   }
   const T=H+D+V,h=H/T,d=D/T,v=V/T;
+  // BTTS: combina Poisson con tasas observadas de gol y de porterías en cero.
+  // Así no depende únicamente de los goles esperados ni sobrevalora un solo patrón.
+  const rate=(x,k)=>x&&x.n?Math.max(0,Math.min(1,k/x.n)):0.5;
+  const homeScores=(rate(A,A.n-A.fts)+rate(B,B.n-B.cs))/2;
+  const awayScores=(rate(B,B.n-B.fts)+rate(A,A.n-A.cs))/2;
+  const empiricalBTTS=Math.max(0.05,Math.min(0.95,homeScores*awayScores));
+  const bttsRaw=bt/T;
+  const bttsBlend=0.55*bttsRaw+0.45*empiricalBTTS;
+  const btts=0.90*bttsBlend+0.05; // ligera regresión al 50% para reducir extremos con muestras pequeñas
   const m=[['Local gana',h],['Empate',d],['Visitante gana',v],['Doble oportunidad 1X',h+d],['Doble oportunidad X2',d+v],['Doble oportunidad 12',h+v],
     ['Over 1.5',o15/T],['Over 2.5',o25/T],['Over 3.5',o35/T],['Under 1.5',1-o15/T],['Under 2.5',1-o25/T],
-    ['Ambos marcan: sí',bt/T],['Ambos marcan: no',1-bt/T],
+    ['Ambos marcan: sí',btts],['Ambos marcan: no',1-btts],
     ['Local marca 1+ gol',1-pois(lh,0)],['Local marca 2+ goles',1-pois(lh,0)-pois(lh,1)],
     ['Visitante marca 1+ gol',1-pois(la,0)],['Visitante marca 2+ goles',1-pois(la,0)-pois(la,1)],
     ['Local deja arco en cero',pois(la,0)],['Visitante deja arco en cero',pois(lh,0)]];
@@ -736,8 +745,12 @@ $('#go').onclick=async()=>{
         const qp=ODP?oddsQ(ODP,hf,wf,e.date):null,fair=qp?fairP(qp):null;
         // Mantener separadas las probabilidades del modelo y las probabilidades justas del mercado.
         // No mezclarlas con pesos arbitrarios hasta calibrar el modelo con resultados fuera de muestra.
-        if(fair&&Object.keys(fair).length){mod.raw=mod.m;mod.f=fair}
-        if(!mod.raw&&q&&Object.keys(q).length){const fc=fairP(q);if(Object.keys(fc).length){mod.m0=mod.m;mod.fc=fc}}
+        if(fair&&Object.keys(fair).length){mod.raw=mod.m.map(x=>[...x]);mod.f=fair}
+        if(!mod.raw&&q&&Object.keys(q).length){const fc=fairP(q);if(Object.keys(fc).length){mod.m0=mod.m.map(x=>[...x]);mod.fc=fc}}
+        // Ajuste prudente de BTTS con referencia de mercado cuando existe. Pinnacle pesa más que la cuota de la propia casa.
+        const yesBTTS=mod.m.find(x=>x[0]==='Ambos marcan: sí'),noBTTS=mod.m.find(x=>x[0]==='Ambos marcan: no');
+        const refBTTS=(mod.f&&mod.f['Ambos marcan: sí']!=null)?mod.f['Ambos marcan: sí']:(mod.fc&&mod.fc['Ambos marcan: sí']!=null?mod.fc['Ambos marcan: sí']:null);
+        if(yesBTTS&&noBTTS&&refBTTS!=null){const weight=(mod.f&&mod.f['Ambos marcan: sí']!=null)?0.30:0.15;const adjusted=yesBTTS[1]*(1-weight)+refBTTS*weight;yesBTTS[1]=adjusted;noBTTS[1]=1-adjusted;}
         const bv=best({mod,q}),hasT=!!(A.n>=5&&B.n>=5&&mod.raw&&q&&mod.m.some(m=>['A','B'].includes(tierOf({q,mod},m[0]))));
         if(q&&Object.keys(q).length)mq++;
         if(hunt||p.length||hasT||(!mod.raw&&bv&&bv.e>=0.05))R.push({m:`${hn} vs ${wn}`,liga:names[slug],
@@ -747,7 +760,7 @@ $('#go').onclick=async()=>{
     let huntTxt='';
     if(hunt){
       const tot=R.length;
-      R=R.map(r=>({r,b:bestOf(r)})).filter(x=>x.b&&x.b.q&&baseStake(x.r,x.b.n,x.b.q)>=cfg.sm).sort((a,b)=>b.b.sc-a.b.sc).slice(0,3).map(x=>x.r);
+      R=R.map(r=>({r,b:bestOf(r)})).filter(x=>x.b&&x.b.q&&x.b.q>=(cfg.qm||1.5)&&baseStake(x.r,x.b.n,x.b.q)>=cfg.sm).sort((a,b)=>b.b.sc-a.b.sc).slice(0,3).map(x=>x.r);
       huntTxt=R.length?`Búsqueda en todas las ligas: ${tot} partidos con cuotas, ${R.length} cumplen (cuota de ${cfg.qm} o más y stake de ${cfg.sm} o más).`:`Búsqueda en todas las ligas: de ${tot} partidos con cuotas, ninguno cumple cuota de ${cfg.qm} o más y stake de ${cfg.sm} o más. Es normal: casi nunca hay uno.`;
     }
     msg.textContent=(huntTxt||(rev?`${rev} partidos revisados, ${R.length} con patrones.`:'No hay partidos pendientes ('+((cfg.dd||1)>=2?'hoy y mañana':'hoy')+') en esas ligas.'))+(bad.length?' No cargaron: '+bad.join('; ')+'.':'')+diag+(OD&&rev&&!mq?' Ningún partido se emparejó con la casa. ESPN trae: '+enames.slice(0,4).join('; ')+'. OddsPapi trae: '+(OD.fx.slice(0,4).map(x=>x.h+' vs '+x.w).join('; ')||'nada')+'.':'')+(nShort?' '+nShort+' partidos tienen menos de 5 partidos de historial y no se analizan.':'')+(OD&&nNoQ?' '+nNoQ+' partidos sin cuotas de la casa.':'');
@@ -977,13 +990,13 @@ const supports=(r,n)=>r.p.some(t=>(/^Over:/.test(t)&&/^Over [123]\.5$/.test(n))|
 function candScan(r){
   const veto=[];
   if(r.A.n<5||r.B.n<5)return {out:[],veto};          // con tan poco historial el modelo no es fiable
-  const out=[],conC=!!(r.q&&Object.keys(r.q).length),qm=cfg.qm||1.5;
+  const out=[],conC=!!(r.q&&Object.keys(r.q).length);
   for(const [n,p] of r.mod.m){
     if(isHalfMarket(n))continue; // hasta calibrar con resultados por tiempo, no se convierten en picks automáticos
-    if(!Number.isFinite(p)||p<0.50||p>0.90)continue;
+    if(!Number.isFinite(p)||p<0.35||p>0.90)continue;
     const q=(r.q&&r.q[n])||null,t=tierOf(r,n),sp=supports(r,n);
     // Sin cuota real no existe valor esperado comprobable: solo se puede mostrar como mercado a vigilar.
-    if(!conC||!q||q<qm)continue;
+    if(!conC||!q||q<1.01)continue;
     const e=p*q-1;
     // Evita sobrevalorar estimaciones débiles: edge >25% suele señalar un modelo/dato mal calibrado.
     if(e<0.05||e>0.25)continue;
