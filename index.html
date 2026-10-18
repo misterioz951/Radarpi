@@ -216,6 +216,16 @@ a{color:var(--blue)}.nsrc a{color:var(--blue);text-decoration:underline;text-und
 @keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.stake-summary .stake-row{padding:12px 0;border-top:1px solid var(--ln)}
+.stake-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.stake-head b{font-size:1rem}.stake-head span{font-weight:700;font-size:.9rem}
+.stake-track{height:8px;background:var(--ln);border-radius:99px;overflow:hidden;margin:8px 0 5px}
+.stake-track i{display:block;height:100%;background:var(--ok);border-radius:99px}
+.stake-markets{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.stake-markets span{display:inline-flex;gap:7px;align-items:center;border:1px solid var(--ln);border-radius:99px;padding:5px 9px;font-size:.78rem}
+.combo-card{border:1px solid var(--ln);border-radius:16px;padding:14px;margin:12px 0;background:var(--card)}.combo-card h2{margin:0 0 5px}.combo-item{padding:12px 0;border-top:1px solid var(--ln)}.combo-item:first-of-type{border-top:0}.combo-leg{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.combo-leg b{font-size:.92rem}.combo-meta{font-size:.8rem;color:var(--mut);margin-top:4px;line-height:1.5}.combo-total{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:8px;padding:9px 10px;border-radius:10px;background:var(--bg)}.combo-total strong{font-size:1.15rem}.af-panel{margin-top:10px;padding:12px;border:1px solid var(--ln);border-radius:12px}.af-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0}.af-grid div{padding:8px;border-radius:9px;background:var(--bg);text-align:center}.af-grid b{display:block;font-size:1rem}.af-grid small{font-size:.72rem;color:var(--mut)}
+
 </style></head><body>
 <header><div class="logo"><svg viewBox="0 0 32 32" fill="none" stroke="#F5B800" stroke-width="2.4" stroke-linecap="round"><path d="M5 21a11 11 0 0 1 22 0"/><path d="M10 21a6 6 0 0 1 12 0"/><circle cx="16" cy="22.5" r="2.3" fill="#F5B800" stroke="none"/></svg></div>
 <div><h1>Radar de patrones</h1><small>Fútbol · análisis exigente, tú decides</small></div></header>
@@ -246,14 +256,18 @@ a{color:var(--blue)}.nsrc a{color:var(--blue);text-decoration:underline;text-und
 <label class="tg-row"><span>Escanear al abrir la app<small>Como máximo cada 3 horas</small></span><input id="c-au" type="checkbox"></label>
 <label class="tg-row"><span>Alertas con la app abierta<small>Escanea solo y te avisa de partidos nuevos con sonido, vibración y un punto rojo. Se pausa si bloqueas el celular o cierras la app.</small></span><input id="c-aa" type="checkbox"></label>
 <label>Cada cuántos minutos (mínimo 15)<input id="c-iv" type="number"></label></details>
-<details class="card grp" open><summary>Picks</summary><p>Reglas para elegir el mejor pick y para la búsqueda en todas las ligas.</p>
-<div class="g2"><label>Cuota mínima<input id="c-qm" type="number" step="0.05"></label><label>Stake mínimo (búsqueda)<input id="c-sm" type="number"></label></div>
+<details class="card grp" open><summary>Picks y combinadas</summary><p>La cuota mínima de «Buscar el mejor pick en todas las ligas» se mantiene separada del objetivo de las combinadas.</p>
+<div class="g2"><label>Cuota mínima (mejor pick)<input id="c-qm" type="number" step="0.05"></label><label>Stake mínimo (búsqueda)<input id="c-sm" type="number"></label><label>Cuota objetivo combinadas<input id="c-cq" type="number" min="1.01" step="0.05"></label></div>
+<p class="status">Las combinadas solo usan selecciones individuales que pasan los filtros actuales y son de partidos diferentes. La probabilidad conjunta es una estimación; no se presentará como garantía.</p>
 <label class="tg-row"><span>Mostrar mercados por mitades<small>Experimentales: no están validados y nunca se eligen como pick automático</small></span><input id="c-hm" type="checkbox"></label></details>
 <details class="card grp"><summary>Cuotas</summary><p>OddsPapi trae las cuotas de tu casa.</p>
 <label>Llave OddsPapi<input id="c-ok" type="password" autocomplete="off"></label>
 <label>Casa de apuestas<input id="c-bm" placeholder="rushbet.co"></label>
 <button class="btn s" id="bkfind" type="button">Buscar casas</button><div id="bkres" class="chips wrap"></div>
 <label class="tg-row"><span>Contrastar con Pinnacle<small>Usa 1 petición extra por escaneo</small></span><input id="c-pn" type="checkbox"></label></details>
+<details class="card grp"><summary>Datos extra de fútbol (API-Football)</summary><p>Proveedor opcional para contrastar pronósticos, lesiones y datos del partido. El plan gratuito ofrece 100 solicitudes al día; la cobertura de estadísticas y mercados cambia por liga y partido. RadarPi no reemplazará las cuotas reales de OddsPapi ni usará automáticamente la predicción del proveedor como pick.</p>
+<label>Llave API-Football<input id="c-af" type="password" autocomplete="off" placeholder="Pega aquí tu API key"></label>
+<div class="tools"><button class="btn s" id="af-test" type="button">Probar conexión</button><span id="af-status" class="status" role="status">Opcional. Se consulta solo cuando lo pidas para un partido.</span></div></details>
 <details class="card grp"><summary>Inteligencia artificial</summary><p>La IA de contexto buscará motivación competitiva, escenarios de clasificación/eliminación, rotaciones, suplentes, lesiones, descanso, viajes y declaraciones recientes. Las claves quedan en el almacenamiento local del navegador; no es un almacén seguro frente a alguien con acceso al dispositivo o a las herramientas del navegador.</p>
 <label>Llave Groq (análisis y pick)<input id="k-gq" type="password" autocomplete="off"></label>
 <label>Llave Gemini (noticias y contexto, opcional)<input id="k-gm" type="password" autocomplete="off"></label>
@@ -297,7 +311,7 @@ const LG={
   "Bélgica":"bel.1","Turquía":"tur.1","Escocia":"sco.1","Grecia":"gre.1","Austria":"aut.1","Suiza":"sui.1","Dinamarca":"den.1","Noruega":"nor.1","Suecia":"swe.1",
   "Chile":"chi.1","Uruguay":"uru.1","Paraguay":"par.1","Perú":"per.1","Ecuador":"ecu.1"
 };
-let cfg=Object.assign({fd:'',gq:'',or:'',br:'',g:3,b:70,m:12,u:2,qm:1.5,dd:1,sm:5,hm:false,r:75,co:5,ta:5,ex:true,au:false,aa:false,iv:60,ok:'',bm:'',pn:true,lg:['col.1','eng.1','esp.1']},LS('cfg',{}));
+let cfg=Object.assign({fd:'',gq:'',or:'',br:'',g:3,b:70,m:12,u:2,qm:1.5,cq:1.5,af:'',dd:1,sm:5,hm:false,r:75,co:5,ta:5,ex:true,au:false,aa:false,iv:60,ok:'',bm:'',pn:true,lg:['col.1','eng.1','esp.1']},LS('cfg',{}));
 cfg.lg=cfg.lg.filter(x=>Object.values(LG).includes(x));if(!cfg.lg.length)cfg.lg=['col.1','eng.1','esp.1'];
 let openRes=false,autoRun=false,hunt=false,mdlTab='res',mdlAll=false;
 let MODEL='openai/gpt-oss-120b';
@@ -327,9 +341,9 @@ document.querySelectorAll('#dd button').forEach(b=>b.onclick=()=>{cfg.dd=+b.data
 drawDd();
 
 // ajustes
-$('#k-gq').value=cfg.gq;$('#k-gm').value=cfg.gk||'';$('#k-or').value=cfg.or||'';$('#k-br').value=cfg.br||'';$('#c-g').value=cfg.g;$('#c-b').value=cfg.b;$('#c-m').value=cfg.m;$('#c-qm').value=cfg.qm;$('#c-sm').value=cfg.sm;$('#c-hm').checked=cfg.hm;$('#c-u').value=cfg.u;$('#c-r').value=cfg.r;$('#c-k').value=cfg.bk||'';$('#c-co').value=cfg.co;$('#c-ta').value=cfg.ta;$('#c-x').checked=cfg.ex;$('#c-au').checked=cfg.au;$('#c-aa').checked=cfg.aa;$('#c-iv').value=cfg.iv;$('#c-pn').checked=cfg.pn;$('#c-ok').value=cfg.ok;$('#c-bm').value=cfg.bm;
+$('#k-gq').value=cfg.gq;$('#k-gm').value=cfg.gk||'';$('#k-or').value=cfg.or||'';$('#k-br').value=cfg.br||'';$('#c-g').value=cfg.g;$('#c-b').value=cfg.b;$('#c-m').value=cfg.m;$('#c-qm').value=cfg.qm;$('#c-cq').value=cfg.cq||1.5;$('#c-af').value=cfg.af||'';$('#c-sm').value=cfg.sm;$('#c-hm').checked=cfg.hm;$('#c-u').value=cfg.u;$('#c-r').value=cfg.r;$('#c-k').value=cfg.bk||'';$('#c-co').value=cfg.co;$('#c-ta').value=cfg.ta;$('#c-x').checked=cfg.ex;$('#c-au').checked=cfg.au;$('#c-aa').checked=cfg.aa;$('#c-iv').value=cfg.iv;$('#c-pn').checked=cfg.pn;$('#c-ok').value=cfg.ok;$('#c-bm').value=cfg.bm;
 $('#save').onclick=()=>{cfg.gq=$('#k-gq').value.trim();cfg.gk=$('#k-gm').value.trim();cfg.or=$('#k-or').value.trim();cfg.br=$('#k-br').value.trim();
-  cfg.g=+$('#c-g').value||3;cfg.b=+$('#c-b').value||70;cfg.m=+$('#c-m').value||8;cfg.qm=+$('#c-qm').value||1.5;cfg.sm=+$('#c-sm').value||5;cfg.hm=$('#c-hm').checked;cfg.u=+$('#c-u').value||2;cfg.r=+$('#c-r').value||75;cfg.bk=+$('#c-k').value||0;cfg.co=+$('#c-co').value||5;cfg.ta=+$('#c-ta').value||5;cfg.ex=$('#c-x').checked;cfg.au=$('#c-au').checked;cfg.aa=$('#c-aa').checked;cfg.iv=Math.max(15,+$('#c-iv').value||60);cfg.pn=$('#c-pn').checked;cfg.ok=$('#c-ok').value.trim();cfg.bm=$('#c-bm').value.trim();SV('cfg',cfg);$('#save').textContent='Guardado'};
+  cfg.g=+$('#c-g').value||3;cfg.b=+$('#c-b').value||70;cfg.m=+$('#c-m').value||8;cfg.qm=+$('#c-qm').value||1.5;cfg.cq=Math.max(1.01,+$('#c-cq').value||1.5);cfg.af=$('#c-af').value.trim();cfg.sm=+$('#c-sm').value||5;cfg.hm=$('#c-hm').checked;cfg.u=+$('#c-u').value||2;cfg.r=+$('#c-r').value||75;cfg.bk=+$('#c-k').value||0;cfg.co=+$('#c-co').value||5;cfg.ta=+$('#c-ta').value||5;cfg.ex=$('#c-x').checked;cfg.au=$('#c-au').checked;cfg.aa=$('#c-aa').checked;cfg.iv=Math.max(15,+$('#c-iv').value||60);cfg.pn=$('#c-pn').checked;cfg.ok=$('#c-ok').value.trim();cfg.bm=$('#c-bm').value.trim();SV('cfg',cfg);$('#save').textContent='Guardado'};
 
 // ESPN (API pública no oficial, sin llave). Sin rangos de fechas: partidos de hoy + calendario de cada equipo
 async function espn(path){
@@ -843,21 +857,37 @@ function selOpts(r){
   const H=all.filter(([n])=>isHalfMarket(n));if(H.length)h+=`<optgroup label="Por mitades · experimental">${opt(H)}</optgroup>`;
   return h;
 }
+function bttsAudit(r){
+  const names=['Ambos marcan: sí','Ambos marcan: no'];
+  const rows=names.map(n=>{
+    const m=(r.mod.m||[]).find(x=>x[0]===n);if(!m)return `<div class="stake-row"><b>${esc(n)}</b><p class="mut">Este mercado no vino en los datos de este partido.</p></div>`;
+    const p=m[1],q=r.q&&+r.q[n]>1?+r.q[n]:null,e=q?p*q-1:null,ref=(r.mod.f&&r.mod.f[n]!=null)?r.mod.f[n]:(r.mod.fc&&r.mod.fc[n]!=null?r.mod.fc[n]:null);
+    let why='Pasa los filtros básicos';
+    if(!Number.isFinite(p)||p<0.35||p>0.90)why='Probabilidad fuera del rango permitido (35–90%)';
+    else if(!q)why='No hay cuota real emparejada para este mercado';
+    else if(e<0.05)why='Ventaja estimada menor al 5%';
+    else if(e>0.25)why='Ventaja estimada mayor al 25%: posible error de datos/modelo';
+    else if(ref!=null&&p-ref>0.10)why='El modelo supera la referencia de mercado por más de 10 puntos; se descarta por seguridad';
+    const pass=why==='Pasa los filtros básicos';
+    return `<div class="stake-row"><div class="stake-head"><b>${esc(n)}</b><span class="${pass?'ok':'bad'}">${pass?'Pasa filtros':'No seleccionado'}</span></div><small>Probabilidad ${Math.round(p*100)}% · ${q?'cuota @'+q+' · valor '+(e>=0?'+':'')+Math.round(e*100)+'%':'sin cuota real'}${ref!=null?' · referencia '+Math.round(ref*100)+'%':''}</small><p class="mut">${esc(why)}</p></div>`;
+  }).join('');
+  return `<div class="card stake-summary"><h3>¿Por qué no salió Ambos marcan?</h3><p class="mut">Este panel muestra los filtros aplicados al partido actual; las cuotas y los datos pueden cambiar entre escaneos.</p>${rows}</div>`;
+}
 function ticket(r){
   const b=bestOf(r);
-  if(!b)return `<div class="nopick2"><b>Sin pick con ventaja clara</b><p>${diagnose(r)}</p>${r.p.length?`<p>Hay ${r.p.length} patrón(es) detectado(s) en la pestaña Datos.</p>`:''}</div>`;
+  if(!b)return `<div class="nopick2"><b>Sin pick con ventaja clara</b><p>${diagnose(r)}</p>${r.p.length?`<p>Hay ${r.p.length} patrón(es) detectado(s) en la pestaña Datos.</p>`:''}</div>${bttsAudit(r)}`;
   const st=baseStake(r,b.n,b.q),c=conflictOf(r,b.n);
   return `<div class="tk ${b.t||''}"><small class="tkl">PICK DE LA APP · SEGÚN REGLAS</small><div class="tk1">${b.t?`<span class="tier tier${b.t}">${b.t}</span>`:''}<b class="n">${esc(b.n)}</b></div>
-<div class="tk2"><span><b>${Math.round(b.p*100)}%</b> prob.</span>${b.q?`<span>cuota <b>@${b.q}</b></span><span>valor <b>${b.e>=0?'+':''}${Math.round(b.e*100)}%</b></span>`:`<span>cuota mínima <b>@${(1.05/b.p).toFixed(2)}</b></span>`}<span>stake base <b>${st}/10</b></span></div>
-<div class="meter${st>=5?' hi':''}" role="img" aria-label="Stake ${st} de 10">${Array.from({length:10},(_,k)=>`<i class="${k<st?'f':''}"></i>`).join('')}</div>
-${c?`<div class="tkw">⚠ Va contra el patrón detectado (${c}). Confírmalo con la IA antes de apostar.</div>`:''}</div>`;
+<div class="tk2"><span><b>${Math.round(b.p*100)}%</b> prob.</span>${b.q?`<span>cuota <b>@${b.q}</b></span><span>valor <b>${b.e>=0?'+':''}${Math.round(b.e*100)}%</b></span>`:`<span>cuota mínima <b>@${(1.05/b.p).toFixed(2)}</b></span>`}<span>stake base <b>${st}/9</b></span></div>
+<div class="meter${st>=5?' hi':''}" role="img" aria-label="Stake ${st} de 9">${Array.from({length:9},(_,k)=>`<i class="${k<st?'f':''}"></i>`).join('')}</div>
+${c?`<div class="tkw">⚠ Va contra el patrón detectado (${c}). Confírmalo con la IA antes de apostar.</div>`:''}</div>${bttsAudit(r)}`;
 }
 const GUIA=`<details class="card hint"><summary>¿Cómo leer las tarjetas?</summary>
 <p><b>Barra azul, gris y amarilla:</b> probabilidad de que gane el local, empate o gane el visitante.</p>
 <p><b>Forma:</b> los últimos 5 partidos de cada equipo. G ganó, E empató, P perdió.</p>
 <p><b>Mercados:</b> la barra es la probabilidad que calcula el modelo. La <b>cuota justa</b> es 1 ÷ probabilidad: si tu casa paga más que eso, hay <b>valor</b> (verde).</p>
 <p><b>Nivel A, B o C:</b> cuánto confirma Pinnacle ese valor. A es la mejor confirmación.</p>
-<p><b>Stake de 1 a 10:</b> confianza calculada con probabilidad, valor, cantidad de datos y bajas. No es una garantía.</p></details>`;
+<p><b>Stake de 1 a 9:</b> confianza calculada con probabilidad, valor, cantidad de datos y bajas. No es una garantía.</p></details>`;
 let resView='picks';
 function setView(v){resView=v;drawRes()}
 async function ai(i){cardTab(i,'v');try{await aiRun(i)}finally{const b=$('#ai'+i);if(b&&R[i]&&!b.hidden)R[i].aiH=b.innerHTML}}
@@ -886,7 +916,7 @@ function card(i){
     return `<article class="card mc"><div class="mh"><span class="pill">${esc(r.liga)}</span><span class="ko">${r.hora}</span></div>
   <div class="mt"><b>${esc(r.h)}</b><em>vs</em><b>${esc(r.w)}</b></div>
   ${ticket(r)}
-  <div class="acts2"><button class="btn" onclick="ai(${i})">Analizar con IA</button><button class="btn s" onclick="showInfo(${i})">Noticias y bajas</button><button class="btn s" onclick="regModel(${i})">Registrar en Modelo</button></div>
+  <div class="acts2"><button class="btn" onclick="ai(${i})">Analizar con IA</button><button class="btn s" onclick="showInfo(${i})">Noticias y bajas</button><button class="btn s" onclick="afMore(${i})">Datos API-Football</button><button class="btn s" onclick="regModel(${i})">Registrar en Modelo</button></div><div id="afp${i}" class="af-panel" hidden></div>
   <div class="cpanel" id="cp${i}" ${r.cardT?'':'hidden'}>
     <div class="seg m ct" role="tablist" aria-label="Análisis del partido">${[['v','Veredicto'],['n','Noticias'],['d','Datos'],['a','Mercados']].map(([k,t])=>`<button type="button" role="tab" data-t="${k}" aria-selected="${r.cardT===k}" class="${r.cardT===k?'on':''}" onclick="cardTab(${i},'${k}')"><span>${t}</span></button>`).join('')}<button type="button" class="x" aria-label="Cerrar panel" onclick="cardTab(${i},null)">✕</button></div>
     <div class="tp" data-t="v" ${r.cardT==='v'?'':'hidden'}><div class="ai" id="ai${i}" ${r.aiH?'':'hidden'}>${r.aiH||''}</div><p class="phd">Pulsa <b>Analizar con IA</b> para que valide el pick de la app, o elige otro mercado en la pestaña Mercados y analízalo.</p></div>
@@ -919,7 +949,7 @@ function drawRes(){
     ?'<p class="status">Solo picks con cuota real y ventaja estimada de 5% a 25%. Es una estimación, no una garantía.</p>'
     :`<div class="tools"><button class="btn s" onclick="toggleAll(true)">Abrir todo</button><button class="btn s" onclick="toggleAll(false)">Cerrar todo</button></div>${nP?'':'<p class="status">Ningún partido tiene un pick con ventaja clara. Aquí están todos para que los revises.</p>'}`;
   const rest=(view==='picks'&&R.length>nP)?`<button class="btn s" style="width:100%" onclick="setView('all')">Ver los ${R.length-nP} partidos sin pick</button>`:'';
-  $('#res').innerHTML=menu+hint+list.map(card).join('')+rest+GUIA;
+  $('#res').innerHTML=menu+hint+comboHtml()+list.map(card).join('')+rest+GUIA;
 }
 function pick(i){const r=R[i],mk=$('#mk'+i).value;r.userMk=mk;const q=mk&&r.q&&r.q[mk];$('#od'+i).value=q||'';calc(i)}
 
@@ -984,6 +1014,68 @@ async function showInfoRun(i){
   b.innerHTML=eh+'<div class="nsep"></div>'+gh;
 }
 
+// ===== Combinadas entre partidos distintos: no se mezclan mercados del mismo partido =====
+function comboHtml(){
+  if(!R.length)return '';
+  const target=Math.max(1.01,+cfg.cq||1.5),legs=[];
+  R.forEach((r,idx)=>{
+    const cs=cands(r).filter(x=>!isHalfMarket(x.n)&&x.q>1&&x.p>0&&x.p<1&&x.e>=0.05&&x.e<=0.25).slice(0,3);
+    cs.forEach(b=>legs.push({idx,r,b}));
+  });
+  const combos=[];
+  for(let i=0;i<legs.length;i++)for(let j=i+1;j<legs.length;j++){
+    const a=legs[i],b=legs[j];if(a.idx===b.idx)continue;
+    if(a.r.ev&&b.r.ev&&String(a.r.ev)===String(b.r.ev))continue;
+    const q=a.b.q*b.b.q,p=a.b.p*b.b.p,e=p*q-1;
+    if(q<target||e<0.03||e>0.20)continue;
+    const score=e+Math.min(a.b.sc,b.b.sc)*0.15;
+    combos.push({a,b,q,p,e,score});
+  }
+  combos.sort((a,b)=>b.score-a.score);
+  const unique=[],seen=new Set();for(const c of combos){const k=[c.a.idx,c.a.b.n,c.b.idx,c.b.n].sort().join('|');if(seen.has(k))continue;seen.add(k);unique.push(c);if(unique.length>=5)break;}
+  const content=unique.length?unique.map((c,i)=>`<div class="combo-item"><div class="combo-leg"><b>${i+1}. ${esc(c.a.r.h)} vs ${esc(c.a.r.w)}</b><strong>@${c.a.b.q.toFixed(2)}</strong></div><div class="combo-meta">${esc(c.a.b.n)} · modelo ${Math.round(c.a.b.p*100)}% · valor individual ${Math.round(c.a.b.e*100)}%</div><div class="combo-leg" style="margin-top:8px"><b>${esc(c.b.r.h)} vs ${esc(c.b.r.w)}</b><strong>@${c.b.b.q.toFixed(2)}</strong></div><div class="combo-meta">${esc(c.b.b.n)} · modelo ${Math.round(c.b.b.p*100)}% · valor individual ${Math.round(c.b.b.e*100)}%</div><div class="combo-total"><div><small>Cuota combinada estimada</small><br><strong>@${c.q.toFixed(2)}</strong></div><div style="text-align:right"><small>Prob. conjunta aprox.</small><br><b>${Math.round(c.p*100)}%</b><br><small class="${c.e>0?'ok':'bad'}">Valor estimado ${c.e>=0?'+':''}${Math.round(c.e*100)}%</small></div></div></div>`).join(''):`<p class="status">Por ahora no hay una combinada de dos partidos que alcance @${target.toFixed(2)} y pase los filtros de valor de ambos picks. No se forzará una combinación solo para llegar a la cuota.</p>`;
+  return `<div class="combo-card"><h2>Combinadas entre partidos</h2><p class="status">Objetivo @${target.toFixed(2)} · se muestran hasta 5 combinaciones con selecciones individuales válidas, de partidos diferentes. La cuota es el producto teórico de las cuotas de casa y puede variar al combinarlas.</p>${content}<p class="status">Importante: la probabilidad conjunta multiplica las probabilidades del modelo como aproximación para partidos distintos. Como el modelo aún no está calibrado con una muestra amplia, úsalo para evaluar candidatos, no como promesa de rentabilidad. Las combinadas del mismo partido requieren cuota Bet Builder real y cálculo específico de dependencia; no se inventan.</p></div>`;
+}
+
+// ===== API-Football opcional: se consulta solo a petición y los resultados se cachean =====
+async function afGet(path,params={}){
+  if(!cfg.af)throw new Error('Añade primero tu llave API-Football en Ajustes.');
+  const url='https://v3.football.api-sports.io/'+path+'?'+new URLSearchParams(params);
+  const res=await fetch(url,{headers:{'x-apisports-key':cfg.af}});
+  let j;try{j=await res.json()}catch{throw new Error('Respuesta no válida del proveedor.');}
+  if(!res.ok||j.errors&&Object.keys(j.errors).length)throw new Error(JSON.stringify(j.errors||('HTTP '+res.status)).slice(0,220));
+  return j;
+}
+$('#af-test').onclick=async()=>{
+  const out=$('#af-status');cfg.af=$('#c-af').value.trim();
+  if(!cfg.af){out.textContent='Pega la llave API-Football y pulsa Guardar ajustes.';return}
+  out.textContent='Probando conexión…';
+  try{const j=await afGet('status');const a=j.response&&j.response.account||{},q=j.response&&j.response.requests||{};SV('cfg',cfg);out.textContent=`Conexión correcta${a.firstname?' · '+a.firstname:''}. Solicitudes hoy: ${q.current??'?'} / ${q.limit_day??'límite no informado'}.`}
+  catch(e){out.textContent='No se pudo conectar: '+e.message;}
+};
+async function afMore(i){
+  const r=R[i],box=$('#afp'+i);box.hidden=false;box.innerHTML='<p class="status">Consultando API-Football… puede gastar hasta 3 solicitudes para este partido. Los resultados se guardarán en caché.</p>';
+  if(!cfg.af){box.innerHTML='<p class="status">Para usar esta función, crea una cuenta gratuita en API-Football, copia tu llave en Ajustes y pulsa Guardar. La cuota gratuita publicada es de 100 solicitudes al día.</p>';return}
+  const cacheKey='af_match_'+String(r.ev||r.h+'_'+r.w+'_'+iso(new Date(r.ko))).replace(/[^a-z0-9_-]/gi,'_');
+  let data=LS(cacheKey,null);
+  try{
+    if(!data||Date.now()-data.t>6*36e5){
+      const date=iso(new Date(r.ko));
+      let fxCache=LS('af_fixtures_'+date,null),fx;
+      if(fxCache&&Date.now()-fxCache.t<12*36e5)fx=fxCache.v;
+      else{const j=await afGet('fixtures',{date,timezone:'America/Bogota'});fx=j.response||[];SV('af_fixtures_'+date,{t:Date.now(),v:fx});}
+      const scored=(fx||[]).map(f=>{const h=f.teams&&f.teams.home&&f.teams.home.name||'',a=f.teams&&f.teams.away&&f.teams.away.name||'';return {f,score:sim(r.h,h)+sim(r.w,a),rev:sim(r.h,a)+sim(r.w,h)}}).map(x=>({...x,score:Math.max(x.score,x.rev),reversed:x.rev>x.score})).sort((a,b)=>b.score-a.score);
+      const hit=scored[0];if(!hit||hit.score<1.15)throw new Error('No encontré un partido coincidente con suficiente confianza. No se usarán datos de otro encuentro.');
+      const f=hit.f,fixtureId=f.fixture&&f.fixture.id;if(!fixtureId)throw new Error('La API no devolvió ID de partido.');
+      const [pj,ij]=await Promise.all([afGet('predictions',{fixture:fixtureId}).catch(e=>({__err:e.message})),afGet('injuries',{fixture:fixtureId}).catch(e=>({__err:e.message}))]);
+      data={t:Date.now(),fixture:{id:fixtureId,home:f.teams.home.name,away:f.teams.away.name,date:f.fixture.date,league:f.league&&f.league.name},prediction:pj.response&&pj.response[0]||null,injuries:ij.response||[],reversed:!!hit.reversed,predictionError:pj.__err||null,injuryError:ij.__err||null};SV(cacheKey,data);
+    }
+    const p=data.prediction&&data.prediction.predictions||{},pct=p.percent||{},inj=data.injuries||[];
+    const pctHtml=(label,v)=>`<div><small>${label}</small><b>${esc(v||'—')}</b></div>`,apiHome=data.reversed?pct.away:pct.home,apiAway=data.reversed?pct.home:pct.away;
+    box.innerHTML=`<div class="nh"><b>Contraste API-Football</b><span class="chip3">No modifica el pick automáticamente</span></div><p class="mr-s">Partido emparejado: <b>${esc(data.fixture.home)} vs ${esc(data.fixture.away)}</b> · ${esc(data.fixture.league||'competición sin nombre')} · ${new Date(data.fixture.date).toLocaleString('es',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}. Comprueba que sea el mismo encuentro.</p>${p.percent?`<div class="af-grid">${pctHtml('Local (partido)',apiHome)}${pctHtml('Empate',pct.draw)}${pctHtml('Visitante (partido)',apiAway)}</div>`:''}${p.advice?`<p><b>Consejo del proveedor:</b> ${esc(p.advice)}</p>`:''}${p.under_over?`<p><b>Goles estimados del proveedor:</b> ${esc(p.under_over)}</p>`:''}${p.winner&&p.winner.name?`<p><b>Ganador estimado por proveedor:</b> ${esc(p.winner.name)}${p.winner.comment?' · '+esc(p.winner.comment):''}</p>`:''}${data.predictionError?`<p class="status">Predicción no disponible: ${esc(data.predictionError)}</p>`:''}<p><b>Lesiones/sanciones devueltas:</b> ${inj.length}</p>${inj.length?`<ul>${inj.slice(0,12).map(x=>`<li>${esc(x.player&&x.player.name||'Jugador')} · ${esc(x.player&&x.player.type||x.player&&x.player.reason||'estado sin detalle')} (${esc(x.team&&x.team.name||'equipo no indicado')})</li>`).join('')}</ul>`:'<p class="status">No se devolvieron lesiones para este partido. Eso no confirma que ambos equipos estén sin bajas.</p>'}${data.injuryError?`<p class="status">Lesiones no disponibles: ${esc(data.injuryError)}</p>`:''}<p class="status">Fuente complementaria. La cobertura de predicciones y lesiones cambia por liga; contrasta siempre con cuotas reales y noticias/alineaciones.</p>`;
+  }catch(e){box.innerHTML=`<p class="bad">API-Football: ${esc(e.message||'No se pudieron obtener datos.')}</p><p class="status">Si la llave es válida pero falla, puede ser falta de cobertura, límite diario o un problema de coincidencia del partido. No se inventan datos para completar el análisis.</p>`;}
+}
+
 // ===== El mejor pick de cada partido lo elige la app con criterios fijos (así siempre sale el mismo) =====
 const isHalfMarket=n=>/primer tiempo|segundo tiempo|ambas mitades|1er tiempo|2do tiempo/i.test(n);
 const supports=(r,n)=>r.p.some(t=>(/^Over:/.test(t)&&/^Over [123]\.5$/.test(n))||(/^Ambos marcan/.test(t)&&n==='Ambos marcan: sí')||(/^(Under:|Partido cerrado)/.test(t)&&/^Under [12]\.5$/.test(n))||(/córners/i.test(t)&&/^Córners Over/.test(n))||(/^Tarjetas/.test(t)&&/^Tarjetas Over/.test(n)));
@@ -1025,7 +1117,7 @@ function regModel(i){
   const id=addPick(r,mk,q,0,false);
   if(!id){toast('No se pudo guardar el pronóstico.');return}
   const P=LS('picks',[]),k=P.find(x=>x.id===id);
-  if(k){k.source='escaneo';k.savedAt=k.savedAt||new Date().toISOString();if(q){k.q=+q;k.qr=!!($('#od'+i)&&+$('#od'+i).value>0)}SV('picks',P)}
+  if(k){k.source='escaneo';k.savedAt=k.savedAt||new Date().toISOString();if(q){k.q=+q;k.qr=!!($('#od'+i)&&+$('#od'+i).value>0)}k.stake=baseStake(r,mk,q);k.stakeScale=9;k.stakeMarket=mk;SV('picks',P)}
   drawModel();toast(`Pronóstico guardado: ${mk}${q?' · cuota @'+q:' · sin cuota'}. No se registró dinero apostado.`);
 }
 function baseStake(r,n,price){
@@ -1035,13 +1127,19 @@ function baseStake(r,n,price){
   // El stake expresa exposición, no probabilidad de ganar. Sin ventaja verificada, no apostar.
   if(e<0.05||e>0.25)return 1;
   let b=techo(r,m);
+  const ref=!!(r.mod.f&&r.mod.f[n]!=null);
+  const tier=tierOf(r,n),sup=!!supports(r,n),conf=!!conflictOf(r,n);
+  // Stake alto solo con evidencia más sólida; una cuota atractiva por sí sola no basta.
   if(r.A.n<8||r.B.n<8)b=Math.min(b,4);
-  if(!r.mod.f||r.mod.f[n]==null)b=Math.min(b,4);
+  if(!ref)b=Math.min(b,4);
   if(e<0.08)b=Math.min(b,3);
   else if(e<0.12)b=Math.min(b,5);
-  else b=Math.min(b,6);
-  if(conflictOf(r,n))b-=1;
-  return Math.max(1,Math.min(6,b));
+  else if(e<0.18)b=Math.min(b,6);
+  else if(e<0.22)b=Math.min(b,(tier==='A'&&r.A.n>=12&&r.B.n>=12&&ref&&!conf)?7:6);
+  else if(tier==='A'&&r.A.n>=20&&r.B.n>=20&&ref&&sup&&!conf)b=Math.min(b,9);
+  else b=Math.min(b,(tier==='A'&&r.A.n>=15&&r.B.n>=15&&ref&&sup&&!conf)?8:6);
+  if(conf)b-=1;
+  return Math.max(1,Math.min(9,b));
 }
 function topHtml(){
   const t3=R.map((r,i)=>{const b=bestOf(r);return b?{r,b,s:baseStake(r,b.n,b.q)}:null}).filter(Boolean).sort((a,b)=>b.b.sc-a.b.sc).slice(0,3);
@@ -1189,8 +1287,8 @@ async function aiRun(i){
     r.pk=o.pick;r.sk=amt;r.pq=price;
     const pm=mk?mk[1]:null,val=(price&&pm!=null)?Math.round((pm*price-1)*100):null;
     box.innerHTML=`<div class="vd"><div class="vh"><span class="chip3 ok">Apostar</span><b class="vp">${esc(o.pick)}</b></div>
-<div class="vgrid"><div><small>Stake final</small><b>${stk}/10</b></div><div><small>Probabilidad</small><b>${pm!=null?Math.round(pm*100)+'%':'—'}</b></div><div><small>${price?'Cuota casa':'Cuota mín.'}</small><b>${price?price:esc(o.cuota_minima||(pm?(1.05/pm).toFixed(2):'—'))}</b></div><div><small>Valor</small><b>${val!=null?(val>=0?'+':'')+val+'%':'—'}</b></div></div>
-<div class="meter${stk>=8?' hi':''}" role="img" aria-label="Stake ${stk} de 10">${Array.from({length:10},(_,k)=>`<i class="${k<stk?'f':''}"></i>`).join('')}</div>
+<div class="vgrid"><div><small>Stake final</small><b>${stk}/9</b></div><div><small>Probabilidad</small><b>${pm!=null?Math.round(pm*100)+'%':'—'}</b></div><div><small>${price?'Cuota casa':'Cuota mín.'}</small><b>${price?price:esc(o.cuota_minima||(pm?(1.05/pm).toFixed(2):'—'))}</b></div><div><small>Valor</small><b>${val!=null?(val>=0?'+':'')+val+'%':'—'}</b></div></div>
+<div class="meter${stk>=8?' hi':''}" role="img" aria-label="Stake ${stk} de 9">${Array.from({length:9},(_,k)=>`<i class="${k<stk?'f':''}"></i>`).join('')}</div>
 <p class="mr-s">${pct.toFixed(1)}% del bankroll${amt?' ≈ <b>'+amt.toLocaleString('es')+'</b>':''}. Stake orientativo (máximo 1,8% del bankroll en esta versión; no es garantía de ventaja)${aj?' · la IA lo bajó '+(-aj):''}.</p>
 <p>${esc(o.resumen||'')}</p>${lista(o.razones,'Razones')}${lista(o.riesgos,'Riesgos')}${inf&&!inf.alineaciones?'<p class="mr-s">Alineaciones sin confirmar: stake máximo 7. Vuelve a analizar cuando salgan (≈1 h antes).</p>':''}
 ${mk?`<div class="ctl" style="grid-template-columns:1fr auto;margin-top:6px;align-items:center"><input id="pq${i}" type="number" step="0.01" placeholder="Cuota real" value="${price||''}" aria-label="Cuota real"><button class="btn s" style="margin:6px 0 0" onclick="regModel(${i})">Registrar en Modelo</button></div>`:''}</div>`;
@@ -1312,11 +1410,13 @@ function drawModel(){
   const gs=[...new Set(D.map(k=>grp(k.mk)))];
   const B=(k,r,t)=>`<button class="btn s ${k.res===r?'on':''}" onclick="setPick('${k.id}','${r}')">${t}</button>`;
   const item=k=>`<div class="bet"><div class="bet-h"><b>${esc(k.m)}</b><span class="st ${k.res||'p'}">${{w:'Acertó',l:'Falló',v:'Nulo'}[k.res]||'Pendiente'}</span></div>
-  <small>${new Date(k.ko).toLocaleDateString('es',{day:'numeric',month:'short'})} · ${esc(k.mk)}${k.experimental?' · experimental (fuera de calibración)':''} · modelo ${Math.round(k.p*100)}%${k.q?' · cuota '+k.q+(k.qr?' (tuya)':' (de la casa)'):''}${k.nv?' · sin ventaja con tu cuota':''}${k.sc?' · marcador '+k.sc:''}${k.man?' · manual':''}</small>
+  <small>${new Date(k.ko).toLocaleDateString('es',{day:'numeric',month:'short'})} · ${esc(k.mk)}${k.experimental?' · experimental (fuera de calibración)':''} · modelo ${Math.round(k.p*100)}%${k.q?' · cuota '+k.q+(k.qr?' (tuya)':' (de la casa)'):''}${Number.isFinite(+k.stake)?' · Stake '+k.stake+'/9':''}${k.nv?' · sin ventaja con tu cuota':''}${k.sc?' · marcador '+k.sc:''}${k.man?' · manual':''}</small>
   <div>${B(k,'w','Acertó')}${B(k,'l','Falló')}${B(k,'v','Nulo')}<button class="btn s" onclick="setPick('${k.id}',null)">↺</button><button class="btn s" onclick="delPick('${k.id}')">Borrar</button></div></div>`;
   const tabs=[['res','Resumen',''],['w','Acertó',nW],['l','Falló',nL],['p','Pendientes',pend]];if(nV)tabs.push(['v','Nulos',nV]);
   const menu=`<div class="seg m" role="tablist" aria-label="Secciones del modelo">${tabs.map(([k,t,n])=>`<button type="button" role="tab" aria-selected="${mdlTab===k}" class="${mdlTab===k?'on':''}" onclick="setMdlTab('${k}')"><span>${t}</span>${n!==''?`<b class="${k==='w'?'ok':k==='l'?'bad':''}">${n}</b>`:''}</button>`).join('')}</div>`;
   let body='';
+  const stakePicks=P.filter(k=>Number.isFinite(+k.stake)&&+k.stake>=1&&+k.stake<=9&&!k.experimental);
+  const stakeSummary=`<div class="card stake-summary"><h2>Resultados por Stake</h2><p class="mut">Solo cuenta picks cuyo stake quedó guardado desde esta versión. Los picks antiguos sin stake no se inventan ni se clasifican.</p>${stakePicks.length?[1,2,3,4,5,6,7,8,9].map(st=>{const a=stakePicks.filter(k=>+k.stake===st),done=a.filter(k=>k.res==='w'||k.res==='l'),w=done.filter(k=>k.res==='w').length,l=done.length-w,pend=a.filter(k=>!k.res).length,markets=[...new Set(a.map(k=>k.mk))];if(!a.length)return '';const rate=done.length?Math.round(100*w/done.length):null;return `<div class="stake-row"><div class="stake-head"><b>Stake ${st}/9</b><span>${done.length?`${w} de ${done.length} aciertos · ${rate}%`:'Sin resultados resueltos'}</span></div><div class="stake-track"><i style="width:${rate==null?0:rate}%"></i></div><small>${l} fallos · ${pend} pendientes</small><div class="stake-markets">${markets.map(m=>`<span>${esc(m)} <b>${a.filter(k=>k.mk===m&&k.res==='w').length}✓ / ${a.filter(k=>k.mk===m&&k.res==='l').length}✕</b></span>`).join('')}</div></div>`}).join(''):'<p class="mut">Todavía no hay picks nuevos con stake guardado. Al usar «Registrar en Modelo» se empezará a medir.</p>'}</div>`;
   if(mdlTab==='res'){
     const gap=hit(D)-pr(D);
     const V=D.length<10?{t:'Aún sin conclusiones',d:`Faltan ${Math.max(0,30-D.length)} picks resueltos para sacar conclusiones. Mientras tanto no cambies reglas por rachas.`}
@@ -1325,6 +1425,7 @@ function drawModel(){
       :{t:'Demasiado optimista',d:'Acierta bastante menos de lo que promete. No te fíes de sus probabilidades altas.'};
     const rec=[...D].sort((a,b)=>new Date(a.ko)-new Date(b.ko)).slice(-12).map(k=>`<i class="dot ${k.res==='w'?'G':'P'}">${k.res==='w'?'G':'P'}</i>`).join('');
     body=`<p class="status">Importante: el porcentaje de acierto por sí solo no demuestra rentabilidad. Evalúa el ROI con cuotas reales, suficientes picks y resultados verificados; no cambies reglas mirando solo los resultados recientes.</p>
+    ${stakeSummary}
     <div class="card"><div class="vhero">${ringSvg(nW,nL)}<div><h2>${V.t}</h2><p>${V.d}</p></div></div>
     <div class="counts"><span><b class="ok">${nW}</b>acertó</span><span><b class="bad">${nL}</b>falló</span><span><b>${pend}</b>pendientes</span>${nV?`<span><b>${nV}</b>nulos</span>`:''}</div>
     <div class="prog" role="progressbar" aria-valuenow="${Math.min(30,D.length)}" aria-valuemin="0" aria-valuemax="30"><i style="width:${Math.min(100,Math.round(D.length/30*100))}%"></i></div>
@@ -1403,7 +1504,7 @@ function drawBets(){
     :'<div class="empty"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="8" width="36" height="48" rx="5"/><path d="M23 22h18M23 32h18M23 42h10"/></svg><b>Sin apuestas todavía</b>Las que registres desde las tarjetas aparecerán aquí.</div>';
 }
 // ===== Copia de seguridad de RadarPi: exporta todas las claves locales =====
-const SECRETS=['gq','gk','or','br','ok'];
+const SECRETS=['gq','gk','or','br','ok','af'];
 const BACKUP_KEYS=['picks','bets','cfg','seen','scan'];
 function exportRadarBackup(){
   const msg=$('#backupMsg');
