@@ -609,12 +609,6 @@ function cardTab(i,t){
   p.querySelectorAll('.ct button[data-t]').forEach(b=>{const on=b.dataset.t===t;b.classList.toggle('on',on);b.setAttribute('aria-selected',on?'true':'false')});
 }
 function toggleAll(o){R.forEach((_,i)=>cardTab(i,o?'d':null))}
-function mktBars(r){
-  const q=r.q||{},L=r.mod.m.filter(x=>!isHalfMarket(x[0])&&x[1]>=0.4&&x[1]<=0.9).map(([n,p])=>{const c=calP(r,n,p),o=q[n];return{n,c,q:o,e:o?c*o-1:null}});
-  const top=(L.some(x=>x.q)?L.filter(x=>x.q):L).sort((a,b)=>b.c-a.c).slice(0,7),bp=bestOf(r);
-  if(!top.length)return '';
-  return `<div class="sec">Mercados</div><div class="vb">${top.map(x=>`<div class="vc${bp&&bp.n===x.n?' pk':''}${x.e!=null&&x.e>0.015?' va':''}"><b>${Math.round(x.c*100)}%</b><div class="vt"><i style="height:${Math.round(x.c*100)}%"></i></div><span>${esc(x.n.replace('Doble oportunidad','Doble op.').replace('Córners ','Córn. '))}</span><small>${x.q?'@'+x.q:'sin cuota'}</small></div>`).join('')}</div><p class="mr-s">Altura = probabilidad ajustada. <b>Verde</b> = la cuota tiene valor. <b>Borde amarillo</b> = pick de la app. Desliza para ver más.</p>`;
-}
 const afWrap=h=>'<details class="afd"><summary><b>Contraste RadarPi + API-Football</b><small>Tocar para ver o recoger</small></summary>'+h+'</details>';
 function card(i){
   const r=R[i];
@@ -632,10 +626,9 @@ function card(i){
     return `<article class="card mc"><div class="mh"><span class="pill">${esc(r.liga)}</span><span class="ko">${r.hora}</span></div>
   <div class="mt"><b>${esc(r.h)}</b><em>vs</em><b>${esc(r.w)}</b></div>
   ${ticket(r)}
-  ${mktBars(r)}
   <div class="acts2"><button class="btn" onclick="ai(${i})">Analizar con IA</button><button class="btn s" onclick="showInfo(${i})">Noticias y bajas</button><button class="btn s" onclick="afMore(${i})">Datos API-Football</button><button class="btn s" onclick="regModel(${i})">Registrar en Modelo</button></div><div id="afp${i}" class="af-panel" hidden></div>
   <div class="cpanel" id="cp${i}" ${r.cardT?'':'hidden'}>
-    <div class="seg m ct" role="tablist" aria-label="Análisis del partido">${[['a','Mercados'],['d','Datos'],['v','Veredicto'],['n','Noticias']].map(([k,t])=>`<button type="button" role="tab" data-t="${k}" aria-selected="${r.cardT===k}" class="${r.cardT===k?'on':''}" onclick="cardTab(${i},'${k}')"><span>${t}</span></button>`).join('')}<button type="button" class="x" aria-label="Cerrar panel" onclick="cardTab(${i},null)">✕</button></div>
+    <div class="seg m ct" role="tablist" aria-label="Análisis del partido">${[['v','Veredicto'],['n','Noticias'],['d','Datos'],['a','Mercados']].map(([k,t])=>`<button type="button" role="tab" data-t="${k}" aria-selected="${r.cardT===k}" class="${r.cardT===k?'on':''}" onclick="cardTab(${i},'${k}')"><span>${t}</span></button>`).join('')}<button type="button" class="x" aria-label="Cerrar panel" onclick="cardTab(${i},null)">✕</button></div>
     <div class="tp" data-t="v" ${r.cardT==='v'?'':'hidden'}><div class="ai" id="ai${i}" ${r.aiH?'':'hidden'}>${r.aiH||''}</div><p class="phd">Pulsa <b>Analizar con IA</b> para que valide el pick de la app, o elige otro mercado en la pestaña Mercados y analízalo.</p></div>
     <div class="tp" data-t="n" ${r.cardT==='n'?'':'hidden'}><div class="ai news" id="in${i}" ${r.inH?'':'hidden'}>${r.inH||''}</div><p class="phd">Pulsa <b>Noticias y bajas</b> para ver alineaciones, lesionados y noticias recientes del partido.</p></div>
     <div class="tp" data-t="d" ${r.cardT==='d'?'':'hidden'}>
