@@ -259,3 +259,6 @@ a{color:var(--blue)}.nsrc a{color:var(--blue);text-decoration:underline;text-und
 .mkts .mr-t{align-items:center}.mkts .pc{font-size:21px}
 .mkts .bar{height:7px;background:var(--card)}
 .mkts>.sec{margin:14px 2px 4px}
+
+#cl{flex-wrap:wrap;max-height:190px;overflow-y:auto;margin:0;padding:2px 0 8px}
+#clq{margin:4px 0 10px}

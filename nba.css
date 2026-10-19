@@ -1,0 +1,18 @@
+.nb-g>summary{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.nb-pj{margin:8px 0;font-size:14px}
+.nb-gr,.nb-t{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--ln)}
+.nb-gr span,.nb-t span{flex:1;font-size:14px}.nb-t span small{display:block;color:var(--mut)}
+.nb-gr b,.nb-t b{font:700 19px 'Archivo Narrow',sans-serif}.nb-gr small,.nb-t>small{color:var(--mut);font-size:12px}
+.nb-p{border-top:1px solid var(--ln);padding:12px 0}
+.nb-ph{display:flex;flex-direction:column;gap:2px}.nb-ph small{color:var(--mut)}
+.nb-ch{display:flex;gap:6px;margin:8px 0}.nb-ch button{flex:1;border:1px solid var(--ln);background:var(--s2);color:var(--ink);border-radius:10px;padding:7px 0;font:600 12.5px Archivo,sans-serif}.nb-ch button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.nb-bars{position:relative;display:flex;align-items:flex-end;gap:4px;height:96px;padding:0 2px;margin:6px 0}
+.nb-bars u{position:absolute;left:0;right:0;bottom:var(--ln);border-top:2px dashed var(--ink);opacity:.6;pointer-events:none}
+.nb-b{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;position:relative}
+.nb-b i{display:block;width:100%;border-radius:5px 5px 0 0}.nb-b i.ok{background:var(--ok)}.nb-b i.no{background:var(--bad);opacity:.75}
+.nb-b span{position:absolute;bottom:100%;font-size:10px;color:var(--mut);margin-bottom:-2px;display:none}.nb-b:last-child span,.nb-b:nth-child(n+1):hover span{display:block}
+.nb-ln{font-size:13px;color:var(--mut);display:flex;gap:6px;align-items:center;flex-wrap:wrap}.nb-ln input{width:70px}.nb-ln em{font-style:normal;font-size:11.5px}
+.nb-sd{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.nb-s{display:flex;flex-direction:column;align-items:center;gap:2px;border:2px solid var(--ln);background:var(--s2);color:var(--ink);border-radius:14px;padding:9px 6px}
+.nb-s b{font-size:13px}.nb-s span{font:700 22px 'Archivo Narrow',sans-serif}.nb-s small{font-size:11.5px;color:var(--mut)}
+.nb-s.va{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 10%,var(--s2))}

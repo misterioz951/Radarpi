@@ -45,9 +45,9 @@ document.querySelectorAll('#dd button').forEach(b=>b.onclick=()=>{cfg.dd=+b.data
 drawDd();
 
 // ajustes
-$('#k-gq').value=cfg.gq;$('#k-gm').value=cfg.gk||'';$('#k-or').value=cfg.or||'';$('#k-br').value=cfg.br||'';$('#c-g').value=cfg.g;$('#c-b').value=cfg.b;$('#c-m').value=cfg.m;$('#c-qm').value=cfg.qm;$('#c-cq').value=cfg.cq||1.5;$('#c-af').value=cfg.af||'';$('#c-sm').value=cfg.sm;$('#c-hm').checked=cfg.hm;$('#c-afa').checked=!!cfg.afa;$('#c-afn').value=cfg.afn||8;$('#c-u').value=cfg.u;$('#c-r').value=cfg.r;$('#c-k').value=cfg.bk||'';$('#c-co').value=cfg.co;$('#c-ta').value=cfg.ta;$('#c-x').checked=cfg.ex;$('#c-au').checked=cfg.au;$('#c-aa').checked=cfg.aa;$('#c-iv').value=cfg.iv;$('#c-pn').checked=cfg.pn;$('#c-ok').value=cfg.ok;$('#c-bm').value=cfg.bm;
+$('#k-gq').value=cfg.gq;$('#k-gm').value=cfg.gk||'';$('#k-or').value=cfg.or||'';$('#k-br').value=cfg.br||'';$('#c-g').value=cfg.g;$('#c-b').value=cfg.b;$('#c-m').value=cfg.m;$('#c-qm').value=cfg.qm;$('#c-cq').value=cfg.cq||1.5;$('#c-af').value=cfg.af||'';$('#c-sm').value=cfg.sm;$('#c-hm').checked=cfg.hm;$('#c-afa').checked=!!cfg.afa;$('#c-afn').value=cfg.afn||8;$('#c-u').value=cfg.u;$('#c-r').value=cfg.r;$('#c-k').value=cfg.bk||'';$('#c-co').value=cfg.co;$('#c-ta').value=cfg.ta;$('#c-x').checked=cfg.ex;$('#c-au').checked=cfg.au;$('#c-aa').checked=cfg.aa;$('#c-iv').value=cfg.iv;$('#c-pn').checked=cfg.pn;$('#c-ok').value=cfg.ok;$('#c-ok2').value=cfg.ok2||'';$('#c-bm').value=cfg.bm;
 $('#save').onclick=()=>{cfg.gq=$('#k-gq').value.trim();cfg.gk=$('#k-gm').value.trim();cfg.or=$('#k-or').value.trim();cfg.br=$('#k-br').value.trim();
-  cfg.g=+$('#c-g').value||3;cfg.b=+$('#c-b').value||70;cfg.m=+$('#c-m').value||8;cfg.qm=+$('#c-qm').value||1.5;cfg.cq=Math.max(1.01,+$('#c-cq').value||1.5);cfg.af=$('#c-af').value.trim();cfg.sm=+$('#c-sm').value||5;cfg.hm=$('#c-hm').checked;cfg.afa=$('#c-afa').checked;cfg.afn=Math.max(1,+$('#c-afn').value||8);cfg.u=+$('#c-u').value||2;cfg.r=+$('#c-r').value||75;cfg.bk=+$('#c-k').value||0;cfg.co=+$('#c-co').value||5;cfg.ta=+$('#c-ta').value||5;cfg.ex=$('#c-x').checked;cfg.au=$('#c-au').checked;cfg.aa=$('#c-aa').checked;cfg.iv=Math.max(15,+$('#c-iv').value||60);cfg.pn=$('#c-pn').checked;cfg.ok=$('#c-ok').value.trim();cfg.bm=$('#c-bm').value.trim();SV('cfg',cfg);$('#save').textContent='Guardado'};
+  cfg.g=+$('#c-g').value||3;cfg.b=+$('#c-b').value||70;cfg.m=+$('#c-m').value||8;cfg.qm=+$('#c-qm').value||1.5;cfg.cq=Math.max(1.01,+$('#c-cq').value||1.5);cfg.af=$('#c-af').value.trim();cfg.sm=+$('#c-sm').value||5;cfg.hm=$('#c-hm').checked;cfg.afa=$('#c-afa').checked;cfg.afn=Math.max(1,+$('#c-afn').value||8);cfg.u=+$('#c-u').value||2;cfg.r=+$('#c-r').value||75;cfg.bk=+$('#c-k').value||0;cfg.co=+$('#c-co').value||5;cfg.ta=+$('#c-ta').value||5;cfg.ex=$('#c-x').checked;cfg.au=$('#c-au').checked;cfg.aa=$('#c-aa').checked;cfg.iv=Math.max(15,+$('#c-iv').value||60);cfg.pn=$('#c-pn').checked;cfg.ok=$('#c-ok').value.trim();cfg.ok2=($('#c-ok2')||{value:cfg.ok2||''}).value.trim();op.i=0;cfg.bm=$('#c-bm').value.trim();SV('cfg',cfg);$('#save').textContent='Guardado'};
 
 // ESPN (API pública no oficial, sin llave). Sin rangos de fechas: partidos de hoy + calendario de cada equipo
 async function espn(path){
@@ -210,9 +210,17 @@ function model(A,B){
 const OPB='https://api.oddspapi.io/v4/';
 async function op(path,params){
   op.t=op.t||0;const w=1100-(Date.now()-op.t);if(w>0)await new Promise(r=>setTimeout(r,w));op.t=Date.now();
-  const r=await fetch(OPB+path+'?'+new URLSearchParams({...(params||{}),apiKey:cfg.ok}));
-  const t=await r.text();if(!r.ok)throw new Error('OddsPapi '+r.status+' '+t.slice(0,100));
-  return JSON.parse(t);
+  const ks=[cfg.ok,cfg.ok2].filter(Boolean);op.i=Math.min(op.i||0,Math.max(0,ks.length-1));
+  for(;;){
+    const r=await fetch(OPB+path+'?'+new URLSearchParams({...(params||{}),apiKey:ks[op.i]||cfg.ok}));
+    const t=await r.text();
+    if(!r.ok){
+      // Clave agotada o rechazada (401/402/403/429): pasa a la clave de respaldo y repite la petición
+      if([401,402,403,429].includes(r.status)&&op.i<ks.length-1){op.i++;toast('Clave OddsPapi agotada: usando la clave de respaldo');continue}
+      throw new Error('OddsPapi '+r.status+' '+t.slice(0,100));
+    }
+    return JSON.parse(t);
+  }
 }
 async function cached(k,days,fn){const c=LS(k,null);if(c&&Date.now()-c.t<days*864e5)return c.v;const v=await fn();SV(k,{t:Date.now(),v});return v}
 const TL={'col.1':[/colombia/i,/primera a|betplay|liga/i],'eng.1':[/england/i,/^premier league$/i],'eng.2':[/england/i,/^championship$/i],
@@ -393,7 +401,7 @@ function best(r){
   return b;
 }
 $('#bkfind').onclick=async()=>{
-  cfg.ok=$('#c-ok').value.trim();SV('cfg',cfg);const o=$('#bkres');o.textContent='Buscando…';
+  cfg.ok=$('#c-ok').value.trim();cfg.ok2=($('#c-ok2')||{value:cfg.ok2||''}).value.trim();op.i=0;SV('cfg',cfg);const o=$('#bkres');o.textContent='Buscando…';
   try{
     const bs=await op('bookmakers'),L=(Array.isArray(bs)?bs:Object.values(bs)).filter(b=>/rush|betplay|betano|codere|wplay/i.test(JSON.stringify(b)));
     o.innerHTML=L.length?L.map(b=>{const sl=b.slug||b.bookmakerSlug||b.bookmaker||'';return `<button type="button" class="chip" data-s="${esc(sl)}">${esc(b.name||b.bookmakerName||sl)} · ${esc(sl)}</button>`}).join(''):'No encontré esas casas.';
@@ -728,7 +736,7 @@ async function showInfoRun(i){
 function comboStake(r,n,p,q,e,ref){
   // El stake de Combi es propio: una cuota baja puede entrar si la probabilidad es alta,
   // la ventaja es positiva, hay suficiente historial y existe contraste de mercado.
-  if(!q||q<1.1||e<0.01||e>0.22||p<0.62||!ref||r.A.n<8||r.B.n<8)return 1;
+  if(!q||q<1.1||e<0.01||e>0.22||p<(r.nba?0.56:0.62)||!ref||r.A.n<8||r.B.n<8)return 1;
   const delta=ref==null?99:Math.abs(p-ref);
   if(delta>0.10)return 1;
   let st=5;
@@ -745,7 +753,7 @@ function comboHtml(source){
       if(isHalfMarket(n)||!Number.isFinite(p0)||!r.q||!r.q[n])continue;const p=calP(r,n,p0);
       const q=+r.q[n],e=p*q-1,ref=(r.mod.f&&r.mod.f[n]!=null)?r.mod.f[n]:(r.mod.fc&&r.mod.fc[n]!=null?r.mod.fc[n]:null);
       const st=comboStake(r,n,p,q,e,ref);
-      if(st>=5&&q>=1.1&&e>=0.01&&e<=0.22&&p>=0.62){
+      if(st>=5&&q>=1.1&&e>=0.01&&e<=0.22&&p>=(r.nba?0.56:0.62)){
         const sc=(p*.55)+(Math.min(e,.15)*1.8)+(st*.015)-(ref==null?0.2:Math.abs(p-ref));
         legs.push({idx,r,b:{n,q,p,e,sc,ref},st,event:String(r.ev||`${r.h}-${r.w}-${r.ko||''}`)});
       }
@@ -813,7 +821,7 @@ function drawCombiModel(){
 }
 async function settleCombi(){
   const P=LS('combipicks',[]);let changed=false;
-  for(const k of P){if(k.res||k.manual||!k.legs?.length)continue;if(k.legs.some(l=>!l.ko||new Date(l.ko).getTime()>Date.now()-3*36e5))continue;let outcomes=[];
+  for(const k of P){if(k.res||k.manual||!k.legs?.length||k.legs.some(l=>l.slug==='nba'))continue;if(k.legs.some(l=>!l.ko||new Date(l.ko).getTime()>Date.now()-3*36e5))continue;let outcomes=[];
     for(const l of k.legs){let f=null;try{f=await final(l.slug,l.event)}catch{}if(!f||f.pending){outcomes=[];break}const ok=evalMk(l.market,f.h,f.a,f.cor,f.crd,f.hh,f.ha);if(ok===null){outcomes=[];break}outcomes.push(ok)}
     if(outcomes.length===k.legs.length){k.res=outcomes.every(Boolean)?'w':'l';k.auto=true;changed=true;}
   }if(changed)SV('combipicks',P);return changed;
@@ -821,13 +829,13 @@ async function settleCombi(){
 async function scanCombi(){
   if($('#comboScanBtn').disabled)return;
   const btn=$('#comboScanBtn'),msg=$('#comboMsg'),panel=$('#comboPanel');
-  if(!cfg.ok||!cfg.bm){msg.textContent='Para buscar combinadas con valor, configura la llave de OddsPapi y tu casa de apuestas en Ajustes.';panel.innerHTML='<div class="combo-empty"><b>Falta configurar las cuotas</b><p>Combi necesita precios reales para calcular el valor. Configura OddsPapi y la casa que utilizas; no usará cuotas inventadas.</p></div>';return;}
+  const selC=Array.isArray(cfg.cl)?cfg.cl:cfg.lg;if((!cfg.ok||!cfg.bm)&&!(selC.includes('nba')&&selC.every(x=>x==='nba'))){msg.textContent='Para buscar combinadas con valor, configura la llave de OddsPapi y tu casa de apuestas en Ajustes.';panel.innerHTML='<div class="combo-empty"><b>Falta configurar las cuotas</b><p>Combi necesita precios reales para calcular el valor. Configura OddsPapi y la casa que utilizas; no usará cuotas inventadas.</p></div>';return;}
   btn.disabled=true;btn.classList.add('busy');btn.textContent='Buscando líneas…';panel.innerHTML='<div class="combo-empty"><b>Buscando partidos y mercados propios…</b><p>Consultando encuentros, historial y cuotas. Esto no ejecuta el escáner normal.</p></div>';
   try{
-    const leagues=cfg.lg.slice(),names=Object.fromEntries(Object.entries(LG).map(([n,s])=>[s,n]));
-    if(!leagues.length)throw new Error('Selecciona al menos una liga en Fútbol.');
+    const leagues=selC.filter(x=>x!=='nba'),useNba=selC.includes('nba'),names=Object.fromEntries(Object.entries(LG).map(([n,s])=>[s,n]));
+    if(!leagues.length&&!useNba)throw new Error('Selecciona al menos una liga o NBA.');
     msg.textContent='Cargando cuotas reales…';
-    const OD=await loadOdds(undefined,leagues);
+    const OD=leagues.length?await loadOdds(undefined,leagues):null;
     // A Combi no le pedimos una segunda descarga de cuotas de Pinnacle: multiplica las solicitudes.
     // Se usa la cuota de la casa configurada, quitándole margen para el contraste interno.
     const results=[],bad=[];let seen=0;
@@ -853,7 +861,8 @@ async function scanCombi(){
         results.push({m:`${hn} vs ${wn}`,liga:names[slug]||slug,h:hn,w:wn,hora:dlab(e.date)+new Date(e.date).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}),p,A,B,mod,q,casa:cfg.bm,ev:e.id,slug,ko:e.date,hid:H.team.id,wid:W.team.id});
       }
     }
-    if(!results.length)throw new Error('No se encontraron partidos con cuotas emparejadas en las ligas y fechas elegidas. Comprueba cobertura de OddsPapi o amplía la búsqueda.');
+    if(useNba){msg.textContent='NBA…';try{results.push(...await window.nbCombiSource(t=>msg.textContent=t))}catch(e){bad.push('NBA: '+e.message)}}
+    if(!results.length)throw new Error((bad.length?bad.join(' · ')+'. ':'')+'No se encontraron partidos con cuotas emparejadas en las ligas y fechas elegidas. Comprueba cobertura de OddsPapi o amplía la búsqueda.');
     panel.innerHTML=comboHtml(results);msg.textContent=`Búsqueda independiente terminada: ${results.length} partidos con cuotas analizados. No se utilizó el resultado del escáner normal.`;
   }catch(e){panel.innerHTML=`<div class="combo-empty"><b>No se pudo completar la búsqueda</b><p>${esc(e.message||'Error desconocido')}</p></div>`;msg.textContent='Combi no pudo terminar la búsqueda.'}
   finally{btn.disabled=false;btn.classList.remove('busy');btn.textContent='✦ Buscar combinadas'}
@@ -935,7 +944,7 @@ function calibStats(){
   calibStats.c={all:f(D),by};calibStats.t=now;return calibStats.c;
 }
 // Probabilidad ajustada: recorte por historial (global y por tipo de mercado) + ancla a la cuota del mercado + contraste API-Football 1X2
-function calP(r,n,p){
+function calP(r,n,p){if(r&&r.nba)return p;
   const C=calibStats(),g=C.by[mgrp(n)]||{n:0,w:0,e:0},ra=(C.all.w+6)/(C.all.e+6),rg=(g.w+4)/(g.e+4),b=g.n/(g.n+8);
   let x=p*Math.min(1.05,Math.max(.7,b*rg+(1-b)*ra));
   const ref=(r.mod.f&&r.mod.f[n]!=null)?r.mod.f[n]:(r.mod.fc&&r.mod.fc[n]!=null?r.mod.fc[n]:null);
@@ -1545,3 +1554,10 @@ $('#hunt').onclick=()=>{if($('#go').disabled)return;hunt=true;$('#go').click()};
     const open=b.classList.contains('open');btn.hidden=!open&&b.scrollHeight<=b.clientHeight+8;btn.textContent=open?'Recoger ▲':'Ver todo ▼'});
   new MutationObserver(()=>{clearTimeout(fix.t);fix.t=setTimeout(fix,60)}).observe(root,{childList:true,subtree:true,characterData:true});
 })();
+
+// Ligas de Combi (independientes de Fútbol) + NBA
+const lgn0=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+function drawCl(){const sel=Array.isArray(cfg.cl)?cfg.cl:cfg.lg,q=lgn0(($('#clq')||{}).value||'');
+  $('#cl').innerHTML=[['🏀 NBA','nba'],...Object.entries(LG)].filter(([n])=>lgn0(n).includes(q)).map(([n,id])=>`<button class="chip ${sel.includes(id)?'on':''}" data-id="${id}">${n}</button>`).join('');
+  document.querySelectorAll('#cl .chip').forEach(b=>b.onclick=()=>{const cur=(Array.isArray(cfg.cl)?cfg.cl:cfg.lg).slice(),id=b.dataset.id;cfg.cl=cur.includes(id)?cur.filter(x=>x!==id):[...cur,id];SV('cfg',cfg);drawCl()})}
+drawCl();$('#clq').oninput=drawCl;
