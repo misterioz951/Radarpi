@@ -33,11 +33,12 @@ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
 
 // ligas
 $('#comboCount').textContent=LS('combipicks',[]).filter(x=>!x.res).length;
-function drawLg(){$('#lg').innerHTML=Object.entries(LG).map(([n,id])=>
+function drawLg(){const lgn=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+  $('#lg').innerHTML=Object.entries(LG).filter(([n])=>lgn(n).includes(lgn(($('#lgq')||{}).value||''))).map(([n,id])=>
   `<button class="chip ${cfg.lg.includes(id)?'on':''}" data-id="${id}">${n}</button>`).join('');
   $('#lg').querySelectorAll('button').forEach(b=>b.onclick=()=>{
     const id=b.dataset.id;cfg.lg=cfg.lg.includes(id)?cfg.lg.filter(x=>x!==id):[...cfg.lg,id];SV('cfg',cfg);drawLg()})}
-drawLg();
+drawLg();$('#lgq').oninput=drawLg;
 function updScan(){const e=$('#scansum');if(e)e.textContent='· '+cfg.lg.length+' ligas · '+((cfg.dd||1)>=2?'hoy y mañana':'hoy')}
 function drawDd(){updScan();document.querySelectorAll('#dd button').forEach(b=>b.classList.toggle('on',+b.dataset.d===(cfg.dd||1)))}
 document.querySelectorAll('#dd button').forEach(b=>b.onclick=()=>{cfg.dd=+b.dataset.d;SV('cfg',cfg);drawDd()});
@@ -608,6 +609,13 @@ function cardTab(i,t){
   p.querySelectorAll('.ct button[data-t]').forEach(b=>{const on=b.dataset.t===t;b.classList.toggle('on',on);b.setAttribute('aria-selected',on?'true':'false')});
 }
 function toggleAll(o){R.forEach((_,i)=>cardTab(i,o?'d':null))}
+function mktBars(r){
+  const q=r.q||{},L=r.mod.m.filter(x=>!isHalfMarket(x[0])&&x[1]>=0.4&&x[1]<=0.9).map(([n,p])=>{const c=calP(r,n,p),o=q[n];return{n,c,q:o,e:o?c*o-1:null}});
+  const top=(L.some(x=>x.q)?L.filter(x=>x.q):L).sort((a,b)=>b.c-a.c).slice(0,7),bp=bestOf(r);
+  if(!top.length)return '';
+  return `<div class="sec">Mercados</div><div class="vb">${top.map(x=>`<div class="vc${bp&&bp.n===x.n?' pk':''}${x.e!=null&&x.e>0.015?' va':''}"><b>${Math.round(x.c*100)}%</b><div class="vt"><i style="height:${Math.round(x.c*100)}%"></i></div><span>${esc(x.n.replace('Doble oportunidad','Doble op.').replace('Córners ','Córn. '))}</span><small>${x.q?'@'+x.q:'sin cuota'}</small></div>`).join('')}</div><p class="mr-s">Altura = probabilidad ajustada. <b>Verde</b> = la cuota tiene valor. <b>Borde amarillo</b> = pick de la app. Desliza para ver más.</p>`;
+}
+const afWrap=h=>'<details class="afd"><summary><b>Contraste RadarPi + API-Football</b><small>Tocar para ver o recoger</small></summary>'+h+'</details>';
 function card(i){
   const r=R[i];
     let lst;
@@ -624,9 +632,10 @@ function card(i){
     return `<article class="card mc"><div class="mh"><span class="pill">${esc(r.liga)}</span><span class="ko">${r.hora}</span></div>
   <div class="mt"><b>${esc(r.h)}</b><em>vs</em><b>${esc(r.w)}</b></div>
   ${ticket(r)}
+  ${mktBars(r)}
   <div class="acts2"><button class="btn" onclick="ai(${i})">Analizar con IA</button><button class="btn s" onclick="showInfo(${i})">Noticias y bajas</button><button class="btn s" onclick="afMore(${i})">Datos API-Football</button><button class="btn s" onclick="regModel(${i})">Registrar en Modelo</button></div><div id="afp${i}" class="af-panel" hidden></div>
   <div class="cpanel" id="cp${i}" ${r.cardT?'':'hidden'}>
-    <div class="seg m ct" role="tablist" aria-label="Análisis del partido">${[['v','Veredicto'],['n','Noticias'],['d','Datos'],['a','Mercados']].map(([k,t])=>`<button type="button" role="tab" data-t="${k}" aria-selected="${r.cardT===k}" class="${r.cardT===k?'on':''}" onclick="cardTab(${i},'${k}')"><span>${t}</span></button>`).join('')}<button type="button" class="x" aria-label="Cerrar panel" onclick="cardTab(${i},null)">✕</button></div>
+    <div class="seg m ct" role="tablist" aria-label="Análisis del partido">${[['a','Mercados'],['d','Datos'],['v','Veredicto'],['n','Noticias']].map(([k,t])=>`<button type="button" role="tab" data-t="${k}" aria-selected="${r.cardT===k}" class="${r.cardT===k?'on':''}" onclick="cardTab(${i},'${k}')"><span>${t}</span></button>`).join('')}<button type="button" class="x" aria-label="Cerrar panel" onclick="cardTab(${i},null)">✕</button></div>
     <div class="tp" data-t="v" ${r.cardT==='v'?'':'hidden'}><div class="ai" id="ai${i}" ${r.aiH?'':'hidden'}>${r.aiH||''}</div><p class="phd">Pulsa <b>Analizar con IA</b> para que valide el pick de la app, o elige otro mercado en la pestaña Mercados y analízalo.</p></div>
     <div class="tp" data-t="n" ${r.cardT==='n'?'':'hidden'}><div class="ai news" id="in${i}" ${r.inH?'':'hidden'}>${r.inH||''}</div><p class="phd">Pulsa <b>Noticias y bajas</b> para ver alineaciones, lesionados y noticias recientes del partido.</p></div>
     <div class="tp" data-t="d" ${r.cardT==='d'?'':'hidden'}>
@@ -895,7 +904,7 @@ async function afMore(i){
     const decision=previousConflict&&previousConflict.level==='strong'?`<b>Pick original vetado por contradicción fuerte: ${esc(previousPick.n)}.</b> RadarPi estimaba ${Math.round(previousPick.p*100)}%, pero API-Football solo ${Math.round(previousConflict.api*100)}% para ese mercado. Ese pick ya no pasa los filtros cuando se tiene en cuenta el proveedor.${picked?` Alternativa que sí pasa los filtros: ${esc(picked.n)} (${Math.round(picked.p*100)}% estimado por RadarPi).`:' No hay una alternativa con valor suficiente; mejor no apostar este partido.'}`:!picked?'<b>No hay pick automático válido</b>: con el contraste API-Football no queda una selección que supere los filtros actuales.':!apiProb?'<b>Contraste parcial</b>: API-Football no aporta una probabilidad directamente comparable para el mercado seleccionado; usa sus bajas y consejo como contexto.':conflict&&conflict.level==='strong'?`<b>Contradicción fuerte: descartar el pick actual (${esc(picked.n)}).</b> RadarPi estima ${Math.round(picked.p*100)}%, pero API-Football estima solo ${Math.round(apiProb*100)}% para ese mismo mercado. No lo registres como pick recomendado; busca otra selección o no apuestes.`:conflict?`<b>Contradicción moderada con API-Football.</b> RadarPi estima ${Math.round(picked.p*100)}% y el proveedor ${Math.round(apiProb*100)}%. Reduce la confianza y no subas el stake.`:`<b>Sin contradicción fuerte.</b> Para ${esc(picked.n)}, RadarPi estima ${Math.round(picked.p*100)}% y API-Football ${Math.round(apiProb*100)}%. La coincidencia no garantiza valor ni acierto.`;
     const pctHtml=(label,v)=>`<div><small>${label}</small><b>${esc(v||'—')}</b></div>`,apiHome=data.reversed?pct.away:pct.home,apiAway=data.reversed?pct.home:pct.away;
     box.innerHTML=`<div class="nh"><b>Contraste combinado RadarPi + API-Football</b><span class="chip3">Revisión de coherencia</span></div><div class="stake-row"><p>${decision}</p><small>El filtro se aplica a las selecciones de resultado 1X2/doble oportunidad cuando hay probabilidades comparables. Para goles, córners y tarjetas, API-Football no ofrece en este endpoint una probabilidad equivalente.</small></div><p class="mr-s">Partido emparejado: <b>${esc(data.fixture.home)} vs ${esc(data.fixture.away)}</b> · ${esc(data.fixture.league||'competición sin nombre')} · ${new Date(data.fixture.date).toLocaleString('es',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}. Comprueba que sea el mismo encuentro.</p>${p.percent?`<div class="af-grid">${pctHtml('Local (partido)',apiHome)}${pctHtml('Empate',pct.draw)}${pctHtml('Visitante (partido)',apiAway)}</div>`:''}${p.advice?`<p><b>Consejo del proveedor:</b> ${esc(p.advice)}</p>`:''}${p.under_over?`<p><b>Goles estimados del proveedor:</b> ${esc(p.under_over)}</p>`:''}${p.winner&&p.winner.name?`<p><b>Ganador estimado por proveedor:</b> ${esc(p.winner.name)}${p.winner.comment?' · '+esc(p.winner.comment):''}</p>`:''}${data.predictionError?`<p class="status">Predicción no disponible: ${esc(data.predictionError)}</p>`:''}<p><b>Lesiones/sanciones devueltas:</b> ${inj.length}</p>${inj.length?`<ul>${inj.slice(0,12).map(x=>`<li>${esc(x.player&&x.player.name||'Jugador')} · ${esc(x.player&&x.player.type||x.player&&x.player.reason||'estado sin detalle')} (${esc(x.team&&x.team.name||'equipo no indicado')})</li>`).join('')}</ul>`:'<p class="status">No se devolvieron lesiones para este partido. Eso no confirma que ambos equipos estén sin bajas.</p>'}${data.injuryError?`<p class="status">Lesiones no disponibles: ${esc(data.injuryError)}</p>`:''}<p class="status">Fuente complementaria. La cobertura de predicciones y lesiones cambia por liga; contrasta siempre con cuotas reales y noticias/alineaciones.</p>`;
-    const savedPanel=box.innerHTML;drawRes();const refreshed=$('#afp'+i);if(refreshed){refreshed.hidden=false;refreshed.innerHTML=savedPanel;}
+    const savedPanel=afWrap(box.innerHTML);box.innerHTML=savedPanel;drawRes();const refreshed=$('#afp'+i);if(refreshed){refreshed.hidden=false;refreshed.innerHTML=savedPanel;}
   }catch(e){box.innerHTML=`<p class="bad">API-Football: ${esc(e.message||'No se pudieron obtener datos.')}</p><p class="status">Si la llave es válida pero falla, puede ser falta de cobertura, límite diario o un problema de coincidencia del partido. No se inventan datos para completar el análisis.</p>`;}
 }
 
@@ -1009,8 +1018,9 @@ function stakeTab(P){
   ${best?`<div class="best-st"><b>Stake ${best.s}/9 es el más fiable hasta ahora</b><br><small>${Math.round(best.h*100)}% de acierto en ${best.n} picks. Con 95% de confianza, su acierto real está entre ${Math.round(best.lo*100)}% y ${Math.round(best.hi*100)}%.</small></div>`:`<p class="status">Hacen falta al menos 5 picks resueltos en un mismo stake para decir cuál es el mejor.</p>`}
   <div class="band">${band(1,3,'Bajo 1–3')}${band(4,6,'Medio 4–6')}${band(7,9,'Alto 7–9')}</div>
   ${rows.map(x=>rwRow('Stake '+x.s+'/9'+(x.est?' (estimado)':''),x.w,x.n,x.pa,`Rango 95%: ${Math.round(x.lo*100)}–${Math.round(x.hi*100)}%${x.roi!=null?' · ROI '+(x.roi>=0?'+':'')+(x.roi*100).toFixed(0)+'%':''}`)).join('')}
-  ${sin?`<p class="status">${sin} picks resueltos no tienen stake guardado (se registraron antes de esta versión). Desde ahora todo pick nuevo guarda su stake automáticamente.</p><button class="btn s" onclick="estStake()">Estimar stake de los históricos</button><p class="status">La estimación se calcula solo con la probabilidad que prometía cada pick y se marca como «estimado».</p>`:''}</div>`;
+  ${sin?`<p class="status">${sin} picks resueltos no tienen stake guardado (se registraron antes de esta versión). Desde ahora todo pick nuevo guarda su stake automáticamente.</p><button class="btn s" onclick="estStake()">Estimar stake de los históricos</button><p class="status">La estimación se calcula solo con la probabilidad que prometía cada pick y se marca como «estimado».</p>`:''}${P.some(k=>k.stakeEst)?'<button class="btn s" onclick="undoEstStake()">Dejar como estaba (quitar estimados)</button><p class="status">Los estimados llevan la marca «estimado». Este botón los borra todos y deja tus picks exactamente como estaban.</p>':''}</div>`;
 }
+function undoEstStake(){const P=LS('picks',[]);let c=0;for(const k of P)if(k.stakeEst){delete k.stakeEst;c++}SV('picks',P);drawModel();toast('Estimación quitada en '+c+' picks. Quedaron como estaban.')}
 function estStake(){const P=LS('picks',[]);let c=0;for(const k of P){if(Number.isFinite(+k.stake)||k.experimental||!(k.p>0))continue;k.stakeEst=Math.max(1,Math.min(9,Math.round(1+(k.p-0.45)/0.4*8)));c++}SV('picks',P);drawModel();toast(c+' picks históricos con stake estimado')}
 function candScan(r){
   const veto=[];
@@ -1532,4 +1542,13 @@ $('#hunt').onclick=()=>{if($('#go').disabled)return;hunt=true;$('#go').click()};
   const sv=LS('scan',null);
   if(sv&&sv.d===today()){R=sv.R;$('#msg').textContent=sv.msg+' (guardado '+new Date(sv.t).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})+')';drawRes()}
   if(cfg.au&&(!sv||sv.d!==today()||Date.now()-sv.t>3*36e5))$('#go').click();
+})();
+
+(function(){const root=document.getElementById('res');if(!root)return;
+  const fix=()=>root.querySelectorAll('.tp .ai:not([hidden])').forEach(b=>{
+    let btn=b.nextElementSibling&&b.nextElementSibling.classList.contains('clipbtn')?b.nextElementSibling:null;
+    if(!btn){btn=document.createElement('button');btn.type='button';btn.className='btn s clipbtn';btn.onclick=()=>{b.classList.toggle('open');fix()};b.after(btn)}
+    if(!b.classList.contains('open'))b.classList.add('clip');
+    const open=b.classList.contains('open');btn.hidden=!open&&b.scrollHeight<=b.clientHeight+8;btn.textContent=open?'Recoger ▲':'Ver todo ▼'});
+  new MutationObserver(()=>{clearTimeout(fix.t);fix.t=setTimeout(fix,60)}).observe(root,{childList:true,subtree:true,characterData:true});
 })();
