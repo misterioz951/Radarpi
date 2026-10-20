@@ -102,6 +102,17 @@ function nbCands(g){const out=[],veto=[];
   return{out:out.sort((a,b)=>b.sc-a.sc),veto}}
 // Sin cuota real: solo mercados de partido (con línea de ESPN o moneyline) y con tope de stake bajo.
 function nbLean(g){if(!gameModel(g))return null;const c=nbAll(g).filter(x=>x.kind==='Partido'&&x.q==null&&x.p>=.58).sort((a,b)=>b.p-a.p)[0];return c?Object.assign({},c,{e:null,sc:c.p}):null}
+// Pick de jugador sin cuota real: busca una línea conservadora (segunda peor marca de los últimos 10) que el modelo y el historial respaldan.
+function nbLeanProp(g){let best=null;
+  [g.h,g.a].forEach(s=>s.pl.forEach(p=>{if(p.st||p.mn<20)return;Object.keys(STX).forEach(st=>{
+    const P=proj(p.g,st);if(!P||P.cur<5||P.a.length<8)return;
+    const bs=s.boost||1,a=P.a.slice(0,10),srt=[...a].sort((x,y)=>x-y),L=srt[1]-.5;
+    if(L<.5||L<.6*P.med)return;
+    const hits=a.filter(x=>x>L).length/a.length,po=pOver({m:P.m*bs,v:P.v*bs,cur:P.cur},L),pe=(hits*a.length+2)/(a.length+4),pp=Math.min(po,pe);
+    if(hits<.8||pp<.66)return;
+    const c={k:'TP'+g.id+p.id+st,kind:STX[st][0],n:p.n+' '+STX[st][0]+' Más '+L,full:p.n+' '+STX[st][0]+' Más '+L,p:pp,q:null,e:null,fair:null,real:false,cur:P.cur,na:a.length,bs,hits:a.filter(x=>x>L).length+'/'+a.length,sc:pp};
+    if(!best||c.sc>best.sc)best=c})}));
+  return best}
 function nbStake(c){let b=c.p>=.7?7:c.p>=.63?6:c.p>=.58?5:4;
   if(c.e==null||c.e<.03)b=Math.min(b,3);else if(c.e<.06)b=Math.min(b,5);else if(c.e<.1)b=Math.min(b,6);
   if(c.fair==null)b=Math.min(b,4);
@@ -113,27 +124,28 @@ function nbWhy(g,veto){
   if(!NB.od)return 'No hay cuotas reales para este partido (falta la llave de The Odds API o no se emparejó). Sin cuota no se puede comprobar el valor.';
   if(veto&&veto.length){const v=veto.sort((a,b)=>(b.p-b.ref)-(a.p-a.ref))[0];return 'El modelo está mucho más optimista que el mercado en '+esc(v.n)+' (modelo '+Math.round(v.p*100)+'% contra '+Math.round(v.ref*100)+'% del mercado). Se descarta: suele ser error del modelo.'}
   return 'Ningún mercado cumple a la vez cuota de 1,30 a 2,80, probabilidad de 54% o más y valor de 2% a 22%.'}
-function nbTicket(g,c,lean,veto){
+function nbTicket(g,c,lean,veto,label){
   if(!c)return '<div class="nopick2"><b>Sin pick con ventaja clara</b><p>'+nbWhy(g,veto)+'</p></div>';
   NB.reg[c.k]={t:c.full,p:c.p,q:c.q,g:g.a.ab+'@'+g.h.ab,st:c.kind};
   const st=nbStake(c);
-  return `<div class="tk ${lean?'':'A'}"><small class="tkl">${lean?'LECTURA DEL MODELO · SIN CUOTA REAL':'PICK DE LA APP · SEGÚN REGLAS'}</small><div class="tk1"><b class="n">${esc(c.n)}</b></div>
+  return `<div class="tk ${lean?'':'A'}"><small class="tkl">${label||(lean?'LECTURA DEL MODELO · SIN CUOTA REAL':'PICK DE LA APP · SEGÚN REGLAS')}</small><div class="tk1"><b class="n">${esc(c.n)}</b></div>
 <div class="tk2"><span><b>${Math.round(c.p*100)}%</b> prob.</span>${c.q?`<span>cuota <b>@${c.q}</b></span><span>valor <b>${c.e>=0?'+':''}${Math.round(c.e*100)}%</b></span>`:`<span>cuota mínima <b>@${(1.05/c.p).toFixed(2)}</b></span>`}<span>stake base <b>${st}/9</b></span></div>
 <div class="meter${st>=5?' hi':''}" role="img" aria-label="Stake ${st} de 9">${Array.from({length:9},(_,k)=>`<i class="${k<st?'f':''}"></i>`).join('')}</div>
-${lean?'<div class="tkw">Sin cuota real no hay valor comprobable. Solo úsalo si tu casa paga al menos la cuota mínima. Con una llave gratis de The Odds API la app verifica el valor.</div>':''}
+${c.hits?'<div class="mr-s" style="margin-top:6px">Superó esa línea en <b>'+c.hits+'</b> de sus últimos partidos. Verifica que tu casa tenga esa línea (o más baja) y confirma que juega.</div>':''}${lean?'<div class="tkw">Sin cuota real no hay valor comprobable. Solo úsalo si tu casa paga al menos la cuota mínima. Con una llave gratis de The Odds API la app verifica el valor.</div>':''}
 <div class="acts2" style="margin-top:8px"><button class="btn s" onclick="nbLog('${c.k}')">＋ Registrar pick</button></div></div>`}
 const nbPlayers=g=>[g.h,g.a].flatMap(s=>s.pl).sort((a,b)=>b.mn-a.mn).map(p=>{const s=NB.sel[p.id]||'pts';return `<div class="nb-p"><div class="nb-ph"><b>${esc(p.n)}</b><small>${p.tm} · ${p.pos} · ${Math.round(p.mn)} min${p.st?' · <i class="bad">'+({doubt:'Duda fuerte',q:'Duda'}[p.st]||p.st)+'</i>':''}</small></div><div class="nb-ch">${Object.keys(STX).map(k=>`<button class="${k===s?'on':''}" onclick="NB.sel['${p.id}']='${k}';nbDraw()">${STX[k][0]}</button>`).join('')}</div>${propBlk(g,p,s)}</div>`}).join('');
 function nbCard(g){
-  const R0=nbCands(g),best=R0.out[0]||null,lean=best?null:nbLean(g),tm=new Date(g.date).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  const R0=nbCands(g),best=R0.out[0]||null,lean=best?null:nbLean(g),pr=R0.out.find(c=>c.kind!=='Partido'&&(!best||c.k!==best.k)),pl=pr||((best&&best.kind!=='Partido')?null:nbLeanProp(g)),pcard=pl?nbTicket(g,pl,!pr,null,pr?'PICK DE JUGADOR · SEGÚN REGLAS':'PICK DE JUGADOR · SIN CUOTA REAL'):'<div class="nopick2"><b>Sin pick de jugador</b><p>Ningún jugador tiene una línea que cumpla en 8 de 10 partidos con minutos estables.</p></div>',tm=new Date(g.date).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   return `<article class="card mc"><div class="mh"><span class="pill">NBA</span><span class="ko">${dlab(g.date)}${tm}</span></div><div class="mt"><b>${esc(g.a.n)}</b><em>@</em><b>${esc(g.h.n)}</b></div>
 ${nbTicket(g,best||lean,!best&&!!lean,R0.veto)}
+${pcard}
 <div class="acts2"><button class="btn" onclick="nbAI('${g.id}')">✦ Análisis IA</button></div><div class="ai" id="nbai${g.id}" hidden></div>
 <details class="dd"><summary>Proyección, mercados y jugadores</summary>${gameRows(g)}<div class="sec">Jugadores</div>${nbPlayers(g)}</details></article>`}
 function nbDraw(){nbK();const box=$('#nbres');if(!NB.g.length){box.innerHTML='';return}NB.reg={};
   let head='';
   if(NB.hunt){
     const real=NB.g.map(g=>({g,c:nbCands(g).out[0]})).filter(x=>x.c).sort((a,b)=>b.c.sc-a.c.sc).slice(0,3);
-    const lean=real.length?[]:NB.g.map(g=>({g,c:nbLean(g)})).filter(x=>x.c).sort((a,b)=>b.c.p-a.c.p).slice(0,3);
+    const lean=real.length?[]:NB.g.flatMap(g=>[{g,c:nbLean(g)},{g,c:nbLeanProp(g)}]).filter(x=>x.c).sort((a,b)=>b.c.p-a.c.p).slice(0,3);
     const L=real.length?real:lean,isLean=!real.length;
     head=`<div class="card"><h2>Mejor pick NBA</h2><small>${L.length?(isLean?'Ningún mercado tiene cuota real con valor (o falta la llave de cuotas). Estas son las lecturas más fuertes del modelo, sin cuota verificada.':'Los '+L.length+' picks con mejor puntaje de '+NB.g.length+' partidos revisados. Cuota real, valor estimado entre 2% y 22% y sin contradecir al mercado.'):'De '+NB.g.length+' partidos revisados, ninguno tiene un pick que pase los filtros. Es normal: casi nunca hay.'}</small>${L.map(x=>`<div class="mt" style="margin-top:12px"><b>${esc(x.g.a.n)}</b><em>@</em><b>${esc(x.g.h.n)}</b></div>${nbTicket(x.g,x.c,isLean)}`).join('')}</div>`}
   box.innerHTML=head+NB.g.map(nbCard).join('');nbPicks()}
