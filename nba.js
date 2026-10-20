@@ -44,7 +44,7 @@ async function nbOdds(games){
 
 // ---- Modelo de partido (ritmo/anotación de los últimos juegos) ----
 async function teamForm(id){const se=seasonEnd(),res=[];
-  for(const q of ['','?season='+(se-1)]){try{const j=await nbj(NE+'teams/'+id+'/schedule'+q);for(const e of j.events||[]){const c=(e.competitions||[])[0];if(!c||!(c.status&&c.status.type&&c.status.type.completed))continue;const me=c.competitors.find(x=>x.team.id==id),op=c.competitors.find(x=>x.team.id!=id),f=x=>+(x.score&&x.score.value!=null?x.score.value:x.score);if(f(me)>0)res.push({d:e.date,pf:f(me),pa:f(op)})}}catch{}if(res.length>=10)break}
+  for(const q of ['','?season='+(se-1)]){try{const j=await nbj(NE+'teams/'+id+'/schedule'+q);for(const e of j.events||[]){const c=(e.competitions||[])[0];if(!c||!(c.status&&c.status.type&&c.status.type.completed))continue;if(e.seasonType&&+e.seasonType.type===1)continue;const me=c.competitors.find(x=>x.team.id==id),op=c.competitors.find(x=>x.team.id!=id),f=x=>+(x.score&&x.score.value!=null?x.score.value:x.score);if(f(me)>0)res.push({d:e.date,pf:f(me),pa:f(op)})}}catch{}if(res.length>=10)break}
   const a=res.sort((x,y)=>y.d.localeCompare(x.d)).slice(0,12);if(a.length<4)return null;return{pf:a.reduce((t,x)=>t+x.pf,0)/a.length,pa:a.reduce((t,x)=>t+x.pa,0)/a.length,n:a.length}}
 function gameModel(g){if(!g.h.f||!g.a.f)return null;const hp=(g.h.f.pf+g.a.f.pa)/2+1.5,ap=(g.a.f.pf+g.h.f.pa)/2-1.5;return{hp,ap,tot:hp+ap,mar:hp-ap}}
 
@@ -103,13 +103,13 @@ function nbCands(g){const out=[],veto=[];
 // Sin cuota real: solo mercados de partido (con línea de ESPN o moneyline) y con tope de stake bajo.
 function nbLean(g){if(!gameModel(g))return null;const c=nbAll(g).filter(x=>x.kind==='Partido'&&x.q==null&&x.p>=.58).sort((a,b)=>b.p-a.p)[0];return c?Object.assign({},c,{e:null,sc:c.p}):null}
 // Pick de jugador sin cuota real: busca una línea conservadora (segunda peor marca de los últimos 10) que el modelo y el historial respaldan.
-function nbLeanProp(g){let best=null;
+function nbLeanProp(g){let best=null;NB.dg=NB.dg||{n:0,ok:0};
   [g.h,g.a].forEach(s=>s.pl.forEach(p=>{if(p.st||p.mn<20)return;Object.keys(STX).forEach(st=>{
-    const P=proj(p.g,st);if(!P||P.cur<5||P.a.length<8)return;
+    const P=proj(p.g,st);NB.dg.n++;if(!P||P.a.length<8)return;NB.dg.ok++;
     const bs=s.boost||1,a=P.a.slice(0,10),srt=[...a].sort((x,y)=>x-y),L=srt[1]-.5;
     if(L<.5||L<.6*P.med)return;
     const hits=a.filter(x=>x>L).length/a.length,po=pOver({m:P.m*bs,v:P.v*bs,cur:P.cur},L),pe=(hits*a.length+2)/(a.length+4),pp=Math.min(po,pe);
-    if(hits<.8||pp<.66)return;
+    if(hits<.8||pp<(P.cur>=5?.66:.6))return;
     const c={k:'TP'+g.id+p.id+st,kind:STX[st][0],n:p.n+' '+STX[st][0]+' Más '+L,full:p.n+' '+STX[st][0]+' Más '+L,p:pp,q:null,e:null,fair:null,real:false,cur:P.cur,na:a.length,bs,hits:a.filter(x=>x>L).length+'/'+a.length,sc:pp};
     if(!best||c.sc>best.sc)best=c})}));
   return best}
@@ -135,7 +135,7 @@ ${c.hits?'<div class="mr-s" style="margin-top:6px">Superó esa línea en <b>'+c.
 <div class="acts2" style="margin-top:8px"><button class="btn s" onclick="nbLog('${c.k}')">＋ Registrar pick</button></div></div>`}
 const nbPlayers=g=>[g.h,g.a].flatMap(s=>s.pl).sort((a,b)=>b.mn-a.mn).map(p=>{const s=NB.sel[p.id]||'pts';return `<div class="nb-p"><div class="nb-ph"><b>${esc(p.n)}</b><small>${p.tm} · ${p.pos} · ${Math.round(p.mn)} min${p.st?' · <i class="bad">'+({doubt:'Duda fuerte',q:'Duda'}[p.st]||p.st)+'</i>':''}</small></div><div class="nb-ch">${Object.keys(STX).map(k=>`<button class="${k===s?'on':''}" onclick="NB.sel['${p.id}']='${k}';nbDraw()">${STX[k][0]}</button>`).join('')}</div>${propBlk(g,p,s)}</div>`}).join('');
 function nbCard(g){
-  const R0=nbCands(g),best=R0.out[0]||null,lean=best?null:nbLean(g),pr=R0.out.find(c=>c.kind!=='Partido'&&(!best||c.k!==best.k)),pl=pr||((best&&best.kind!=='Partido')?null:nbLeanProp(g)),pcard=pl?nbTicket(g,pl,!pr,null,pr?'PICK DE JUGADOR · SEGÚN REGLAS':'PICK DE JUGADOR · SIN CUOTA REAL'):'<div class="nopick2"><b>Sin pick de jugador</b><p>Ningún jugador tiene una línea que cumpla en 8 de 10 partidos con minutos estables.</p></div>',tm=new Date(g.date).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  const R0=nbCands(g),best=R0.out[0]||null,lean=best?null:nbLean(g),pr=R0.out.find(c=>c.kind!=='Partido'&&(!best||c.k!==best.k)),pl=pr||((best&&best.kind!=='Partido')?null:nbLeanProp(g)),pcard=pl?nbTicket(g,pl,!pr,null,pr?'PICK DE JUGADOR · SEGÚN REGLAS':'PICK DE JUGADOR · SIN CUOTA REAL'):'<div class="nopick2"><b>Sin pick de jugador</b><p>Ningún jugador cumple la línea en 8 de 10 partidos con 20+ minutos y sin duda de lesión. Jugadores leídos: '+[g.h,g.a].reduce((t,x)=>t+x.pl.length,0)+(NB.g.length&&![g.h,g.a].some(x=>x.pl.length)?'. ESPN no devolvió estadísticas de jugadores para este partido: usa «Probar fuentes».':'. Con la temporada recién empezada se usan juegos de la temporada pasada y el filtro es más estricto.')+'</p></div>',tm=new Date(g.date).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   return `<article class="card mc"><div class="mh"><span class="pill">NBA</span><span class="ko">${dlab(g.date)}${tm}</span></div><div class="mt"><b>${esc(g.a.n)}</b><em>@</em><b>${esc(g.h.n)}</b></div>
 ${nbTicket(g,best||lean,!best&&!!lean,R0.veto)}
 ${pcard}
