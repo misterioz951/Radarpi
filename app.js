@@ -45,9 +45,9 @@ document.querySelectorAll('#dd button').forEach(b=>b.onclick=()=>{cfg.dd=+b.data
 drawDd();
 
 // ajustes
-$('#k-gq').value=cfg.gq;$('#k-gm').value=cfg.gk||'';$('#k-or').value=cfg.or||'';$('#k-br').value=cfg.br||'';$('#c-g').value=cfg.g;$('#c-b').value=cfg.b;$('#c-m').value=cfg.m;$('#c-qm').value=cfg.qm;$('#c-cq').value=cfg.cq||1.5;$('#c-af').value=cfg.af||'';$('#c-sm').value=cfg.sm;$('#c-hm').checked=cfg.hm;$('#c-afa').checked=!!cfg.afa;$('#c-afn').value=cfg.afn||8;$('#c-u').value=cfg.u;$('#c-r').value=cfg.r;$('#c-k').value=cfg.bk||'';$('#c-co').value=cfg.co;$('#c-ta').value=cfg.ta;$('#c-x').checked=cfg.ex;$('#c-au').checked=cfg.au;$('#c-aa').checked=cfg.aa;$('#c-iv').value=cfg.iv;$('#c-pn').checked=cfg.pn;$('#c-ok').value=cfg.ok;$('#c-ok2').value=cfg.ok2||'';$('#c-bm').value=cfg.bm;
+$('#k-gq').value=cfg.gq;$('#k-gm').value=cfg.gk||'';$('#k-or').value=cfg.or||'';$('#k-br').value=cfg.br||'';$('#c-g').value=cfg.g;$('#c-b').value=cfg.b;$('#c-m').value=cfg.m;$('#c-qm').value=cfg.qm;$('#c-cq').value=cfg.cq||1.5;$('#c-af').value=cfg.af||'';$('#c-sm').value=cfg.sm;$('#c-hm').checked=cfg.hm;$('#c-afa').checked=!!cfg.afa;$('#c-fm').value=cfg.fm||'b';$('#c-afn').value=cfg.afn||8;$('#c-u').value=cfg.u;$('#c-r').value=cfg.r;$('#c-k').value=cfg.bk||'';$('#c-co').value=cfg.co;$('#c-ta').value=cfg.ta;$('#c-x').checked=cfg.ex;$('#c-au').checked=cfg.au;$('#c-aa').checked=cfg.aa;$('#c-iv').value=cfg.iv;$('#c-pn').checked=cfg.pn;$('#c-ok').value=cfg.ok;$('#c-ok2').value=cfg.ok2||'';$('#c-bm').value=cfg.bm;
 $('#save').onclick=()=>{cfg.gq=$('#k-gq').value.trim();cfg.gk=$('#k-gm').value.trim();cfg.or=$('#k-or').value.trim();cfg.br=$('#k-br').value.trim();
-  cfg.g=+$('#c-g').value||3;cfg.b=+$('#c-b').value||70;cfg.m=+$('#c-m').value||8;cfg.qm=+$('#c-qm').value||1.5;cfg.cq=Math.max(1.01,+$('#c-cq').value||1.5);cfg.af=$('#c-af').value.trim();cfg.sm=+$('#c-sm').value||5;cfg.hm=$('#c-hm').checked;cfg.afa=$('#c-afa').checked;cfg.afn=Math.max(1,+$('#c-afn').value||8);cfg.u=+$('#c-u').value||2;cfg.r=+$('#c-r').value||75;cfg.bk=+$('#c-k').value||0;cfg.co=+$('#c-co').value||5;cfg.ta=+$('#c-ta').value||5;cfg.ex=$('#c-x').checked;cfg.au=$('#c-au').checked;cfg.aa=$('#c-aa').checked;cfg.iv=Math.max(15,+$('#c-iv').value||60);cfg.pn=$('#c-pn').checked;cfg.ok=$('#c-ok').value.trim();cfg.ok2=($('#c-ok2')||{value:cfg.ok2||''}).value.trim();op.i=0;cfg.bm=$('#c-bm').value.trim();SV('cfg',cfg);$('#save').textContent='Guardado'};
+  cfg.g=+$('#c-g').value||3;cfg.b=+$('#c-b').value||70;cfg.m=+$('#c-m').value||8;cfg.qm=+$('#c-qm').value||1.5;cfg.cq=Math.max(1.01,+$('#c-cq').value||1.5);cfg.af=$('#c-af').value.trim();cfg.sm=+$('#c-sm').value||5;cfg.hm=$('#c-hm').checked;cfg.afa=$('#c-afa').checked;cfg.fm=$('#c-fm').value;cfg.afn=Math.max(1,+$('#c-afn').value||8);cfg.u=+$('#c-u').value||2;cfg.r=+$('#c-r').value||75;cfg.bk=+$('#c-k').value||0;cfg.co=+$('#c-co').value||5;cfg.ta=+$('#c-ta').value||5;cfg.ex=$('#c-x').checked;cfg.au=$('#c-au').checked;cfg.aa=$('#c-aa').checked;cfg.iv=Math.max(15,+$('#c-iv').value||60);cfg.pn=$('#c-pn').checked;cfg.ok=$('#c-ok').value.trim();cfg.ok2=($('#c-ok2')||{value:cfg.ok2||''}).value.trim();op.i=0;cfg.bm=$('#c-bm').value.trim();SV('cfg',cfg);$('#save').textContent='Guardado'};
 
 // ESPN (API pública no oficial, sin llave). Sin rangos de fechas: partidos de hoy + calendario de cada equipo
 async function espn(path){
@@ -944,6 +944,8 @@ function calibStats(){
   calibStats.c={all:f(D),by};calibStats.t=now;return calibStats.c;
 }
 // Probabilidad ajustada: recorte por historial (global y por tipo de mercado) + ancla a la cuota del mercado + contraste API-Football 1X2
+const FMODES={s:{qa:1.3,qb:2.3,pc:.5,ea:.015,eb:.18},b:{qa:1.2,qb:2.6,pc:.46,ea:0,eb:.22},w:{qa:1.15,qb:3.2,pc:.4,ea:0,eb:.3}};
+const FM=()=>FMODES[cfg.fm]||FMODES.b;
 function calP(r,n,p){if(r&&r.nba)return p;
   const C=calibStats(),g=C.by[mgrp(n)]||{n:0,w:0,e:0},ra=(C.all.w+6)/(C.all.e+6),rg=(g.w+4)/(g.e+4),b=g.n/(g.n+8);
   let x=p*Math.min(1.05,Math.max(.7,b*rg+(1-b)*ra));
@@ -1008,7 +1010,7 @@ function rwRow(t,w,n,p,extra){
 function wilson(w,n){if(!n)return[0,0];const z=1.96,p=w/n,d=1+z*z/n,c=p+z*z/(2*n),s=z*Math.sqrt(p*(1-p)/n+z*z/(4*n*n));return[Math.max(0,(c-s)/d),Math.min(1,(c+s)/d)]}
 function engineCard(){
   const C=calibStats(),g=C.all;if(g.n<5)return '';const r=(g.w+6)/(g.e+6),N={res:'Resultado 1X2',dc:'Doble oportunidad',btts:'Ambos marcan',tot:'Goles',cor:'Córners',tar:'Tarjetas'};
-  return `<div class="card"><h2>Ajuste del motor</h2><p class="status">Con ${g.n} picks resueltos, el modelo prometía ${Math.round(100*g.e/g.n)}% y acertó ${Math.round(100*g.w/g.n)}%. Por eso ahora recorta sus probabilidades ≈${Math.round((1-Math.min(1,r))*100)}% (más en los mercados que más fallan), las ancla a la cuota del mercado y solo propone picks con cuota 1,30–2,30 y valor entre 1,5% y 18%.</p>${Object.entries(C.by).map(([k,v])=>rwRow(N[k]||k,v.w,v.n,Math.round(100*v.e/v.n))).join('')}</div>`;
+  return `<div class="card"><h2>Ajuste del motor</h2><p class="status">Con ${g.n} picks resueltos, el modelo prometía ${Math.round(100*g.e/g.n)}% y acertó ${Math.round(100*g.w/g.n)}%. Por eso ahora recorta sus probabilidades ≈${Math.round((1-Math.min(1,r))*100)}% (más en los mercados que más fallan), las ancla a la cuota del mercado y filtra los picks según el modo elegido en Ajustes (Filtros de picks).</p>${Object.entries(C.by).map(([k,v])=>rwRow(N[k]||k,v.w,v.n,Math.round(100*v.e/v.n))).join('')}</div>`;
 }
 function stakeTab(P){
   const S=P.filter(k=>!k.experimental&&(k.res==='w'||k.res==='l')),sOf=k=>Number.isFinite(+k.stake)&&+k.stake>=1?{s:+k.stake,est:false}:(k.stakeEst?{s:+k.stakeEst,est:true}:null);
@@ -1035,7 +1037,7 @@ function candScan(r){
     // Sin cuota real no existe valor esperado comprobable: solo se puede mostrar como mercado a vigilar.
     if(!conC||!q||q<1.01)continue;
     const pc=calP(r,n,p),e=pc*q-1;
-    if(q<1.3||q>2.3||pc<0.5||e<0.015||e>0.18)continue;
+    const F=FM();if(q<F.qa||q>F.qb||pc<F.pc||e<F.ea||e>F.eb)continue;
     // Sanidad frente al mercado: si el modelo supera a Pinnacle (o a la casa sin margen) por más de 10 puntos, casi seguro es error del modelo.
     const ref=(r.mod.f&&r.mod.f[n]!=null)?r.mod.f[n]:(r.mod.fc&&r.mod.fc[n]!=null?r.mod.fc[n]:null);
     if(ref!=null&&p-ref>0.10){veto.push({n,p,ref});continue}
@@ -1072,7 +1074,7 @@ function baseStake(r,n,price){
   const m=r.mod.m.find(x=>x[0]===n);if(!m)return 1;
   if(!price||price<=1)return 1;
   const pc=calP(r,n,m[1]),e=pc*price-1;
-  if(e<0.015||e>0.18||pc<0.5||price<1.3||price>2.3)return 1;
+  const F=FM();if(e<F.ea||e>F.eb||pc<F.pc||price<F.qa||price>F.qb)return 1;
   let b=techo(r,m);
   const ref=!!(r.mod.f&&r.mod.f[n]!=null)||!!(r.afq&&r.afq[n]);
   const tier=tierOf(r,n),sup=!!supports(r,n),conf=!!conflictOf(r,n);
