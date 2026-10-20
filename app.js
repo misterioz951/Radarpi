@@ -61,28 +61,30 @@ const sc=x=>+(x.score&&x.score.value!=null?x.score.value:x.score);
 const CONT=['uefa.champions','uefa.europa','uefa.europa.conf','conmebol.libertadores','conmebol.sudamericana'];
 const DOM=['eng.1','esp.1','ita.1','ger.1','fra.1','por.1','ned.1','bel.1','tur.1','sco.1','gre.1','aut.1','sui.1','cze.1','den.1','nor.1','swe.1','pol.1','ukr.1','cro.1','srb.1','cyp.1','isr.1','rou.1','bul.1','hun.1','svk.1','svn.1','fin.1','aze.1','geo.1','kaz.1','irl.1','wal.1','nir.1','isl.1','lva.1','est.1','ltu.1','mlt.1','blr.1','arm.1','mda.1','alb.1','bih.1','mkd.1','mne.1','arg.1','bra.1','col.1','chi.1','uru.1','par.1','per.1','ecu.1','bol.1','ven.1','mex.1','usa.1'];
 async function domMap(){
-  const c=LS('DOM2',null);if(c&&Date.now()-c.t<30*864e5)return c.v;
-  const v={};
-  await Promise.all(DOM.map(async sl=>{
-    try{
-      const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+sl+'/teams');if(!r.ok)return;
-      const j=await r.json(),L=((j.sports||[])[0]||{}).leagues||[{}];
-      for(const t of (L[0].teams||[]))if(!v[t.team.id])v[t.team.id]=sl;
-    }catch{}
-  }));
-  SV('DOM2',{t:Date.now(),v});return v;
-}
-async function teamForm(slug,id){
-  const k='Y'+slug+id,cc=LS(k,null);
-  if(cc&&cc.d===today())return cc.v;
-  const sls=[slug];
-  if(CONT.includes(slug)){const d=(await domMap())[id];if(d&&d!==slug)sls.push(d)}
-  const evs=[];
-  for(const sl of sls){
-    let j=null;try{j=await espn(`${sl}/teams/${id}/schedule`)}catch{}
-    for(const e of ((j&&j.events)||[]))evs.push([e,sl]);
+  const c=LS('DOM3',null);if(c&&Date.now()-c.t<14*864e5)return c.v;
+  const v={};let okN=0;
+  const lim=6;
+  for(let i=0;i<DOM.length;i+=lim){
+    await Promise.all(DOM.slice(i,i+lim).map(async sl=>{
+      try{
+        const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+sl+'/teams?limit=200');if(!r.ok)return;
+        const j=await r.json(),L=((j.sports||[])[0]||{}).leagues||[{}];okN++;
+        for(const t of (L[0].teams||[]))if(!v[t.team.id])v[t.team.id]=sl;
+      }catch{}
+    }));
   }
-  evs.sort((a,b)=>a[0].date<b[0].date?-1:1);
+  // Solo se guarda si casi todas las ligas respondieron: un mapa incompleto guardado 30 días dejaba equipos sin historial.
+  if(okN>=Math.floor(DOM.length*0.8))SV('DOM3',{t:Date.now(),v});
+  return v;
+}
+const CAL=new Set(['arg.1','bra.1','col.1','chi.1','uru.1','par.1','per.1','ecu.1','bol.1','ven.1','usa.1','nor.1','swe.1','fin.1','isl.1','irl.1','conmebol.libertadores','conmebol.sudamericana']);
+const prevSeason=sl=>{const d=new Date(),y=d.getFullYear();return CAL.has(sl)?y-1:(d.getMonth()>=6?y-1:y-2)};
+async function schedEvs(sl,id,season){
+  let j=null;try{j=await espn(`${sl}/teams/${id}/schedule`+(season?`?season=${season}`:''))}catch{}
+  return ((j&&j.events)||[]).map(e=>[e,sl]);
+}
+function toGames(evs,id){
+  evs=evs.slice().sort((a,b)=>a[0].date<b[0].date?-1:1);
   const v=[],vistos=new Set();
   for(const [e,sl] of evs){
     if(vistos.has(e.id))continue;
@@ -93,7 +95,35 @@ async function teamForm(slug,id){
     const gf=sc(me),ga=sc(ot);if(isNaN(gf)||isNaN(ga))continue;
     vistos.add(e.id);v.push({id:e.id,sl,gf,ga,h:me.homeAway==='home'});
   }
-  const out=v.slice(-10);
+  return v;
+}
+// Si el equipo no está en el mapa de ligas locales, se busca su liga probando las ligas una por una (se guarda por equipo).
+async function domOf(id,known){
+  const m=await domMap();if(m[id])return m[id];
+  const T=LS('DOMT',{}),c=T[id];
+  if(c&&(c.s||Date.now()-c.t<3*864e5))return c.s;
+  let found=null;
+  for(let i=0;i<DOM.length&&!found;i+=8){
+    const res=await Promise.all(DOM.slice(i,i+8).map(async sl=>{const e=await schedEvs(sl,id);return e.some(x=>!known.has(x[0].id)&&x[0].status&&x[0].status.type&&x[0].status.type.completed)?sl:null}));
+    found=res.find(Boolean)||null;
+  }
+  T[id]={s:found,t:Date.now()};SV('DOMT',T);return found;
+}
+async function teamForm(slug,id){
+  const k='Y3'+slug+id,cc=LS(k,null);
+  if(cc&&cc.d===today())return cc.v;
+  let evs=await schedEvs(slug,id);
+  const sls=[slug];
+  // Torneos cortos (Champions, Europa, Libertadores…): se completa con la liga local del equipo.
+  if(CONT.includes(slug)){
+    const dom=await domOf(id,new Set(evs.map(x=>x[0].id)));
+    if(dom&&dom!==slug){sls.push(dom);evs=evs.concat(await schedEvs(dom,id))}
+  }
+  // Si aún hay menos de 10 partidos (inicio de temporada), se suma la temporada anterior de esas mismas competiciones.
+  if(toGames(evs,id).length<10){
+    for(const sl of sls)evs=evs.concat(await schedEvs(sl,id,prevSeason(sl)));
+  }
+  const out=toGames(evs,id).slice(-10);
   if(cfg.ex)await addExtra(slug,out,id);
   SV(k,{d:today(),v:out});return out;
 }
@@ -283,7 +313,7 @@ async function mkMap(){
           const t={'1X':'Doble oportunidad 1X','X2':'Doble oportunidad X2','12':'Doble oportunidad 12'}[n];if(t)o[t]=ky(i)})}
       else if(oc.length===2&&idx(/^over/)>=0&&idx(/^under/)>=0&&!/team|player/i.test(nm)&&(full||first||second)){
         if((first||second)&&/corner|card|booking/i.test(nm))continue; // córners/tarjetas por mitad no se mezclan con los goles por mitad
-        const pre=first?'Primer tiempo ':second?'Segundo tiempo ':/corner/i.test(nm)?'Córners ':/card|booking/i.test(nm)?'Tarjetas ':/^over under full time$/i.test(nm)?'':null;
+        const pre=first?'Primer tiempo ':second?'Segundo tiempo ':/corner/i.test(nm)?'Córners ':/card|booking/i.test(nm)?'Tarjetas ':/^(over[ \/]?under|total goals?|goals? over[ \/]?under|match goals?)( full[ -]?time| 90 ?min(ute)?s?| regular time)?$/i.test(nm.trim())?'':null;
         if(pre===null||(!full&&!first&&!second&&pre===''))continue;
         o[`${pre}Over ${h}`]=ky(idx(/^over/));o[`${pre}Under ${h}`]=ky(idx(/^under/));
       }
@@ -551,7 +581,7 @@ function conflictOf(r,n){
 }
 function whyNo(r){
   const qm=cfg.qm||1.5;
-  if(r.A.n<5||r.B.n<5)return `Historial insuficiente: ${esc(r.h)} tiene ${r.A.n} y ${esc(r.w)} ${r.B.n} partidos recientes (se necesitan 5). Pasa con equipos de ligas pequeñas en torneos internacionales cuando ESPN no trae su liga local.`;
+  if(r.A.n<5||r.B.n<5)return `Historial insuficiente: ${esc(r.h)} tiene ${r.A.n} y ${esc(r.w)} ${r.B.n} partidos recientes (se necesitan 5). RadarPi ya completa con la liga local y la temporada anterior; si sigue pasando, ESPN no tiene datos de ese equipo.`;
   if(!(r.q&&Object.keys(r.q).length))return 'No hay cuotas de tu casa para este partido (no se emparejó con OddsPapi o la casa no lo ofrece). Sin cuota real no se puede comprobar el valor.';
   const ok=r.mod.m.filter(([n,p])=>!isHalfMarket(n)&&Number.isFinite(p)&&p>=0.5&&p<=0.9),wq=ok.filter(([n])=>r.q[n]);
   if(!wq.length)return 'La casa tiene cuotas, pero no en los mercados donde el modelo ve 50% de probabilidad o más.';
