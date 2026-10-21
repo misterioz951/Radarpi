@@ -93,7 +93,7 @@ function toGames(evs,id){
     const me=c0.competitors.find(x=>String(x.team.id)===String(id)),ot=c0.competitors.find(x=>x!==me);
     if(!me||!ot)continue;
     const gf=sc(me),ga=sc(ot);if(isNaN(gf)||isNaN(ga))continue;
-    vistos.add(e.id);v.push({id:e.id,sl,gf,ga,h:me.homeAway==='home'});
+    vistos.add(e.id);v.push({id:e.id,sl,gf,ga,h:me.homeAway==='home',o:String(ot.team.id)});
   }
   return v;
 }
@@ -109,8 +109,21 @@ async function domOf(id,known){
   }
   T[id]={s:found,t:Date.now()};SV('DOMT',T);return found;
 }
+// Fuerza del rival: cada partido del historial se ajusta por lo que ese rival suele marcar y recibir (tabla de su liga).
+// Los goles crudos (gf, ga) se conservan para los patrones; el modelo usa gfa/gaa. En torneos continentales el ajuste se recorta a la mitad.
+async function adjustForm(v,id){
+  const dm=await domMap().catch(()=>({})),slOf=x=>CONT.includes(x.sl)?(dm[x.o]||null):x.sl,need=[...new Set(v.map(slOf).filter(Boolean))],S={};
+  for(let i=0;i<need.length;i+=6)await Promise.all(need.slice(i,i+6).map(async s=>{S[s]=await standings(s).catch(()=>null)}));
+  const cl=x=>Math.max(.6,Math.min(1.6,x));
+  for(const x of v){
+    const s=slOf(x),SL=s&&S[s],r=SL&&SL.t[x.o];
+    if(!r||!SL.mu){x.gfa=x.gf;x.gaa=x.ga;continue}
+    const k=Math.min(1,r.gp/12)*(CONT.includes(x.sl)?.5:1),sa=cl(1+((r.gf/r.gp)/SL.mu-1)*k),sd=cl(1+((r.ga/r.gp)/SL.mu-1)*k);
+    x.gfa=+(x.gf/sd).toFixed(3);x.gaa=+(x.ga/sa).toFixed(3);
+  }
+}
 async function teamForm(slug,id){
-  const k='Y3'+slug+id,cc=LS(k,null);
+  const k='Y4'+slug+id,cc=LS(k,null);
   if(cc&&cc.d===today())return cc.v;
   let evs=await schedEvs(slug,id);
   const sls=[slug];
@@ -124,6 +137,7 @@ async function teamForm(slug,id){
     for(const sl of sls)evs=evs.concat(await schedEvs(sl,id,prevSeason(sl)));
   }
   const out=toGames(evs,id).slice(-10);
+  try{await adjustForm(out,id)}catch{}
   if(cfg.ex)await addExtra(slug,out,id);
   SV(k,{d:today(),v:out});return out;
 }
@@ -161,8 +175,8 @@ function st(v){
   let rs=0;for(let i=v.length-1;i>=0&&win(v[i]);i--)rs++;
   return{n:v.length,l:v.filter(x=>x.gf<x.ga).length,w:v.filter(win).length,
     gf:v.reduce((a,x)=>a+x.gf,0)/n,t:v.reduce((a,x)=>a+x.gf+x.ga,0)/n,
-    gfw:wm(x=>x.gf),gaw:wm(x=>x.ga),
-    gfH:avg(H,x=>x.gf),gaH:avg(H,x=>x.ga),gfA:avg(W,x=>x.gf),gaA:avg(W,x=>x.ga),
+    gfw:wm(x=>x.gfa??x.gf),gaw:wm(x=>x.gaa??x.ga),adj:v.filter(x=>x.gfa!=null&&Math.abs(x.gfa-x.gf)+Math.abs(x.gaa-x.ga)>.01).length,
+    gfH:avg(H,x=>x.gfa??x.gf),gaH:avg(H,x=>x.gaa??x.ga),gfA:avg(W,x=>x.gfa??x.gf),gaA:avg(W,x=>x.gaa??x.ga),
     b:pc(v.filter(x=>x.gf>0&&x.ga>0).length),low:pc(v.filter(x=>x.gf+x.ga<=2).length),
     cs:v.filter(x=>x.ga===0).length,fts:v.filter(x=>x.gf===0).length,
     hn:H.length,hw:H.filter(win).length,an:W.length,aw:W.filter(win).length,rs,
@@ -459,7 +473,7 @@ $('#go').onclick=async()=>{
       else{msg.textContent='Cargando cuotas…';try{OD=await loadOdds(undefined,leagues);const T=(LS('optour',null)||{}).v||{},sin=leagues.filter(x=>!T[x]).map(x=>names0[x]||x);if(cfg.pn){try{ODP=await loadOdds('pinnacle',leagues);diag+=` Pinnacle: ${ODP.fx.length} partidos.`}catch(e){ODP=null;bad0.push('Pinnacle ('+e.message.slice(0,60)+')')}}
       diag+=` Cuotas de ${cfg.bm}: ${OD.fx.length} partidos en las próximas 48 h.`+(sin.length?' Sin torneo en OddsPapi: '+sin.join(', ')+'.':'')}catch(e){OD=null;bad0.push('Cuotas ('+e.message.slice(0,90)+')')}}
     }
-    let rev=0;const bad=bad0;
+    let rev=0,adjN=0,adjT=0;const bad=bad0;
     for(const slug of leagues){
       if(rev>=cap)break;
       msg.textContent='Cargando '+names[slug]+'…';
@@ -478,7 +492,7 @@ $('#go').onclick=async()=>{
         let A,B;
         try{A=st(await teamForm(slug,H.team.id));B=st(await teamForm(slug,W.team.id))}
         catch(err){bad.push(hn+' vs '+wn+' ('+err.message.slice(0,60)+')');continue}
-        const SL=STD[slug];A.ss=SL&&SL.t[H.team.id];B.ss=SL&&SL.t[W.team.id];A.mu=SL?SL.mu:null;
+        const SL=STD[slug];A.ss=SL&&SL.t[H.team.id];B.ss=SL&&SL.t[W.team.id];A.mu=SL?SL.mu:null;adjT+=2;adjN+=(A.adj>0)+(B.adj>0);
         const p=[];
         if(A.n>=5&&B.n>=5){
           if(A.l===0&&B.l>=4)p.push(`${hn} invicto (0 derrotas en 10) vs ${wn} irregular (${B.l} derrotas)`);
@@ -525,7 +539,7 @@ $('#go').onclick=async()=>{
       huntTxt=R.length?`Búsqueda en todas las ligas: ${tot} partidos con cuotas, ${R.length} cumplen (cuota de ${cfg.qm} o más y stake de ${cfg.sm} o más).`:`Búsqueda en todas las ligas: de ${tot} partidos con cuotas, ninguno cumple cuota de ${cfg.qm} o más y stake de ${cfg.sm} o más. Es normal: casi nunca hay uno.`;
     }
     msg.textContent=(huntTxt||(rev?`${rev} partidos revisados, ${R.length} con patrones.`:'No hay partidos pendientes ('+((cfg.dd||1)>=2?'hoy y mañana':'hoy')+') en esas ligas.'))+(bad.length?' No cargaron: '+bad.join('; ')+'.':'')+diag+(OD&&rev&&!mq?' Ningún partido se emparejó con la casa. ESPN trae: '+enames.slice(0,4).join('; ')+'. OddsPapi trae: '+(OD.fx.slice(0,4).map(x=>x.h+' vs '+x.w).join('; ')||'nada')+'.':'')+(nShort?' '+nShort+' partidos tienen menos de 5 partidos de historial y no se analizan.':'')+(OD&&nNoQ?' '+nNoQ+' partidos sin cuotas de la casa.':'');
-    if(!hunt&&rev){const nb=R.filter(r=>bestOf(r)).length;msg.textContent+=` Con pick: ${nb} de ${rev}. Filtro «${({s:'estricto',b:'equilibrado',w:'amplio'})[cfg.fm||'b']}».`}
+    if(!hunt&&rev){const nb=R.filter(r=>bestOf(r)).length;msg.textContent+=` Con pick: ${nb} de ${rev}. Filtro «${({s:'estricto',b:'equilibrado',w:'amplio'})[cfg.fm||'b']}». Fuerza del rival aplicada en ${adjN} de ${adjT} equipos.`}
     drawRes();SV('scan',{d:today(),t:Date.now(),R,msg:msg.textContent});afterScan();$('#scanbox').open=false;updScan();
   }catch(e){msg.textContent='Error: '+e.message}
   finally{$('#go').disabled=false;$('#go').classList.remove('busy');autoRun=false;hunt=false}
@@ -1487,7 +1501,8 @@ function drawBets(){
 }
 // ===== Copia de seguridad de RadarPi: exporta todas las claves locales =====
 const SECRETS=['gq','gk','or','br','ok','af'];
-const BACKUP_KEYS=['picks','bets','cfg','seen','scan'];
+const NB_SECRETS=['keys','sgo','bdl'];   // llaves dentro de los ajustes NBA (nbcfg)
+const BACKUP_KEYS=['picks','bets','cfg','seen','scan','nbapicks','combipicks','nbcfg'];
 function exportRadarBackup(){
   const msg=$('#backupMsg');
   try{
@@ -1495,6 +1510,7 @@ function exportRadarBackup(){
     for(const k of BACKUP_KEYS){
       let v=localStorage.getItem(k);if(v===null)continue;
       if(k==='cfg'){try{const c=JSON.parse(v);SECRETS.forEach(x=>{c[x]=''});v=JSON.stringify(c)}catch{continue}}   // las llaves de API nunca salen en el archivo
+      if(k==='nbcfg'){try{const c=JSON.parse(v);NB_SECRETS.forEach(x=>{c[x]=''});v=JSON.stringify(c)}catch{continue}}
       storage[k]=v;
     }
     if(!Object.keys(storage).length){msg.textContent='No se encontraron datos guardados para respaldar.';return;}
@@ -1504,8 +1520,8 @@ function exportRadarBackup(){
     a.href=url;a.download='radarpi-copia-'+new Date().toISOString().slice(0,10)+'.json';
     document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);
     try{localStorage.setItem('radarpi_backup_last_export',new Date().toISOString())}catch{}
-    const np=(()=>{try{return JSON.parse(storage.picks||'[]').length}catch{return 0}})(),nb=(()=>{try{return JSON.parse(storage.bets||'[]').length}catch{return 0}})();
-    msg.textContent='Copia preparada: '+np+' picks y '+nb+' apuestas, sin tus llaves de API. Verifica que el JSON aparezca en Descargas y guárdalo fuera de Chrome.';
+    const cnt=k=>{try{return JSON.parse(storage[k]||'[]').length}catch{return 0}},np=cnt('picks'),nb=cnt('bets'),nn=cnt('nbapicks'),nc=cnt('combipicks');
+    msg.textContent='Copia preparada: '+np+' picks de fútbol, '+nn+' de NBA, '+nc+' de combi y '+nb+' apuestas, sin tus llaves de API. Verifica que el JSON aparezca en Descargas y guárdalo fuera de Chrome.';
   }catch(e){msg.textContent='No se pudo crear la copia: '+(e&&e.message?e.message:'error desconocido');}
 }
 $('#backupOut').addEventListener('click',exportRadarBackup);
@@ -1524,10 +1540,13 @@ $('#backupFile').addEventListener('change',async e=>{
     if(!pairs.length)throw new Error('La copia está vacía o tiene un formato no compatible.');
     if(!confirm('Se restaurarán los datos de la copia (picks, apuestas y ajustes). Las llaves de API que ya tienes se conservan. Los datos actuales con el mismo nombre serán reemplazados. Se recomienda exportar primero una copia del estado actual. ¿Continuar?'))return;
     for(const [k,v] of pairs){
-      if(!BACKUP_KEYS.includes(k)&&!/^(picks|bets|cfg|seen|scan)$/.test(k)&&data.format>=3)continue;
+      if(!BACKUP_KEYS.includes(k)&&!/^(picks|bets|cfg|seen|scan|nbapicks|combipicks|nbcfg)$/.test(k)&&data.format>=3)continue;
       if(v===null){localStorage.removeItem(k);continue}
       if(k==='cfg'){   // conserva las llaves de API que ya tienes en este dispositivo
         try{const nw=JSON.parse(v),cur=JSON.parse(localStorage.getItem('cfg')||'{}');SECRETS.forEach(x=>{if(!nw[x]&&cur[x])nw[x]=cur[x]});localStorage.setItem('cfg',JSON.stringify(nw));continue}catch{}
+      }
+      if(k==='nbcfg'){   // conserva las llaves de The Odds API de este dispositivo
+        try{const nw=JSON.parse(v),cur=JSON.parse(localStorage.getItem('nbcfg')||'{}');NB_SECRETS.forEach(x=>{if(!nw[x]&&cur[x])nw[x]=cur[x]});localStorage.setItem('nbcfg',JSON.stringify(nw));continue}catch{}
       }
       localStorage.setItem(k,v);
     }
