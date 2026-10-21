@@ -12,15 +12,58 @@ function nbCdf(k,m,v){if(k<0)return 0;if(v<=m*1.02){let t=Math.exp(-m),s=t;for(l
 const seasonEnd=()=>{const d=new Date();return d.getMonth()>=8?d.getFullYear()+1:d.getFullYear()};
 
 // ---- Estadísticas de jugadores (ESPN gamelog), cache compacto ----
-function parseGL(j){const nm=j.names||j.labels||[],ix=n=>nm.indexOf(n),iM=ix('MIN'),iP=ix('PTS'),iR=ix('REB'),iA=ix('AST'),i3=ix('3PT'),ev=j.events||{},out=[];
-  for(const st of j.seasonTypes||[]){if(!/regular/i.test(st.displayName||''))continue;for(const c of st.categories||[])for(const e of c.events||[]){const s=e.stats||[],m=ev[e.eventId]||{};out.push({d:String(m.gameDate||'').slice(0,10),r:[+s[iM]||0,+s[iP]||0,+s[iR]||0,+s[iA]||0,+String(s[i3]||'0').split('-')[0]||0]})}}
-  return out}
+function parseGL(j){
+  if(!j||typeof j!=='object')return [];
+  const labels=Array.isArray(j.names)?j.names:(Array.isArray(j.labels)?j.labels:[]);
+  const ix=(...names)=>{for(const n of names){const i=labels.findIndex(x=>String(x).toUpperCase()===n);if(i>=0)return i}return -1};
+  const iM=ix('MIN','MINUTES'),iP=ix('PTS','POINTS'),iR=ix('REB','REBOUNDS'),iA=ix('AST','ASSISTS'),i3=ix('3PT','3PM','3P');
+  const ev=j.events||{},out=[];
+  const pushEvent=(e,st)=>{
+    if(!e)return;
+    const eid=String(e.eventId||e.id||e.gameId||''),meta=ev[eid]||ev[Number(eid)]||{};
+    let date=e.gameDate||e.date||e.game_date||meta.gameDate||meta.date||meta.startDate||'';
+    if(!date&&typeof meta==='string')date=meta;
+    date=String(date||'').slice(0,10);
+    const stats=e.stats||e.statistics||[];
+    const get=(i,...keys)=>{
+      let v=i>=0&&Array.isArray(stats)?stats[i]:undefined;
+      if(v==null&&!Array.isArray(stats)&&stats&&typeof stats==='object'){for(const k of keys)if(stats[k]!=null){v=stats[k];break}}
+      if(v==null&&Array.isArray(stats)){for(const x of stats)if(x&&typeof x==='object'&&keys.includes(String(x.name||x.label||x.abbreviation||'').toUpperCase())){v=x.value??x.displayValue;break}}
+      return v;
+    };
+    const min=get(iM,'MIN','MINUTES'),pts=get(iP,'PTS','POINTS'),reb=get(iR,'REB','REBOUNDS'),ast=get(iA,'AST','ASSISTS'),threes=get(i3,'3PT','3PM','3P');
+    const minutes=parseFloat(String(min??'0').replace(':','.'))||0;
+    const number=v=>{const n=parseFloat(String(v??'0').replace(',','.'));return Number.isFinite(n)?n:0};
+    const made=String(threes??'0').match(/^\s*(\d+)/);
+    out.push({d:date,r:[minutes,number(pts),number(reb),number(ast),made?+made[1]:number(threes)]});
+  };
+  const types=Array.isArray(j.seasonTypes)?j.seasonTypes:[];
+  for(const st of types){
+    const title=String(st.displayName||st.name||'');
+    if(title&&!/regular|season|career/i.test(title))continue;
+    for(const c of st.categories||[]){
+      for(const e of c.events||[])pushEvent(e,st);
+    }
+  }
+  // Algunas respuestas ESPN cambian el anidamiento: intenta leer categorías/eventos raíz.
+  if(!out.length){
+    const cats=j.categories||j.events||[];
+    if(Array.isArray(cats))for(const c of cats)for(const e of (c.events||[]))pushEvent(e,c);
+  }
+  return out.filter(x=>x.r.some(v=>v>0));
+}
 async function glog(id){
-  const C=LS('nba_gl',{}),c=C[id];if(c&&Date.now()-c.t<18*36e5)return c.g;
-  const se=seasonEnd(),cut=(se-1)+'-10-01';let all=parseGL(await nbj(NW+'athletes/'+id+'/gamelog'));
-  if(all.filter(x=>x.d>=cut).length<10)try{all=all.concat(parseGL(await nbj(NW+'athletes/'+id+'/gamelog?season='+(se-1))))}catch{}
+  const C=LS('nba_gl_v2',{}),c=C[id];if(c&&Date.now()-c.t<6*36e5&&c.g&&c.g.length)return c.g;
+  const se=seasonEnd(),cut=(se-1)+'-10-01';let all=[];
+  try{all=parseGL(await nbj(NW+'athletes/'+id+'/gamelog'))}catch{}
+  if(all.filter(x=>x.d>=cut).length<10){
+    for(const url of [NW+'athletes/'+id+'/gamelog?season='+(se-1),NW+'athletes/'+id+'/gamelog?season='+(se-1)+'&seasontype=2']){
+      try{const extra=parseGL(await nbj(url));all=all.concat(extra);if(all.filter(x=>x.d>=cut).length>=10)break}catch{}
+    }
+  }
   const seen=new Set(),g=all.filter(x=>x.d&&!seen.has(x.d)&&seen.add(x.d)).sort((a,b)=>b.d.localeCompare(a.d)).slice(0,15).map(x=>x.r.concat(x.d>=cut?1:0));
-  const C2=LS('nba_gl',{});C2[id]={t:Date.now(),g};for(const k in C2)if(Date.now()-C2[k].t>36e5*36)delete C2[k];SV('nba_gl',C2);return g}
+  const C2=LS('nba_gl_v2',{});C2[id]={t:Date.now(),g};for(const k in C2)if(Date.now()-C2[k].t>36e5*36)delete C2[k];SV('nba_gl_v2',C2);return g
+}
 const STX={pts:['PTS',1],reb:['REB',2],ast:['AST',3],tp:['3PM',4],pra:['PRA',0]};
 const val=(r,s)=>s==='pra'?r[1]+r[2]+r[3]:r[STX[s][1]];
 function proj(rows,s){const a=rows.filter(r=>r[0]>=8).slice(0,12).map(r=>val(r,s));if(a.length<3)return null;let w=0,m=0;a.forEach((x,i)=>{const k=i<5?1.4:.6;m+=x*k;w+=k});m/=w;
@@ -258,7 +301,7 @@ function nbPicks(){nbK();
 async function nbTest(){const o=$('#nbmsg');const R=[];const t=async(n,f)=>{try{R.push('✔ '+n+': '+await f())}catch(e){R.push('✘ '+n+': '+e.message)}o.textContent=R.join(' · ')};
   let tid,pid;await t('Calendario ESPN',async()=>{const j=await nbj(NE+'scoreboard');tid=((j.events||[])[0]||{competitions:[{competitors:[{team:{id:13}}]}]}).competitions[0].competitors[0].team.id;return (j.events||[]).length+' partidos'});
   await t('Plantilla',async()=>{const j=await nbj(NE+'teams/'+(tid||13)+'/roster'),A=(j.athletes||[]).flatMap(x=>x.items||[x]);pid=A[0]&&A[0].id;return A.length+' jugadores'});
-  await t('Estadísticas por jugador',async()=>{const g=parseGL(await nbj(NW+'athletes/'+pid+'/gamelog'));return g.length+' partidos leídos'});
+  await t('Estadísticas por jugador',async()=>{const j=await nbj(NW+'athletes/'+pid+'/gamelog'),g=parseGL(j);if(!g.length)throw new Error('0 partidos; etiquetas: '+JSON.stringify((j.labels||j.names||[]).slice(0,8))+'; seasonTypes: '+(j.seasonTypes||[]).length);return g.length+' partidos leídos'});
   await t('Ratings de equipos (ESPN standings)',async()=>{const v=await nbRatings();if(!v)throw new Error('sin datos de standings');return Object.keys(v.t).length+' equipos · promedio de liga '+v.L.toFixed(1)+' pts'});
   await t('Líneas ESPN (gratis)',async()=>{const j=await nbj(NE+'scoreboard');let n=0;for(const e of j.events||[]){const c=e.competitions[0],tm=x=>c.competitors.find(y=>y.homeAway===x).team;if(espnLn(c,{ab:tm('home').abbreviation},{ab:tm('away').abbreviation}))n++}return n+' partidos con línea'});
   if(NC.keys.trim())await t('The Odds API',async()=>{const j=await nbo('events',{});return j.length+' partidos con cuotas'});

@@ -61,7 +61,8 @@ const sc=x=>+(x.score&&x.score.value!=null?x.score.value:x.score);
 const CONT=['uefa.champions','uefa.europa','uefa.europa.conf','conmebol.libertadores','conmebol.sudamericana'];
 const DOM=['eng.1','esp.1','ita.1','ger.1','fra.1','por.1','ned.1','bel.1','tur.1','sco.1','gre.1','aut.1','sui.1','cze.1','den.1','nor.1','swe.1','pol.1','ukr.1','cro.1','srb.1','cyp.1','isr.1','rou.1','bul.1','hun.1','svk.1','svn.1','fin.1','aze.1','geo.1','kaz.1','irl.1','wal.1','nir.1','isl.1','lva.1','est.1','ltu.1','mlt.1','blr.1','arm.1','mda.1','alb.1','bih.1','mkd.1','mne.1','arg.1','bra.1','col.1','chi.1','uru.1','par.1','per.1','ecu.1','bol.1','ven.1','mex.1','usa.1'];
 async function domMap(){
-  const c=LS('DOM4',null);if(c&&Date.now()-c.t<14*864e5)return c.v;
+  // DOM5 invalida el mapa antiguo: podía quedar incompleto durante dos semanas.
+  const c=LS('DOM5',null);if(c&&Date.now()-c.t<3*864e5&&c.v)return c.v;
   const v={};let okN=0;
   const lim=6;
   for(let i=0;i<DOM.length;i+=lim){
@@ -69,12 +70,11 @@ async function domMap(){
       try{
         const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+sl+'/teams?limit=200');if(!r.ok)return;
         const j=await r.json(),L=((j.sports||[])[0]||{}).leagues||[{}];okN++;
-        for(const t of (L[0].teams||[]))if(!v[t.team.id])v[t.team.id]=sl;
+        for(const t of (L[0].teams||[])){const team=t.team||t;if(team.id&&!v[String(team.id)])v[String(team.id)]=sl}
       }catch{}
     }));
   }
-  // Solo se guarda si casi todas las ligas respondieron: un mapa incompleto guardado 30 días dejaba equipos sin historial.
-  if(okN>=Math.floor(DOM.length*0.8))SV('DOM4',{t:Date.now(),v});
+  if(okN>=Math.floor(DOM.length*0.65))SV('DOM5',{t:Date.now(),v});
   return v;
 }
 const CAL=new Set(['arg.1','bra.1','col.1','chi.1','uru.1','par.1','per.1','ecu.1','bol.1','ven.1','usa.1','nor.1','swe.1','fin.1','isl.1','irl.1','conmebol.libertadores','conmebol.sudamericana']);
@@ -99,15 +99,22 @@ function toGames(evs,id){
 }
 // Si el equipo no está en el mapa de ligas locales, se busca su liga probando las ligas una por una (se guarda por equipo).
 async function domOf(id,known){
+  id=String(id);
   const m=await domMap();if(m[id])return m[id];
-  const T=LS('DOMT2',{}),c=T[id];
-  if(c&&(c.s||Date.now()-c.t<6*36e5))return c.s;
+  const T=LS('DOMT3',{}),c=T[id];
+  // Un resultado null solo dura 15 min; antes bloqueaba nuevos intentos durante 6 horas.
+  if(c&&(c.s||Date.now()-c.t<15*60e3))return c.s;
   let found=null;
   for(let i=0;i<DOM.length&&!found;i+=8){
-    const res=await Promise.all(DOM.slice(i,i+8).map(async sl=>{const e=await schedEvs(sl,id);return toGames(e,id).some(g=>!known.has(g.id))?sl:null}));
+    const res=await Promise.all(DOM.slice(i,i+8).map(async sl=>{
+      const e=await schedEvs(sl,id);
+      return toGames(e,id).some(g=>!known.has(g.id))?sl:null;
+    }));
     found=res.find(Boolean)||null;
   }
-  T[id]={s:found,t:Date.now()};SV('DOMT2',T);return found;
+  if(found){T[id]={s:found,t:Date.now()};SV('DOMT3',T)}
+  else {T[id]={s:null,t:Date.now()};SV('DOMT3',T)}
+  return found;
 }
 // Fuerza del rival: cada partido del historial se ajusta por lo que ese rival suele marcar y recibir (tabla de su liga).
 // Los goles crudos (gf, ga) se conservan para los patrones; el modelo usa gfa/gaa. En torneos continentales el ajuste se recorta a la mitad.
@@ -123,7 +130,7 @@ async function adjustForm(v,id){
   }
 }
 async function teamForm(slug,id){
-  const k='Y5'+slug+id,cc=LS(k,null);
+  const k='Y6'+slug+id,cc=LS(k,null);
   if(cc&&cc.d===today()&&(cc.v||[]).length>=5)return cc.v;
   let evs=await schedEvs(slug,id);
   const sls=[slug];
@@ -293,7 +300,7 @@ async function tourIds(){
   });
 }
 async function mkMap(){
-  return cached('opmk_v5',30,async()=>{
+  return cached('opmk_v6',7,async()=>{
     const ms=await op('markets'),o={};
     for(const m of ms){
       if(+m.sportId!==10||m.playerProp)continue;
@@ -340,7 +347,7 @@ async function mkMap(){
   });
 }
 async function loadOdds(bm,lg){
-  bm=bm||cfg.bm;lg=lg||cfg.lg;const key='btts-map-v5|'+bm+'|'+lg.join(','),cacheKey='odds_v5_'+bm,c=LS(cacheKey,null);
+  bm=bm||cfg.bm;lg=lg||cfg.lg;const key='market-map-v6|'+bm+'|'+lg.join(','),cacheKey='odds_v6_'+bm,c=LS(cacheKey,null);
   if(autoRun&&!(c&&c.k===key))throw new Error('el escaneo automático no gasta cuotas; haz un escaneo manual');
   if(c&&c.k===key&&(Date.now()-c.t<3*36e5||autoRun))return c.v;
   const MK=await mkMap(),T=await tourIds(),P=await cached('oppart',30,()=>op('participants',{sportId:10}));
