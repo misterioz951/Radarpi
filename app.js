@@ -49,10 +49,17 @@ $('#k-gq').value=cfg.gq;$('#k-gm').value=cfg.gk||'';$('#k-or').value=cfg.or||'';
 $('#save').onclick=()=>{cfg.gq=$('#k-gq').value.trim();cfg.gk=$('#k-gm').value.trim();cfg.or=$('#k-or').value.trim();cfg.br=$('#k-br').value.trim();
   cfg.g=+$('#c-g').value||3;cfg.b=+$('#c-b').value||70;cfg.m=+$('#c-m').value||8;cfg.qm=+$('#c-qm').value||1.5;cfg.cq=Math.max(1.01,+$('#c-cq').value||1.5);cfg.af=$('#c-af').value.trim();cfg.sm=+$('#c-sm').value||5;cfg.hm=$('#c-hm').checked;cfg.afa=$('#c-afa').checked;cfg.fm=$('#c-fm').value;cfg.afn=Math.max(1,+$('#c-afn').value||8);cfg.u=+$('#c-u').value||2;cfg.r=+$('#c-r').value||75;cfg.bk=+$('#c-k').value||0;cfg.co=+$('#c-co').value||5;cfg.ta=+$('#c-ta').value||5;cfg.ex=$('#c-x').checked;cfg.au=$('#c-au').checked;cfg.aa=$('#c-aa').checked;cfg.iv=Math.max(15,+$('#c-iv').value||60);cfg.pn=$('#c-pn').checked;cfg.ok=$('#c-ok').value.trim();cfg.ok2=($('#c-ok2')||{value:cfg.ok2||''}).value.trim();op.i=0;cfg.bm=$('#c-bm').value.trim();SV('cfg',cfg);$('#save').textContent='Guardado'};
 
+// ESPN puede bloquear o fallar desde algunas redes/navegadores. Se intenta directo y luego dos proxies públicos solo para ESPN.
+async function fetchESPN(url,options){
+  let err='';
+  try{const r=await fetch(url,options);if(r.ok)return r;err='HTTP '+r.status;}catch(e){err=e&&e.message||'fallo de red';}
+  const proxies=[u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),u=>'https://corsproxy.io/?url='+encodeURIComponent(u)];
+  for(const make of proxies){try{const r=await fetch(make(url),options);if(r.ok)return r;err+='; proxy HTTP '+r.status;}catch(e){err+='; proxy '+(e&&e.message||'fallo de red');}}
+  throw new Error('ESPN no respondió ('+err+'). Comprueba conexión o vuelve a intentar.');
+}
 // ESPN (API pública no oficial, sin llave). Sin rangos de fechas: partidos de hoy + calendario de cada equipo
 async function espn(path){
-  const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+path);
-  if(!r.ok)throw new Error('HTTP '+r.status+' '+path);
+  const r=await fetchESPN('https://site.api.espn.com/apis/site/v2/sports/soccer/'+path);
   return r.json();
 }
 const sc=x=>+(x.score&&x.score.value!=null?x.score.value:x.score);
@@ -68,7 +75,7 @@ async function domMap(){
   for(let i=0;i<DOM.length;i+=lim){
     await Promise.all(DOM.slice(i,i+lim).map(async sl=>{
       try{
-        const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+sl+'/teams?limit=200');if(!r.ok)return;
+        const r=await fetchESPN('https://site.api.espn.com/apis/site/v2/sports/soccer/'+sl+'/teams?limit=200');
         const j=await r.json(),L=((j.sports||[])[0]||{}).leagues||[{}];okN++;
         for(const t of (L[0].teams||[])){const team=t.team||t;if(team.id&&!v[String(team.id)])v[String(team.id)]=sl}
       }catch{}
@@ -152,8 +159,8 @@ async function teamForm(slug,id){
 async function ev(slug,eid){
   const k='S2'+eid,c=LS(k,null);if(c)return c;
   try{
-    const r=await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/soccer/${slug}/summary?event=${eid}`);
-    if(!r.ok)return null;
+    const r=await fetchESPN(`https://site.web.api.espn.com/apis/site/v2/sports/soccer/${slug}/summary?event=${eid}`).catch(()=>null);
+    if(!r)return null;
     const j=await r.json(),o={};
     for(const t of (j.boxscore&&j.boxscore.teams)||[]){
       const g=n=>{const x=(t.statistics||[]).find(q=>q.name===n);return x?+x.displayValue:null};
@@ -290,7 +297,7 @@ const TL={'col.1':[/colombia/i,/primera a|betplay|liga/i],'eng.1':[/england/i,/^
   'conmebol.libertadores':[/./,/libertadores/i],'conmebol.sudamericana':[/./,/sudamericana/i],'usa.1':[/usa|united states/i,/mls|major league soccer/i]};
 const BADT=/women|femenin|u-?\d\d|youth|reserve|qualif|serie [bcd]|primera b|segunda|\b2\./i;
 async function tourIds(){
-  return cached('optour_v3',30,async()=>{
+  return cached('optour_v4',7,async()=>{
     const all=await op('tournaments',{sportId:10}),out={};
     for(const [slug,[c,n]] of Object.entries(TL)){
       const f=all.filter(t=>c.test(t.categoryName||'')&&n.test(t.tournamentName||'')&&!BADT.test(t.tournamentName||''));
@@ -411,8 +418,8 @@ function oddsQ(OD,hf,wf,ko){
 }
 async function standings(slug){
   const k='ST'+slug,c=LS(k,null);if(c&&c.d===today())return c.v;
-  const r=await fetch(`https://site.api.espn.com/apis/v2/sports/soccer/${slug}/standings`);
-  if(!r.ok)return null;
+  const r=await fetchESPN(`https://site.api.espn.com/apis/v2/sports/soccer/${slug}/standings`).catch(()=>null);
+  if(!r)return null;
   const j=await r.json(),es=[],t={};let G=0,P=0;
   const walk=x=>{if(x.standings&&x.standings.entries)es.push(...x.standings.entries);(x.children||[]).forEach(walk)};walk(j);
   for(const e of es){
@@ -477,7 +484,7 @@ $('#go').onclick=async()=>{
     const names=Object.fromEntries(Object.entries(LG).map(([n,s])=>[s,n])),names0=names,bad0=[];let OD=null,ODP=null,diag='',mq=0,nShort=0,nNoQ=0;const enames=[];const STD={};
     if(cfg.ok){
       if(!cfg.bm)msg.textContent='Elige tu casa en Ajustes para traer cuotas.';
-      else{msg.textContent='Cargando cuotas…';try{OD=await loadOdds(undefined,leagues);const T=(LS('optour',null)||{}).v||{},sin=leagues.filter(x=>!T[x]).map(x=>names0[x]||x);if(cfg.pn){try{ODP=await loadOdds('pinnacle',leagues);diag+=` Pinnacle: ${ODP.fx.length} partidos.`}catch(e){ODP=null;bad0.push('Pinnacle ('+e.message.slice(0,60)+')')}}
+      else{msg.textContent='Cargando cuotas…';try{OD=await loadOdds(undefined,leagues);const T=await tourIds(),sin=leagues.filter(x=>!T[x]).map(x=>names0[x]||x);if(cfg.pn){try{ODP=await loadOdds('pinnacle',leagues);diag+=` Pinnacle: ${ODP.fx.length} partidos.`}catch(e){ODP=null;bad0.push('Pinnacle ('+e.message.slice(0,60)+')')}}
       diag+=` Cuotas de ${cfg.bm}: ${OD.fx.length} partidos en las próximas 48 h.`+(sin.length?' Sin torneo en OddsPapi: '+sin.join(', ')+'.':'')}catch(e){OD=null;bad0.push('Cuotas ('+e.message.slice(0,90)+')')}}
     }
     let rev=0,adjN=0,adjT=0;const bad=bad0;
@@ -544,6 +551,23 @@ $('#go').onclick=async()=>{
       const tot=R.length;
       R=R.map(r=>({r,b:bestOf(r)})).filter(x=>x.b&&x.b.q&&x.b.q>=(cfg.qm||1.5)&&baseStake(x.r,x.b.n,x.b.q)>=cfg.sm).sort((a,b)=>b.b.sc-a.b.sc).slice(0,3).map(x=>x.r);
       huntTxt=R.length?`Búsqueda en todas las ligas: ${tot} partidos con cuotas, ${R.length} cumplen (cuota de ${cfg.qm} o más y stake de ${cfg.sm} o más).`:`Búsqueda en todas las ligas: de ${tot} partidos con cuotas, ninguno cumple cuota de ${cfg.qm} o más y stake de ${cfg.sm} o más. Es normal: casi nunca hay uno.`;
+    }
+    let kept=0;
+    // Los picks encontrados en un escaneo normal se conservan durante el día aunque el filtro cambie.
+    // Se etiquetan como anteriores porque sus cuotas deben volver a verificarse antes de apostar.
+    if(!hunt){
+      const prev=LS('scan',null),fresh=R.slice();
+      if(prev&&prev.d===today()&&Array.isArray(prev.R)){
+        const eventKey=r=>String(r.ev||r.slug+'|'+r.h+'|'+r.w+'|'+r.ko),pickKey=r=>{const b=bestOf(r);return b?String(b.n):''};
+        const present=new Set(R.map(r=>eventKey(r)+'|'+pickKey(r)));
+        for(const old of prev.R.filter(x=>bestOf(x)&&x.ko&&new Date(x.ko).getTime()>Date.now()).slice(0,30)){
+          const id=eventKey(old)+'|'+pickKey(old);
+          // Conserva cada pick distinto del mismo partido; no duplica el mismo mercado/pick.
+          if(present.has(id))continue;
+          R.push({...old,_fromPrevious:true});present.add(id);kept++;
+        }
+      }
+      if(kept)diag+=` Se conservaron ${kept} picks de escaneos anteriores de hoy; verifica de nuevo las cuotas antes de apostar.`;
     }
     msg.textContent=(huntTxt||(rev?`${rev} partidos revisados, ${R.length} con patrones.`:'No hay partidos pendientes ('+((cfg.dd||1)>=2?'hoy y mañana':'hoy')+') en esas ligas.'))+(bad.length?' No cargaron: '+bad.join('; ')+'.':'')+diag+(OD&&rev&&!mq?' Ningún partido se emparejó con la casa. ESPN trae: '+enames.slice(0,4).join('; ')+'. OddsPapi trae: '+(OD.fx.slice(0,4).map(x=>x.h+' vs '+x.w).join('; ')||'nada')+'.':'')+(nShort?' '+nShort+' partidos tienen menos de 5 partidos de historial y no se analizan.':'')+(OD&&nNoQ?' '+nNoQ+' partidos sin cuotas de la casa.':'');
     if(!hunt&&rev){const nb=R.filter(r=>bestOf(r)).length;msg.textContent+=` Con pick: ${nb} de ${rev}. Filtro «${({s:'estricto',b:'equilibrado',w:'amplio'})[cfg.fm||'b']}». Fuerza del rival aplicada en ${adjN} de ${adjT} equipos.`}
@@ -697,7 +721,7 @@ function card(i){
         (halves.length?`<div class="sec">Mercados por mitades · experimentales</div>`:'')+halves.map(([n,p])=>mrow(n,p,`Estimación provisional · cuota justa teórica @${(1/p).toFixed(2)}`,false,null)).join('')+
         (halves.length?`<p class="status">No uses estas probabilidades por mitades como señal validada: el reparto 45%/55% es una aproximación general, no una calibración histórica por liga.</p>`:'');
     }
-    return `<article class="card mc"><div class="mh"><span class="pill">${esc(r.liga)}</span><span class="ko">${r.hora}</span></div>
+    return `<article class="card mc"><div class="mh"><span class="pill">${esc(r.liga)}</span><span class="ko">${r.hora}</span></div>${r._fromPrevious?'<p class="status">Pick conservado de un escaneo anterior de hoy. Confirma que el partido siga pendiente y actualiza la cuota antes de apostar.</p>':''}
   <div class="mt"><b>${esc(r.h)}</b><em>vs</em><b>${esc(r.w)}</b></div>
   ${ticket(r)}
   <div class="acts2"><button class="btn" onclick="ai(${i})">Analizar con IA</button><button class="btn s" onclick="showInfo(${i})">Noticias y bajas</button><button class="btn s" onclick="afMore(${i})">Datos API-Football</button><button class="btn s" onclick="regModel(${i})">Registrar en Modelo</button></div><div id="afp${i}" class="af-panel" hidden></div>
@@ -757,7 +781,7 @@ function calc(i){
 // Cada baja se clasifica con el historial de titulares de los últimos partidos del equipo.
 async function info(i){
   const r=R[i];if(r.inf)return r.inf;
-  const get=async u=>{try{const x=await fetch(u);return x.ok?await x.json():null}catch{return null}};
+  const get=async u=>{try{const x=/espn\.com/i.test(u)?await fetchESPN(u):await fetch(u);return x.ok?await x.json():null}catch{return null}};
   const B='https://site.api.espn.com/apis/site/v2/sports/soccer/'+r.slug;
   const [ih,iw,sm]=await Promise.all([get(`${B}/teams/${r.hid}/injuries`),get(`${B}/teams/${r.wid}/injuries`),
     get(`https://site.web.api.espn.com/apis/site/v2/sports/soccer/${r.slug}/summary?event=${r.ev}`)]);
@@ -1342,7 +1366,7 @@ function evalMk(n,h,a,cor,crd,hh,ha){
     'Ambos marcan: sí':h>0&&a>0,'Ambos marcan: no':!(h>0&&a>0),'Local deja arco en cero':a===0,'Visitante deja arco en cero':h===0})[n]??null;
 }
 async function final(slug,ev){
-  const r=await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/soccer/${slug}/summary?event=${ev}`);
+  const r=await fetchESPN(`https://site.web.api.espn.com/apis/site/v2/sports/soccer/${slug}/summary?event=${ev}`);
   if(!r.ok)return null;
   const j=await r.json(),c=j.header&&j.header.competitions&&j.header.competitions[0];
   if(!c||!(c.status&&c.status.type&&c.status.type.completed))return{pending:true};

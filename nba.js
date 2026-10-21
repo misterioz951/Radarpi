@@ -1,15 +1,64 @@
 (function(){
 'use strict';
-/* ===== NBA · Radar de patrones (fuentes gratis: ESPN + The Odds API) ===== */
+/* ===== NBA · Radar de patrones (ESPN + API-NBA + The Odds API) ===== */
 const NE='https://site.api.espn.com/apis/site/v2/sports/basketball/nba/',NW='https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/',NO='https://api.the-odds-api.com/v4/sports/basketball_nba/';
-const NC=Object.assign({keys:'',games:3,per:8,day:0,news:'',sgo:'',bdl:''},LS('nbcfg',{}));
+async function nbFetchESPN(url,options){let err='';try{const r=await fetch(url,options);if(r.ok)return r;err='HTTP '+r.status}catch(e){err=e&&e.message||'fallo de red'}for(const make of [u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),u=>'https://corsproxy.io/?url='+encodeURIComponent(u)]){try{const r=await fetch(make(url),options);if(r.ok)return r;err+='; proxy HTTP '+r.status}catch(e){err+='; proxy '+(e&&e.message||'fallo de red')}}throw new Error('ESPN no respondió ('+err+').')}
+const NC=Object.assign({keys:'',games:3,per:8,day:0,news:'',sgo:'',bdl:'',apisports:''},LS('nbcfg',{}));
 const NB={g:[],od:null,sel:{},ln:{},reg:{},picks:LS('nbapicks',[]),ki:0};
 const nz=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\b(jr|sr|ii|iii|iv)\b/g,'').replace(/[^a-z ]/g,'').replace(/\s+/g,' ').trim();
 const Phi=x=>{const t=1/(1+.2316419*Math.abs(x)),p=.3989423*Math.exp(-x*x/2)*t*(.3193815+t*(-.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return x>0?1-p:p};
-const nbj=async u=>{const r=await fetch(u);if(!r.ok)throw new Error(r.status+' '+u.replace(/\?.*/,'').split('/').slice(-2).join('/'));return r.json()};
+const nbj=async u=>{const r=await nbFetchESPN(u);return r.json()};
 async function pool(a,n,f){const o=[];let i=0;await Promise.all(Array.from({length:n},async()=>{while(i<a.length){const k=i++;try{o[k]=await f(a[k],k)}catch(e){o[k]=null}}}));return o}
 function nbCdf(k,m,v){if(k<0)return 0;if(v<=m*1.02){let t=Math.exp(-m),s=t;for(let i=1;i<=k;i++){t*=m/i;s+=t}return Math.min(1,s)}const r=m*m/(v-m),p=r/(r+m);let t=Math.pow(p,r),s=t;for(let i=1;i<=k;i++){t*=(i-1+r)/i*(1-p);s+=t}return Math.min(1,s)}
 const seasonEnd=()=>{const d=new Date();return d.getMonth()>=8?d.getFullYear()+1:d.getFullYear()};
+
+// ---- Fuente alternativa real para estadísticas de jugadores: API-NBA (API-Sports) ----
+const AN='https://v2.nba.api-sports.io';
+async function nbaApi(path){
+  const key=String(NC.apisports||'').trim();if(!key)throw new Error('falta la llave API-NBA en Ajustes NBA');
+  const r=await fetch(AN+path,{headers:{'x-apisports-key':key}});
+  if(!r.ok)throw new Error('API-NBA HTTP '+r.status);
+  const j=await r.json();if(j.errors&&Object.keys(j.errors).length)throw new Error(JSON.stringify(j.errors));
+  return j.response||[];
+}
+async function nbaApiTeams(){
+  const season=String(seasonEnd()-1),C=LS('nba_api_teams_v1',null);
+  if(C&&C.season===season&&Date.now()-C.t<7*864e5&&Array.isArray(C.v))return C.v;
+  const v=await nbaApi('/teams?league=standard&season='+season);
+  if(!v.length)throw new Error('API-NBA no devolvió equipos para la temporada '+season);
+  SV('nba_api_teams_v1',{t:Date.now(),season,v});return v;
+}
+function nbaApiTeamMatch(teams,ab){
+  const aliases={GSW:['GS','GSW','GOLDEN STATE'],NYK:['NY','NYK','NEW YORK'],NOP:['NO','NOP','NEW ORLEANS'],SAS:['SA','SAS','SAN ANTONIO'],UTA:['UTAH','UTA'],PHX:['PHO','PHX','PHOENIX'],BKN:['BKN','BROOKLYN'],LAC:['LAC','LA CLIPPERS'],LAL:['LAL','LA LAKERS'],CHA:['CHA','CHARLOTTE']};
+  const want=aliases[ab]||[ab];
+  return teams.find(t=>want.includes(String(t.code||t.abbreviation||'').toUpperCase()))||teams.find(t=>want.some(x=>nz(t.name||'').includes(nz(x))||nz(t.nickname||'').includes(nz(x))))||null;
+}
+async function nbaApiTeamPlayers(ab){
+  const season=String(seasonEnd()-1),cacheKey='nba_api_teamstats_v1',C=LS(cacheKey,{}),ck=season+'_'+ab;
+  if(C[ck]&&Date.now()-C[ck].t<6*36e5)return C[ck].v;
+  const teams=await nbaApiTeams(),team=nbaApiTeamMatch(teams,ab);
+  if(!team)throw new Error('API-NBA no encontró equipo '+ab);
+  // Al inicio de temporada actual puede haber 0-2 partidos: mezcla temporada actual y anterior.
+  const [cur,prev]=await Promise.all([
+    nbaApi('/players/statistics?team='+team.id+'&season='+season).catch(()=>[]),
+    nbaApi('/players/statistics?team='+team.id+'&season='+(+season-1)).catch(()=>[])
+  ]);
+  const raw=cur.map(x=>({...x,_currentSeason:true})).concat(prev.map(x=>({...x,_currentSeason:false})));
+  const by={};
+  for(const x of raw){
+    const p=x.player||{},g=x.game||{},n=p.name||[p.firstname,p.lastname].filter(Boolean).join(' ')||x.player_name||'';
+    if(!n)continue;
+    const id=String(p.id||x.player_id||nz(n));
+    const mins=x.min??x.minutes??x.played??0;
+    let min=0;if(typeof mins==='number')min=mins;else {const mm=String(mins).match(/(\d+)(?::(\d+))?/);if(mm)min=+mm[1]+(+mm[2]||0)/60;}
+    const num=(...vals)=>{for(const v of vals){const z=Number(v);if(v!==null&&v!==''&&Number.isFinite(z))return z}return 0};
+    const date=String(g.date||g.date_start||g.datetime||x.date||'').slice(0,10);
+    const row={d:date,id:String(g.id||g.game_id||date),r:[min,num(x.points,x.pts),num(x.totReb,x.total_rebounds,x.rebounds,x.reb),num(x.assists,x.ast),num(x.tpm,x.three_points_made,x.three_pointers_made,x.threes),x._currentSeason?1:0]};
+    if(!by[id])by[id]={id,n,pos:p.pos||p.position||'',g:[]};by[id].g.push(row);
+  }
+  const out=Object.values(by).map(p=>({...p,g:p.g.filter(x=>x.r[0]>0||x.r.slice(1,5).some(v=>v>0)).sort((a,b)=>b.d.localeCompare(a.d)).filter((x,i,a)=>i===a.findIndex(y=>y.id===x.id)).slice(0,15).map(x=>x.r.concat(x.d))})).filter(p=>p.g.length>=3);
+  C[ck]={t:Date.now(),v:out};for(const k of Object.keys(C))if(Date.now()-C[k].t>3*864e5)delete C[k];SV(cacheKey,C);return out;
+}
 
 // ---- Estadísticas de jugadores (ESPN gamelog), cache compacto ----
 function parseGL(j){
@@ -90,10 +139,10 @@ async function teamForm(id){const se=seasonEnd(),res=[];
   for(const q of ['','?season='+(se-1)]){try{const j=await nbj(NE+'teams/'+id+'/schedule'+q);for(const e of j.events||[]){const c=(e.competitions||[])[0];if(!c||!(c.status&&c.status.type&&c.status.type.completed))continue;if(e.seasonType&&+e.seasonType.type===1)continue;const me=c.competitors.find(x=>x.team.id==id),op=c.competitors.find(x=>x.team.id!=id),f=x=>+(x.score&&x.score.value!=null?x.score.value:x.score);if(f(me)>0)res.push({d:e.date,pf:f(me),pa:f(op)})}}catch{}if(res.length>=10)break}
   const a=res.sort((x,y)=>y.d.localeCompare(x.d)).slice(0,12);if(a.length<4)return null;return{pf:a.reduce((t,x)=>t+x.pf,0)/a.length,pa:a.reduce((t,x)=>t+x.pa,0)/a.length,n:a.length,dts:a.slice(0,5).map(x=>x.d)}}
 // ---- Rival, ritmo y descanso (ESPN standings, gratis y sin llave) ----
-async function nbRatings(){
-  const c=LS('nb_rt',null);if(c&&Date.now()-c.t<6*36e5)return c.v;
+async function nbRatings(force){
+  const c=LS('nb_rt',null);if(!force&&c&&Date.now()-c.t<6*36e5)return c.v;
   const base='https://site.api.espn.com/apis/v2/sports/basketball/nba/standings';
-  const read=async q=>{const r=await fetch(base+q);if(!r.ok)return null;const j=await r.json(),es=[],t={};
+  const read=async q=>{const r=await nbFetchESPN(base+q).catch(()=>null);if(!r)return null;const j=await r.json(),es=[],t={};
     const walk=x=>{if(x.standings&&x.standings.entries)es.push(...x.standings.entries);(x.children||[]).forEach(walk)};walk(j);
     for(const e of es){const st={};(e.stats||[]).forEach(q=>st[q.name]=q.value);
       const gp=+st.gamesPlayed||((+st.wins||0)+(+st.losses||0)),pf=st.avgPointsFor!=null?+st.avgPointsFor:+st.pointsFor/gp,pa=st.avgPointsAgainst!=null?+st.avgPointsAgainst:+st.pointsAgainst/gp;
@@ -134,24 +183,42 @@ function espnLn(c,h,a){const o=(c.odds||[])[0];if(!o)return null;const r={},d=St
   if(o.overUnder!=null&&+o.overUnder>150)r.ou=+o.overUnder;
   return(r.sp!=null||r.ou!=null)?r:null}
 async function nbTeam(g,s,inj){
-  s.f=await teamForm(s.id);
-  const ro=await nbj(NE+'teams/'+s.id+'/roster'),A=(ro.athletes||[]).flatMap(x=>x.items||[x]).filter(x=>x&&x.id);
-  const L=await pool(A,6,async a=>({a,g:await glog(a.id)}));
-  const all=L.filter(x=>x&&x.g&&x.g.length>=3).map(x=>{const n=x.a.displayName||x.a.fullName,r0=nzInj(((x.a.injuries||[])[0]||{}).status),s0=ns(n)||inj[nz(n)]||(r0?{s:r0,c:''}:null);return{id:x.a.id,n,pos:(x.a.position||{}).abbreviation||'',st:s0?s0.s:'',nt:s0?s0.c:'',tm:s.ab,g:x.g,mn:x.g.slice(0,8).reduce((t,r)=>t+r[0],0)/Math.min(8,x.g.length)}});
+  s.f=g.src==='API-NBA'?null:await teamForm(s.id);
+  let all=[];
+  // ESPN sigue siendo la primera fuente. Si falla o no trae historial suficiente, API-NBA aporta estadísticas reales por equipo.
+  try{
+    if(g.src==='API-NBA')throw new Error('calendario alternativo');
+    const ro=await nbj(NE+'teams/'+s.id+'/roster'),A=(ro.athletes||[]).flatMap(x=>x.items||[x]).filter(x=>x&&x.id);
+    const L=await pool(A,6,async a=>({a,g:await glog(a.id)}));
+    all=L.filter(x=>x&&x.g&&x.g.length>=3).map(x=>{const n=x.a.displayName||x.a.fullName,r0=nzInj(((x.a.injuries||[])[0]||{}).status),s0=ns(n)||inj[nz(n)]||(r0?{s:r0,c:''}:null);return{id:x.a.id,n,pos:(x.a.position||{}).abbreviation||'',st:s0?s0.s:'',nt:s0?s0.c:'',tm:s.ab,g:x.g,mn:x.g.slice(0,8).reduce((t,r)=>t+r[0],0)/Math.min(8,x.g.length),src:'ESPN'}});
+  }catch(e){s.espnPlayerErr=e.message}
+  if(all.filter(p=>p.g&&p.g.length>=3).length<4&&NC.apisports.trim()){
+    try{
+      const alt=await nbaApiTeamPlayers(s.ab),seen=new Set(all.map(p=>nz(p.n)));
+      for(const p of alt){if(seen.has(nz(p.n)))continue;const inj0=ns(p.n)||inj[nz(p.n)]||null;all.push({id:'apisports_'+p.id,n:p.n,pos:p.pos||'',st:inj0?inj0.s:'',nt:inj0?inj0.c:'',tm:s.ab,g:p.g,mn:p.g.slice(0,8).reduce((t,r)=>t+r[0],0)/Math.min(8,p.g.length),src:'API-NBA'});}
+    }catch(e){s.apiNbaErr=e.message}
+  }
   const outMin=all.filter(p=>p.st==='out'&&p.mn>=14).reduce((t,p)=>t+p.mn,0);s.out=all.filter(p=>p.st==='out'&&p.mn>=10).map(p=>p.n);s.boost=1+Math.min(.12,outMin/240*.5);
-  s.pl=all.filter(p=>p.mn>=14&&p.st!=='out').sort((a,b)=>b.mn-a.mn).slice(0,NB.hunt?Math.min(NC.per,6):NC.per)}
+  s.pl=all.filter(p=>p.mn>=14&&p.st!=='out'&&p.g&&p.g.length>=3).sort((a,b)=>b.mn-a.mn).slice(0,NB.hunt?Math.min(NC.per,6):NC.per)}
 async function nbScan(hunt){const msg=$('#nbmsg'),bs=[$('#nbgo'),$('#nbhunt')].filter(Boolean);bs.forEach(b=>b.disabled=true);NB.hunt=hunt===true;
-  try{const d=new Date(Date.now()+NC.day*864e5),ds=d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate());msg.textContent='Buscando partidos…';
-    const sb=await nbj(NE+'scoreboard?dates='+ds);
-    NB.g=(sb.events||[]).filter(e=>!(e.status&&e.status.type&&e.status.type.completed)&&!(e.status&&e.status.type&&e.status.type.state==='in')).slice(0,NB.hunt?12:NC.games).map(e=>{const c=e.competitions[0],t=h=>{const x=c.competitors.find(y=>y.homeAway===h).team;return{id:x.id,n:x.displayName,ab:x.abbreviation}};const g={id:e.id,date:e.date,h:t('home'),a:t('away'),pl:[]};g.ln=espnLn(c,g.h,g.a);return g});
-    if(!NB.g.length){msg.textContent='No hay partidos NBA sin jugar para ese día.';$('#nbres').innerHTML='';return}
+  try{const d=new Date(Date.now()+NC.day*864e5),ds=d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate()),apiDate=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());msg.textContent='Buscando partidos…';
+    let sb=null,espnError='';try{sb=await nbj(NE+'scoreboard?dates='+ds)}catch(e){espnError=e.message}
+    NB.g=(sb&&sb.events||[]).filter(e=>!(e.status&&e.status.type&&e.status.type.completed)&&!(e.status&&e.status.type&&e.status.type.state==='in')).slice(0,NB.hunt?12:NC.games).map(e=>{const c=e.competitions[0],t=h=>{const x=c.competitors.find(y=>y.homeAway===h).team;return{id:x.id,n:x.displayName,ab:x.abbreviation}};const g={id:e.id,date:e.date,h:t('home'),a:t('away'),pl:[],src:'ESPN'};g.ln=espnLn(c,g.h,g.a);return g});
+    if(!NB.g.length&&NC.apisports.trim()){
+      msg.textContent='ESPN no dio calendario; consultando API-NBA…';
+      const season=String(seasonEnd()-1),raw=await nbaApi('/games?date='+apiDate+'&league=standard&season='+season),teams=await nbaApiTeams();
+      const teamObj=x=>{const id=x&&x.id,team=teams.find(t=>String(t.id)===String(id))||{};const n=x&&(x.name||x.nickname)||team.name||team.nickname||'',ab=x&&(x.code||x.abbreviation)||team.code||team.abbreviation||'';return{id:'api_'+id,apiId:id,n,ab:ab||n.slice(0,3).toUpperCase()}};
+      NB.g=raw.filter(e=>{const st=e.status||{},v=String(st.short||st.code||st.long||'').toLowerCase();return !/(finished|final|cancel|postpon|live|quarter|halftime|overtime|in play|ft|q[1-4]|ht)/.test(v)}).map(e=>{const h=teamObj(e.teams&&e.teams.home||e.home),a=teamObj(e.teams&&e.teams.visitors||e.teams&&e.teams.away||e.away);return{id:'api_'+(e.id||e.game&&e.game.id),date:e.date||e.game&&e.game.date,h,a,pl:[],src:'API-NBA'}}).filter(g=>g.h.n&&g.a.n).slice(0,NB.hunt?12:NC.games);
+      if(NB.g.length)msg.textContent='Calendario obtenido desde API-NBA; consultando estadísticas…';
+    }
+    if(!NB.g.length){msg.textContent='No hay partidos NBA sin jugar para ese día.'+(espnError?' ESPN: '+espnError+'.':'');$('#nbres').innerHTML='';return}
     let oddsErr='';NB.od=null;if(NC.keys.trim()){msg.textContent='Cuotas…';try{NB.od=await nbOdds(NB.g)}catch(e){oddsErr=' Cuotas: '+e.message+'.'}}
     NB.rt=null;try{NB.rt=await nbRatings()}catch{}
     NB.g.forEach(g=>{g.h.r=NB.rt&&NB.rt.t[g.h.id]||null;g.a.r=NB.rt&&NB.rt.t[g.a.id]||null});
     const inj=await nbInj(),T=[];NB.g.forEach(g=>{T.push([g,g.h]);T.push([g,g.a])});let k=0;
     await pool(T,3,async([g,s])=>{try{await nbTeam(g,s,inj)}catch(e){s.f=s.f||null;s.pl=s.pl||[];s.out=s.out||[]}msg.textContent='Equipos y jugadores '+(++k)+'/'+T.length+'…'});
     const nOd=NB.od?Object.keys(NB.od).length:0;
-    msg.textContent='Listo. '+NB.g.length+' partidos.'+(NB.od?' Props de jugadores publicados en '+(NB.pn||0)+' partido(s).'+((NB.perr||[]).length?' ('+NB.perr.slice(0,2).join(' · ')+')':''):'')+(NB.rt?' Rival y ritmo: ratings de temporada aplicados.':' Sin ratings de temporada (ESPN standings): solo forma reciente.')+(NB.od?' Cuotas reales en '+nOd+' (~'+(3+5*nOd)+' créditos).':(NC.keys.trim()?'':' Sin llave de The Odds API: solo lecturas del modelo con líneas de ESPN, sin cuota real.'))+oddsErr;
+    msg.textContent='Listo. '+NB.g.length+' partidos ('+(NB.g.some(g=>g.src==='API-NBA')?'calendario API-NBA':'calendario ESPN')+').' +(NB.od?' Props de jugadores publicados en '+(NB.pn||0)+' partido(s).'+((NB.perr||[]).length?' ('+NB.perr.slice(0,2).join(' · ')+')':''):'')+(NB.rt?' Rival y ritmo: ratings de temporada aplicados.':' Sin ratings de temporada (ESPN standings): solo forma reciente.')+(NB.od?' Cuotas reales en '+nOd+' (~'+(3+5*nOd)+' créditos).':(NC.keys.trim()?'':' Sin llave de The Odds API: solo lecturas del modelo con líneas de ESPN, sin cuota real.'))+oddsErr;
     nbDraw()}
   catch(e){msg.textContent='Error: '+e.message+'. Usa «Probar fuentes».'}finally{bs.forEach(b=>b.disabled=false)}}
 
@@ -302,11 +369,12 @@ async function nbTest(){const o=$('#nbmsg');const R=[];const t=async(n,f)=>{try{
   let tid,pid;await t('Calendario ESPN',async()=>{const j=await nbj(NE+'scoreboard');tid=((j.events||[])[0]||{competitions:[{competitors:[{team:{id:13}}]}]}).competitions[0].competitors[0].team.id;return (j.events||[]).length+' partidos'});
   await t('Plantilla',async()=>{const j=await nbj(NE+'teams/'+(tid||13)+'/roster'),A=(j.athletes||[]).flatMap(x=>x.items||[x]);pid=A[0]&&A[0].id;return A.length+' jugadores'});
   await t('Estadísticas por jugador',async()=>{const j=await nbj(NW+'athletes/'+pid+'/gamelog'),g=parseGL(j);if(!g.length)throw new Error('0 partidos; etiquetas: '+JSON.stringify((j.labels||j.names||[]).slice(0,8))+'; seasonTypes: '+(j.seasonTypes||[]).length);return g.length+' partidos leídos'});
-  await t('Ratings de equipos (ESPN standings)',async()=>{const v=await nbRatings();if(!v)throw new Error('sin datos de standings');return Object.keys(v.t).length+' equipos · promedio de liga '+v.L.toFixed(1)+' pts'});
+  await t('Ratings de equipos (ESPN standings)',async()=>{const v=await nbRatings(true);if(!v)throw new Error('sin datos de standings');return Object.keys(v.t).length+' equipos · promedio de liga '+v.L.toFixed(1)+' pts'});
   await t('Líneas ESPN (gratis)',async()=>{const j=await nbj(NE+'scoreboard');let n=0;for(const e of j.events||[]){const c=e.competitions[0],tm=x=>c.competitors.find(y=>y.homeAway===x).team;if(espnLn(c,{ab:tm('home').abbreviation},{ab:tm('away').abbreviation}))n++}return n+' partidos con línea'});
   if(NC.keys.trim())await t('The Odds API',async()=>{const j=await nbo('events',{});return j.length+' partidos con cuotas'});
   if(NC.sgo)await t('Sports Game Odds',async()=>{const r=await fetch('https://api.sportsgameodds.com/v2/events?leagueID=NBA&limit=1&apiKey='+encodeURIComponent(NC.sgo));if(!r.ok)throw new Error(r.status);return 'responde'});
   if(NC.bdl)await t('balldontlie',async()=>{const r=await fetch('https://api.balldontlie.io/v1/teams',{headers:{Authorization:NC.bdl}});if(!r.ok)throw new Error(r.status);return 'responde'});
+  if(NC.apisports)await t('API-NBA (estadísticas alternativas)',async()=>{const v=await nbaApiTeams();return v.length+' equipos; temporada '+(seasonEnd()-1)});
   await t('Bajas ESPN',async()=>Object.keys(await nbInj()).length+' jugadores con parte médico')}
 
 const nzInj=s=>{s=String(s||'').toLowerCase();return /\bout\b|fuera/.test(s)?'out':/doubt/.test(s)?'doubt':/question|day|gtd|probable/.test(s)?'q':''};
@@ -348,7 +416,7 @@ function nbInit(){$('#nba-root').innerHTML=`<div class="combo-page-head"><div cl
 <div class="tools"><button class="btn" id="nbgo" onclick="nbScan(false)">Escanear NBA</button><button class="btn s" onclick="nbTest()">Probar fuentes</button></div><button class="btn s" id="nbhunt" type="button" style="width:100%;min-height:46px;margin:10px 0 0" onclick="nbScan(true)">Buscar el mejor pick NBA</button><p class="status" id="nbmsg" role="status"></p></div>
 <details class="card cfgbox"><summary>Bajas de última hora (Telegram / X)</summary><label>Pega los mensajes: nombre completo + OUT / Duda / Questionable (uno por línea)<textarea rows="5" onchange="NC.news=this.value;nbSet()">${esc(NC.news)}</textarea></label><p class="status">Telegram y X no se pueden leer automáticamente desde una página gratis. Pegas el texto y la app lo cruza con las plantillas en el próximo escaneo. Las bajas oficiales de ESPN se leen solas.</p></details><div id="nbres"></div><div id="nbpk"></div>
 <details class="card cfgbox"><summary>Ajustes NBA</summary><label>Llaves The Odds API (una por línea; si una se agota usa la siguiente)<textarea id="nbk" rows="3" autocomplete="off" onchange="NC.keys=this.value;nbSet()">${esc(NC.keys)}</textarea></label>
-<label>Sports Game Odds (llave, opcional)<input type="password" value="${esc(NC.sgo)}" onchange="NC.sgo=this.value.trim();nbSet()"></label><label>balldontlie (llave, opcional)<input type="password" value="${esc(NC.bdl)}" onchange="NC.bdl=this.value.trim();nbSet()"></label><p class="status">Sports Game Odds y balldontlie quedan guardadas y se comprueban en «Probar fuentes»; todavía no alimentan los picks.</p><label>Partidos por escaneo<input type="number" min="1" max="10" value="${NC.games}" onchange="NC.games=Math.max(1,+this.value||3);nbSet()"></label><label>Jugadores por equipo<input type="number" min="3" max="12" value="${NC.per}" onchange="NC.per=Math.max(3,+this.value||8);nbSet()"></label>
+<label>Sports Game Odds (llave, opcional)<input type="password" value="${esc(NC.sgo)}" onchange="NC.sgo=this.value.trim();nbSet()"></label><label>API-NBA / API-Sports (llave gratuita, estadísticas alternativas)<input type="password" autocomplete="off" value="${esc(NC.apisports)}" onchange="NC.apisports=this.value.trim();nbSet()"></label><p class="status">API-NBA sí alimenta los picks de jugadores como respaldo cuando ESPN no devuelve suficientes estadísticas. Consigue la llave en api-sports.io; el plan gratuito tiene límite diario. Sports Game Odds y balldontlie solo se comprueban por ahora.</p><label>balldontlie (llave, opcional)<input type="password" value="${esc(NC.bdl)}" onchange="NC.bdl=this.value.trim();nbSet()"></label><label>Partidos por escaneo<input type="number" min="1" max="10" value="${NC.games}" onchange="NC.games=Math.max(1,+this.value||3);nbSet()"></label><label>Jugadores por equipo<input type="number" min="3" max="12" value="${NC.per}" onchange="NC.per=Math.max(3,+this.value||8);nbSet()"></label>
 <p class="status">«Buscar el mejor pick NBA» revisa hasta 12 partidos y, con llave, gasta ~3 créditos + 5 por partido. Cada partido con props gasta ~5 créditos y el resumen del día 3 (500 gratis al mes por cuenta). Las cuotas son de casas de EE. UU., como referencia; confirma la de tu casa.</p></details>`;nbPicks()}
 function nbSet(){SV('nbcfg',NC);document.querySelectorAll('#nbday button').forEach((b,i)=>b.classList.toggle('on',i===NC.day))}
 nbInit();nbAutoRes(false).catch(()=>{});
