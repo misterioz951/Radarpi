@@ -104,7 +104,7 @@ async function domOf(id,known){
   if(c&&(c.s||Date.now()-c.t<3*864e5))return c.s;
   let found=null;
   for(let i=0;i<DOM.length&&!found;i+=8){
-    const res=await Promise.all(DOM.slice(i,i+8).map(async sl=>{const e=await schedEvs(sl,id);return e.some(x=>!known.has(x[0].id)&&x[0].status&&x[0].status.type&&x[0].status.type.completed)?sl:null}));
+    const res=await Promise.all(DOM.slice(i,i+8).map(async sl=>{const e=await schedEvs(sl,id);return toGames(e,id).some(g=>!known.has(g.id))?sl:null}));
     found=res.find(Boolean)||null;
   }
   T[id]={s:found,t:Date.now()};SV('DOMT',T);return found;
@@ -124,7 +124,7 @@ async function adjustForm(v,id){
 }
 async function teamForm(slug,id){
   const k='Y4'+slug+id,cc=LS(k,null);
-  if(cc&&cc.d===today())return cc.v;
+  if(cc&&cc.d===today()&&(cc.v||[]).length>=5)return cc.v;
   let evs=await schedEvs(slug,id);
   const sls=[slug];
   // Torneos cortos (Champions, Europa, Libertadores…): se completa con la liga local del equipo.
@@ -293,12 +293,12 @@ async function tourIds(){
   });
 }
 async function mkMap(){
-  return cached('opmk_v6',30,async()=>{
+  return cached('opmk_v5',30,async()=>{
     const ms=await op('markets'),o={};
     for(const m of ms){
       if(+m.sportId!==10||m.playerProp)continue;
       const nm=m.marketName||'',h=m.handicap,oc=m.outcomes||[],ky=i=>m.marketId+'_'+oc[i].outcomeId;
-      const per=String(m.period||'').toLowerCase().replace(/[^a-z0-9]/g,''),first=/firsthalf|1sthalf|half1|period1/.test(per)||/first half|1st half/i.test(nm),second=/secondhalf|2ndhalf|half2|period2/.test(per)||/second half|2nd half/i.test(nm),full=!first&&!second&&(!per||/^(fulltime|ft|fullmatch|match|game|90min|90minutes|regulation|regulartime|normaltime|result)$/.test(per));
+      const per=String(m.period||'').toLowerCase().replace(/[^a-z0-9]/g,''),first=/firsthalf|1sthalf|half1|period1/.test(per)||/first half|1st half/i.test(nm),second=/secondhalf|2ndhalf|half2|period2/.test(per)||/second half|2nd half/i.test(nm),full=!first&&!second&&(!per||/^(fulltime|fullmatch|match|90min|regulation)$/.test(per));
       // Mapear por el nombre semántico del resultado, nunca por outcomeId supuesto:
       // los IDs pueden variar entre mercados/proveedores y podrían intercambiar Sí/No.
       const idx=re=>oc.findIndex(x=>re.test(String(x.outcomeName||'').trim().toLowerCase()));
@@ -314,7 +314,7 @@ async function mkMap(){
         // Si los nombres no permiten distinguir ambos resultados, no importamos esas cuotas.
         if(yi>=0&&ni>=0&&yi!==ni){o['Ambos marcan: sí']=ky(yi);o['Ambos marcan: no']=ky(ni)}
       }
-      else if(full&&oc.length===2&&idx(/^over/)>=0&&idx(/^under/)>=0&&/(home|host|away|visitor|visiting)/i.test(nm)){
+      else if(full&&oc.length===2&&idx(/^over/)>=0&&idx(/^under/)>=0){
         // Mercados de goles por equipo: solo se aceptan si el nombre identifica explícitamente local/visitante.
         const homeTotal=/(home|host).*(team|total|goal)|(team|total|goal).*(home|host)/i.test(nm);
         const awayTotal=/(away|visitor|visiting).*(team|total|goal)|(team|total|goal).*(away|visitor|visiting)/i.test(nm);
@@ -340,7 +340,7 @@ async function mkMap(){
   });
 }
 async function loadOdds(bm,lg){
-  bm=bm||cfg.bm;lg=lg||cfg.lg;const key='btts-map-v6|'+bm+'|'+lg.join(','),cacheKey='odds_v6_'+bm,c=LS(cacheKey,null);
+  bm=bm||cfg.bm;lg=lg||cfg.lg;const key='btts-map-v5|'+bm+'|'+lg.join(','),cacheKey='odds_v5_'+bm,c=LS(cacheKey,null);
   if(autoRun&&!(c&&c.k===key))throw new Error('el escaneo automático no gasta cuotas; haz un escaneo manual');
   if(c&&c.k===key&&(Date.now()-c.t<3*36e5||autoRun))return c.v;
   const MK=await mkMap(),T=await tourIds(),P=await cached('oppart',30,()=>op('participants',{sportId:10}));
@@ -467,10 +467,10 @@ $('#go').onclick=async()=>{
       leagues=leagues.filter((_,i)=>ok[i]);
       if(!leagues.length){msg.textContent='No hay partidos pendientes en ninguna liga para el periodo elegido.';return}
     }
-    const names=Object.fromEntries(Object.entries(LG).map(([n,s])=>[s,n])),names0=names,bad0=[];let OD=null,ODP=null,diag='',mq=0,nShort=0,nNoQ=0;const shortL=[];const enames=[];const STD={};
+    const names=Object.fromEntries(Object.entries(LG).map(([n,s])=>[s,n])),names0=names,bad0=[];let OD=null,ODP=null,diag='',mq=0,nShort=0,nNoQ=0;const enames=[];const STD={};
     if(cfg.ok){
       if(!cfg.bm)msg.textContent='Elige tu casa en Ajustes para traer cuotas.';
-      else{msg.textContent='Cargando cuotas…';try{OD=await loadOdds(undefined,leagues);const T=(LS('optour_v3',null)||{}).v||{},sin=leagues.filter(x=>!T[x]).map(x=>names0[x]||x);if(cfg.pn){try{ODP=await loadOdds('pinnacle',leagues);diag+=` Pinnacle: ${ODP.fx.length} partidos.`}catch(e){ODP=null;bad0.push('Pinnacle ('+e.message.slice(0,60)+')')}}
+      else{msg.textContent='Cargando cuotas…';try{OD=await loadOdds(undefined,leagues);const T=(LS('optour',null)||{}).v||{},sin=leagues.filter(x=>!T[x]).map(x=>names0[x]||x);if(cfg.pn){try{ODP=await loadOdds('pinnacle',leagues);diag+=` Pinnacle: ${ODP.fx.length} partidos.`}catch(e){ODP=null;bad0.push('Pinnacle ('+e.message.slice(0,60)+')')}}
       diag+=` Cuotas de ${cfg.bm}: ${OD.fx.length} partidos en las próximas 48 h.`+(sin.length?' Sin torneo en OddsPapi: '+sin.join(', ')+'.':'')}catch(e){OD=null;bad0.push('Cuotas ('+e.message.slice(0,90)+')')}}
     }
     let rev=0,adjN=0,adjT=0;const bad=bad0;
@@ -512,7 +512,7 @@ $('#go').onclick=async()=>{
           if(A.y!=null&&B.y!=null&&A.y+B.y>=cfg.ta)p.push(`Tarjetas: promedian ${A.y.toFixed(1)} y ${B.y.toFixed(1)} por partido (suman ${(A.y+B.y).toFixed(1)})`);
         }
         const mod=model(A,B),q=oddsQ(OD,hf,wf,e.date),qbad=(oddsQ.last||[]).slice(),mfx=OD?oddsFx(OD,hf,wf,e.date):null;
-        if(A.n<5||B.n<5){nShort++;if(A.n<5)shortL.push(hn+' ('+A.n+')');if(B.n<5)shortL.push(wn+' ('+B.n+')')}if(!(q&&Object.keys(q).length))nNoQ++;enames.push(hn+' vs '+wn);
+        if(A.n<5||B.n<5)nShort++;if(!(q&&Object.keys(q).length))nNoQ++;enames.push(hn+' vs '+wn);
         const qp=ODP?oddsQ(ODP,hf,wf,e.date):null,fair=qp?fairP(qp):null;
         // Mantener separadas las probabilidades del modelo y las probabilidades justas del mercado.
         // No mezclarlas con pesos arbitrarios hasta calibrar el modelo con resultados fuera de muestra.
@@ -538,7 +538,7 @@ $('#go').onclick=async()=>{
       R=R.map(r=>({r,b:bestOf(r)})).filter(x=>x.b&&x.b.q&&x.b.q>=(cfg.qm||1.5)&&baseStake(x.r,x.b.n,x.b.q)>=cfg.sm).sort((a,b)=>b.b.sc-a.b.sc).slice(0,3).map(x=>x.r);
       huntTxt=R.length?`Búsqueda en todas las ligas: ${tot} partidos con cuotas, ${R.length} cumplen (cuota de ${cfg.qm} o más y stake de ${cfg.sm} o más).`:`Búsqueda en todas las ligas: de ${tot} partidos con cuotas, ninguno cumple cuota de ${cfg.qm} o más y stake de ${cfg.sm} o más. Es normal: casi nunca hay uno.`;
     }
-    msg.textContent=(huntTxt||(rev?`${rev} partidos revisados, ${R.length} con patrones.`:'No hay partidos pendientes ('+((cfg.dd||1)>=2?'hoy y mañana':'hoy')+') en esas ligas.'))+(bad.length?' No cargaron: '+bad.join('; ')+'.':'')+diag+(OD&&rev&&!mq?' Ningún partido se emparejó con la casa. ESPN trae: '+enames.slice(0,4).join('; ')+'. OddsPapi trae: '+(OD.fx.slice(0,4).map(x=>x.h+' vs '+x.w).join('; ')||'nada')+'.':'')+(nShort?' '+nShort+' partidos tienen menos de 5 partidos de historial y no se analizan'+(shortL.length?': '+shortL.slice(0,6).join(', '):'')+'.':'')+(OD&&nNoQ?' '+nNoQ+' partidos sin cuotas de la casa.':'');
+    msg.textContent=(huntTxt||(rev?`${rev} partidos revisados, ${R.length} con patrones.`:'No hay partidos pendientes ('+((cfg.dd||1)>=2?'hoy y mañana':'hoy')+') en esas ligas.'))+(bad.length?' No cargaron: '+bad.join('; ')+'.':'')+diag+(OD&&rev&&!mq?' Ningún partido se emparejó con la casa. ESPN trae: '+enames.slice(0,4).join('; ')+'. OddsPapi trae: '+(OD.fx.slice(0,4).map(x=>x.h+' vs '+x.w).join('; ')||'nada')+'.':'')+(nShort?' '+nShort+' partidos tienen menos de 5 partidos de historial y no se analizan.':'')+(OD&&nNoQ?' '+nNoQ+' partidos sin cuotas de la casa.':'');
     if(!hunt&&rev){const nb=R.filter(r=>bestOf(r)).length;msg.textContent+=` Con pick: ${nb} de ${rev}. Filtro «${({s:'estricto',b:'equilibrado',w:'amplio'})[cfg.fm||'b']}». Fuerza del rival aplicada en ${adjN} de ${adjT} equipos.`}
     drawRes();SV('scan',{d:today(),t:Date.now(),R,msg:msg.textContent});afterScan();$('#scanbox').open=false;updScan();
   }catch(e){msg.textContent='Error: '+e.message}
@@ -635,14 +635,28 @@ function bttsAudit(r){
   }).join('');
   return `<div class="card stake-summary"><h3>¿Por qué no salió Ambos marcan?</h3><p class="mut">Este panel muestra los filtros aplicados al partido actual; las cuotas y los datos pueden cambiar entre escaneos.</p>${rows}</div>`;
 }
+const fam=n=>/^Córners/.test(n)?'Córners':/^Tarjetas/.test(n)?'Tarjetas':/^Ambos/.test(n)?'Ambos marcan':/^Doble/.test(n)?'Doble oportunidad':/^(Over|Under|Goles)/.test(n)?'Goles':/^(Local|Visitante) (marca|deja)/.test(n)?'Goles por equipo':'Resultado';
+function famBest(r){const s={};for(const c of cands(r)){const f=fam(c.n);if(!s[f])s[f]=c}return Object.values(s).sort((a,b)=>b.sc-a.sc)}
+const altsHtml=(r,b)=>{const a=famBest(r).filter(x=>x.n!==b.n).slice(0,4);return a.length?`<div class="alts"><small>También con valor, en otros mercados</small>${a.map(x=>`<span><b>${esc(x.n)}</b> ${Math.round(x.p*100)}% @${x.q}</span>`).join('')}</div>`:''};
+const refOf=(r,n)=>(r.mod.f&&r.mod.f[n]!=null)?r.mod.f[n]:(r.mod.fc&&r.mod.fc[n]!=null?r.mod.fc[n]:null);
+function closest(r){const L=(r.mod.m||[]).filter(([n,p])=>!isHalfMarket(n)&&p>=.4&&p<=.9&&r.q&&r.q[n]).map(([n,p])=>{const pc=calP(r,n,p),q=r.q[n];return{n,pc,q,e:pc*q-1}}).sort((a,b)=>b.e-a.e).slice(0,3);
+  return L.length?`<div class="alts"><small>Lo más cercano a tener valor (no pasa el filtro)</small>${L.map(x=>`<span><b>${esc(x.n)}</b> ${Math.round(x.pc*100)}% @${x.q} · valor ${x.e>=0?'+':''}${Math.round(x.e*100)}%</span>`).join('')}</div>`:''}
+// Línea segura: probabilidad alta y cuota baja. No es ventaja (el valor es ~0 o algo negativo): sirve de pata de combinada o con stake mínimo.
+function safeLine(r){if(r.A.n<5||r.B.n<5||!r.q)return '';
+  const L=(r.mod.m||[]).filter(([n,p])=>!isHalfMarket(n)&&p>=.5&&r.q[n]).map(([n,p])=>{const pc=calP(r,n,p),q=r.q[n],rf=refOf(r,n);return{n,pc,q,e:pc*q-1,bad:rf!=null&&p-rf>.10}}).filter(x=>!x.bad&&x.q>=1.2&&x.q<=1.7&&x.pc>=.68&&x.e>=-.04).sort((a,b)=>b.pc-a.pc)[0];
+  return L?`<div class="tk safe"><small class="tkl">LÍNEA SEGURA · SIN VALOR CLARO</small><div class="tk1"><b class="n">${esc(L.n)}</b></div><div class="tk2"><span><b>${Math.round(L.pc*100)}%</b> prob.</span><span>cuota <b>@${L.q}</b></span><span>valor <b>${L.e>=0?'+':''}${Math.round(L.e*100)}%</b></span><span>stake sugerido <b>1/9</b></span></div><p class="status">Riesgo bajo, pero la cuota ya refleja esa probabilidad: no es una ventaja. Úsala como pata de combinada o con stake mínimo.</p></div>`:''}
+function reasons(r){if(r.A.n<5||r.B.n<5||!r.q)return '';const F=FM(),c={q:0,rng:0,pc:0,val:0,veto:0};
+  for(const [n,p] of r.mod.m){if(isHalfMarket(n)||!(p>=.35&&p<=.9))continue;const q=r.q[n];if(!q||q<1.01)continue;c.q++;const pc=calP(r,n,p),e=pc*q-1,rf=refOf(r,n);
+    if(q<F.qa||q>F.qb)c.rng++;else if(pc<F.pc)c.pc++;else if(rf!=null&&p-rf>.10)c.veto++;else if(e<F.ea)c.val++;else if(e>F.eb)c.veto++}
+  return c.q?`<p class="status">Mercados con cuota: ${c.q}. Descartados: cuota fuera de rango ${c.rng}, probabilidad baja ${c.pc}, sin valor ${c.val}, modelo demasiado optimista frente al mercado ${c.veto}.</p>`:''}
 function ticket(r){
   const b=bestOf(r);
-  if(!b)return `<div class="nopick2"><b>Sin pick con ventaja clara</b><p>${diagnose(r)}</p>${r.p.length?`<p>Hay ${r.p.length} patrón(es) detectado(s) en la pestaña Datos.</p>`:''}</div>`;
+  if(!b)return `<div class="nopick2"><b>Sin pick con ventaja clara</b><p>${diagnose(r)}</p>${reasons(r)}${r.p.length?`<p>Hay ${r.p.length} patrón(es) detectado(s) en la pestaña Datos.</p>`:''}</div>${safeLine(r)}${closest(r)}`;
   const st=baseStake(r,b.n,b.q),c=conflictOf(r,b.n),afReady=!!(r.afData||LS(afCacheKeyFor(r),null));
   return `<div class="tk ${b.t||''}"><small class="tkl">PICK DE LA APP · SEGÚN REGLAS</small><div class="tk1">${b.t?`<span class="tier tier${b.t}">${b.t}</span>`:''}<b class="n">${esc(b.n)}</b></div>
 <div class="tk2"><span><b>${Math.round(b.p*100)}%</b> prob.</span>${b.q?`<span>cuota <b>@${b.q}</b></span><span>valor <b>${b.e>=0?'+':''}${Math.round(b.e*100)}%</b></span>`:`<span>cuota mínima <b>@${(1.05/b.p).toFixed(2)}</b></span>`}<span>stake base <b>${st}/9</b></span></div>
 <div class="meter${st>=5?' hi':''}" role="img" aria-label="Stake ${st} de 9">${Array.from({length:9},(_,k)=>`<i class="${k<st?'f':''}"></i>`).join('')}</div>
-${c?`<div class="tkw">⚠ Va contra el patrón detectado (${c}). Confírmalo con la IA antes de apostar.</div>`:''}${!afReady&&cfg.af?'<div class="tkw">API-Football aún no contrastado para este partido. Pulsa «Datos API-Football» antes de considerar un pick 1X2.</div>':''}</div>`;
+${altsHtml(r,b)}${r.qx&&r.qx[b.n]?'<div class="tkw">Cuota tomada de API-Football (promedio de casas), no de tu casa. Confírmala antes de apostar.</div>':''}${c?`<div class="tkw">⚠ Va contra el patrón detectado (${c}). Confírmalo con la IA antes de apostar.</div>`:''}${!afReady&&cfg.af?'<div class="tkw">API-Football aún no contrastado para este partido. Pulsa «Datos API-Football» antes de considerar un pick 1X2.</div>':''}</div>`;
 }
 const GUIA=`<details class="card hint"><summary>¿Cómo leer las tarjetas?</summary>
 <p><b>Barra azul, gris y amarilla:</b> probabilidad de que gane el local, empate o gane el visitante.</p>
@@ -994,9 +1008,9 @@ const FMODES={s:{qa:1.3,qb:2.3,pc:.5,ea:.015,eb:.18},b:{qa:1.2,qb:2.6,pc:.46,ea:
 const FM=()=>FMODES[cfg.fm]||FMODES.b;
 function calP(r,n,p){if(r&&r.nba)return p;
   const C=calibStats(),g=C.by[mgrp(n)]||{n:0,w:0,e:0},ra=(C.all.w+6)/(C.all.e+6),rg=(g.w+4)/(g.e+4),b=g.n/(g.n+8);
-  let x=p*Math.min(1.05,Math.max(.7,b*rg+(1-b)*ra));
-  const ref=(r.mod.f&&r.mod.f[n]!=null)?r.mod.f[n]:(r.mod.fc&&r.mod.fc[n]!=null?r.mod.fc[n]:null);
-  if(ref!=null)x=0.5*x+0.5*ref;
+  const kf=Math.min(1.05,Math.max(.7,b*rg+(1-b)*ra)),ref=(r.mod.f&&r.mod.f[n]!=null)?r.mod.f[n]:(r.mod.fc&&r.mod.fc[n]!=null?r.mod.fc[n]:null);
+  let x=p*(ref!=null?1-(1-kf)*.5:kf);   // con referencia de mercado, el ancla ya corrige parte del optimismo
+  if(ref!=null)x=ref+.6*(x-ref);
   if(/^(Local gana|Empate|Visitante gana|Doble)/.test(n)){const ap=afMarketProb(r,n);if(ap!=null)x=0.8*x+0.2*ap}
   return Math.max(.01,Math.min(.97,x));
 }
@@ -1044,7 +1058,7 @@ async function afAuto(r){
     d={t:Date.now(),noInj:true,fixture:{id,home:hit.f.teams.home.name,away:hit.f.teams.away.name,date:hit.f.fixture.date,league:hit.f.league&&hit.f.league.name},prediction:(pj.response||[])[0]||null,injuries:[],reversed:hit.rev,afq:afQ(oj.response)};SV(ck,d);
   }
   r.afData=d;const aq=d.afq||{};
-  if(Object.keys(aq).length){r.afq=aq;if(!r.q){r.q=Object.assign({},aq);r.qsrc='API-Football (promedio de casas)'}if(!r.mod.f&&!r.mod.fc){const fc=fairP(aq);if(Object.keys(fc).length)r.mod.fc=fc}}
+  if(Object.keys(aq).length){r.afq=aq;if(!r.q){r.q=Object.assign({},aq);r.qx=Object.fromEntries(Object.keys(aq).map(k=>[k,1]));r.qsrc='API-Football (promedio de casas)'}else{for(const n in aq)if(!(n in r.q)){r.q[n]=aq[n];(r.qx=r.qx||{})[n]=1}}if(!r.mod.f&&!r.mod.fc){const fc=fairP(aq);if(Object.keys(fc).length)r.mod.fc=fc}}
   return d;
 }
 
@@ -1614,3 +1628,5 @@ function drawCl(){const sel=Array.isArray(cfg.cl)?cfg.cl:cfg.lg,q=lgn0(($('#clq'
   $('#cl').innerHTML=[['🏀 NBA','nba'],...Object.entries(LG)].filter(([n])=>lgn0(n).includes(q)).map(([n,id])=>`<button class="chip ${sel.includes(id)?'on':''}" data-id="${id}">${n}</button>`).join('');
   document.querySelectorAll('#cl .chip').forEach(b=>b.onclick=()=>{const cur=(Array.isArray(cfg.cl)?cfg.cl:cfg.lg).slice(),id=b.dataset.id;cfg.cl=cur.includes(id)?cur.filter(x=>x!==id):[...cur,id];SV('cfg',cfg);drawCl()})}
 drawCl();$('#clq').oninput=drawCl;
+
+document.head.appendChild(Object.assign(document.createElement('style'),{textContent:'.alts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.alts small{width:100%;color:var(--mut);font-size:12px}.alts span{background:var(--s2);border:1px solid var(--ln);border-radius:10px;padding:5px 8px;font-size:12.5px}.tk.safe{border-style:dashed;margin-top:10px}'}));

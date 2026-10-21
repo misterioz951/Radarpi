@@ -38,8 +38,8 @@ function bestOf(rows){const g={};for(const x of rows)(g[x.k]=g[x.k]||[]).push(x)
 const rowsOf=ev=>{const R=[];for(const b of ev.bookmakers||[])for(const m of b.markets||[])for(const o of m.outcomes||[])R.push({k:m.key+'|'+nz(o.description||o.name)+'|'+(o.description?o.name:''),p:o.point,q:o.price});return R};
 async function nbOdds(games){
   const ev=await nbo('odds',{regions:'us',markets:'h2h,spreads,totals'}),out={};
-  for(const e of ev){const g=games.find(x=>nz(x.h.n)===nz(e.home_team)&&nz(x.a.n)===nz(e.away_team));if(g)out[g.id]={eid:e.id,o:bestOf(rowsOf(e))}}
-  await pool(games.filter(g=>out[g.id]),2,async g=>{const j=await nbo('events/'+out[g.id].eid+'/odds',{regions:'us',markets:'player_points,player_rebounds,player_assists,player_threes,player_points_rebounds_assists'});Object.assign(out[g.id].o,bestOf(rowsOf(j)))});
+  const lt=s=>nz(s).split(' ').pop();for(const e of ev){const g=games.find(x=>lt(x.h.n)===lt(e.home_team)&&lt(x.a.n)===lt(e.away_team));if(g)out[g.id]={eid:e.id,o:bestOf(rowsOf(e))}}
+  NB.perr=[];NB.pn=0;await pool(games.filter(g=>out[g.id]),2,async g=>{try{const j=await nbo('events/'+out[g.id].eid+'/odds',{regions:'us',markets:'player_points,player_rebounds,player_assists,player_threes,player_points_rebounds_assists'}),o=bestOf(rowsOf(j));if(Object.keys(o).length){NB.pn++;Object.assign(out[g.id].o,o)}else NB.perr.push(g.a.ab+'@'+g.h.ab+': sin props publicados todavía')}catch(e){NB.perr.push(g.a.ab+'@'+g.h.ab+': '+e.message)}});
   return out}
 
 // ---- Modelo de partido (ritmo/anotación de los últimos juegos) ----
@@ -108,7 +108,7 @@ async function nbScan(hunt){const msg=$('#nbmsg'),bs=[$('#nbgo'),$('#nbhunt')].f
     const inj=await nbInj(),T=[];NB.g.forEach(g=>{T.push([g,g.h]);T.push([g,g.a])});let k=0;
     await pool(T,3,async([g,s])=>{try{await nbTeam(g,s,inj)}catch(e){s.f=s.f||null;s.pl=s.pl||[];s.out=s.out||[]}msg.textContent='Equipos y jugadores '+(++k)+'/'+T.length+'…'});
     const nOd=NB.od?Object.keys(NB.od).length:0;
-    msg.textContent='Listo. '+NB.g.length+' partidos.'+(NB.rt?' Rival y ritmo: ratings de temporada aplicados.':' Sin ratings de temporada (ESPN standings): solo forma reciente.')+(NB.od?' Cuotas reales en '+nOd+' (~'+(3+5*nOd)+' créditos).':(NC.keys.trim()?'':' Sin llave de The Odds API: solo lecturas del modelo con líneas de ESPN, sin cuota real.'))+oddsErr;
+    msg.textContent='Listo. '+NB.g.length+' partidos.'+(NB.od?' Props de jugadores publicados en '+(NB.pn||0)+' partido(s).'+((NB.perr||[]).length?' ('+NB.perr.slice(0,2).join(' · ')+')':''):'')+(NB.rt?' Rival y ritmo: ratings de temporada aplicados.':' Sin ratings de temporada (ESPN standings): solo forma reciente.')+(NB.od?' Cuotas reales en '+nOd+' (~'+(3+5*nOd)+' créditos).':(NC.keys.trim()?'':' Sin llave de The Odds API: solo lecturas del modelo con líneas de ESPN, sin cuota real.'))+oddsErr;
     nbDraw()}
   catch(e){msg.textContent='Error: '+e.message+'. Usa «Probar fuentes».'}finally{bs.forEach(b=>b.disabled=false)}}
 
