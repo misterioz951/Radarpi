@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>RadarPi</title>
+<title>Radar de patrones</title>
 <meta name="theme-color" content="#0E1A33">
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@600;700&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="nba.css"></head><body>
@@ -55,7 +55,7 @@
 <label>Llave API-Football<input id="c-af" type="password" autocomplete="off" placeholder="Pega aquí tu API key"></label>
 <div class="tools"><button class="btn s" id="af-test" type="button">Probar conexión</button><span id="af-status" class="status" role="status">Opcional. Se consulta solo cuando lo pidas para un partido.</span></div>
 <label class="tg-row"><span>Usar API-Football en cada escaneo<small>Contrasta automáticamente los mejores partidos: probabilidades, cuotas promedio de varias casas y tendencia de goles. Gasta ~2 solicitudes por partido y se detiene a las 90 del día.</small></span><input id="c-afa" type="checkbox"></label><label>Partidos por escaneo (API-Football)<input id="c-afn" type="number" min="1" max="20"></label>
-<label>Filtros de picks<select id="c-fm"><option value="s">Estricto: pocos picks, cuota 1,30–2,30, valor 1,5%–18%</option><option value="b">Equilibrado: cuota 1,20–2,60, valor ≥ 0%</option><option value="w">Amplio: más picks, cuota 1,15–3,20 (stake bajo)</option></select></label></details>
+<label>Filtros de picks (Fútbol, NBA y Combi)<select id="c-fm"><option value="s">Estricto: pocos picks, cuota 1,30–2,30, valor 1,5%–18%</option><option value="b">Equilibrado: cuota 1,20–2,60, valor ≥ 0%</option><option value="w">Amplio: más picks, cuota 1,15–3,20 (stake bajo)</option></select></label></details>
 <details class="card grp"><summary>Inteligencia artificial</summary><p>La IA de contexto buscará motivación competitiva, escenarios de clasificación/eliminación, rotaciones, suplentes, lesiones, descanso, viajes y declaraciones recientes. Las claves quedan en el almacenamiento local del navegador; no es un almacén seguro frente a alguien con acceso al dispositivo o a las herramientas del navegador.</p>
 <label>Llave Groq (análisis y pick)<input id="k-gq" type="password" autocomplete="off"></label>
 <label>Llave Gemini (noticias y contexto, opcional)<input id="k-gm" type="password" autocomplete="off"></label>

@@ -81,27 +81,27 @@ function nbPropOpts(g,p,s){const P=proj(p.g,s);if(!P)return null;const bs=(p.tm=
   return{P,L,key,ov:side(ov,po,'Más'),un:side(un,1-po,'Menos'),real:!!ov}}
 function propBlk(g,p,s){const o=nbPropOpts(g,p,s);if(!o)return '<p class="status">Pocos partidos para proyectar.</p>';const {P,L,key}=o,a=[...P.a].slice(0,10).reverse(),mx=Math.max(L*1.5,...a,1);
   const bars=a.map(x=>`<div class="nb-b"><i class="${x>L?'ok':'no'}" style="height:${Math.max(4,x/mx*100)}%"></i><span>${x}</span></div>`).join('');
-  const sd=x=>{NB.reg[key+x.name]={t:`${p.n} ${STX[s][0]} ${x.name} ${L}`,p:x.pr,q:x.q,g:g.h.ab+'-'+g.a.ab,st:STX[s][0]};return `<button class="nb-s${x.e!=null&&x.e>.03?' va':''}" onclick="nbLog('${key+x.name}')"><b>${x.name} ${L}</b><span>${Math.round(x.pr*100)}%</span><small>${x.q?'@'+x.q+(x.e!=null?' · valor '+(x.e>=0?'+':'')+Math.round(x.e*100)+'%':''):'justa @'+(1/x.pr).toFixed(2)}</small></button>`};
+  const sd=x=>{NB.reg[key+x.name]={t:`${p.n} ${STX[s][0]} ${x.name} ${L}`,p:x.pr,q:x.q,g:g.h.ab+'-'+g.a.ab,st:STX[s][0],gid:g.id,ko:g.date,meta:{t:'pr',pid:p.id,stat:s,side:x.name,line:L}};return `<button class="nb-s${x.e!=null&&x.e>.03?' va':''}" onclick="nbLog('${key+x.name}')"><b>${x.name} ${L}</b><span>${Math.round(x.pr*100)}%</span><small>${x.q?'@'+x.q+(x.e!=null?' · valor '+(x.e>=0?'+':'')+Math.round(x.e*100)+'%':''):'justa @'+(1/x.pr).toFixed(2)}</small></button>`};
   return `<div class="nb-bars" style="--ln:${L/mx*100}%">${bars}<u></u></div><div class="nb-ln">Proy. <b>${f1(P.m)}</b> · mediana ${P.med} · línea <input type="number" step=".5" value="${L}" onchange="NB.ln['${key}']=+this.value;nbDraw()"> ${o.real?'<em>cuota EE. UU.</em>':'<em>sin línea real</em>'}</div><div class="nb-sd">${sd(o.ov)}${sd(o.un)}</div>${P.cur<5?'<p class="status">Pocos juegos de esta temporada: se usa también la anterior y se recorta la confianza.</p>':''}${P.bs>1.02?'<p class="status">+'+Math.round((P.bs-1)*100)+'% por bajas del equipo.</p>':''}`}
 function gameRows(g){const m=gameModel(g);if(!m)return '<p class="status">Sin datos suficientes del equipo.</p>';const ob=[...(g.a.out||[]).map(x=>g.a.ab+' '+esc(x)),...(g.h.out||[]).map(x=>g.h.ab+' '+esc(x))];
-  return `<p class="nb-pj">Proyección: ${g.a.ab} <b>${Math.round(m.ap)}</b> – ${g.h.ab} <b>${Math.round(m.hp)}</b> · total ${f1(m.tot)}${ob.length?'<br><small>Bajas: '+ob.join(', ')+'</small>':''}</p>`+gameCands(g).map((c,i)=>{const k=g.id+'G'+i;NB.reg[k]={t:g.a.ab+'@'+g.h.ab+' '+c.n,p:c.p,q:c.q,g:'',st:'Partido'};return `<div class="nb-gr"><span>${c.n}</span><b>${Math.round(c.p*100)}%</b><small>${c.q?'@'+c.q+' · valor '+Math.round((c.p*c.q-1)*100)+'%':'justa @'+(1/c.p).toFixed(2)}</small>${c.q?`<button class="btn s" onclick="nbLog('${k}')">＋</button>`:''}</div>`}).join('')}
+  return `<p class="nb-pj">Proyección: ${g.a.ab} <b>${Math.round(m.ap)}</b> – ${g.h.ab} <b>${Math.round(m.hp)}</b> · total ${f1(m.tot)}${ob.length?'<br><small>Bajas: '+ob.join(', ')+'</small>':''}</p>`+gameCands(g).map((c,i)=>{const k=g.id+'G'+i;NB.reg[k]={t:g.a.ab+'@'+g.h.ab+' '+c.n,p:c.p,q:c.q,g:'',st:'Partido',gid:g.id,ko:g.date,meta:c.meta||null};return `<div class="nb-gr"><span>${c.n}</span><b>${Math.round(c.p*100)}%</b><small>${c.q?'@'+c.q+' · valor '+Math.round((c.p*c.q-1)*100)+'%':'justa @'+(1/c.p).toFixed(2)}</small>${c.q?`<button class="btn s" onclick="nbLog('${k}')">＋</button>`:''}</div>`}).join('')}
 // ---- Motor de picks NBA (mismas reglas de fondo que fútbol: cuota real, valor, ancla al mercado, veto) ----
 function nbAll(g){const C=[];
-  gameCands(g).forEach((c,i)=>C.push({k:'TG'+g.id+i,kind:'Partido',n:c.n,full:g.a.ab+'@'+g.h.ab+' · '+c.n,p:c.p,q:c.q,fair:c.fair==null?null:c.fair,real:true}));
+  gameCands(g).forEach((c,i)=>C.push({k:'TG'+g.id+i,kind:'Partido',n:c.n,full:g.a.ab+'@'+g.h.ab+' · '+c.n,p:c.p,q:c.q,fair:c.fair==null?null:c.fair,real:true,meta:c.meta||null}));
   [g.h,g.a].forEach(s=>s.pl.forEach(p=>Object.keys(STX).forEach(st=>{const o=nbPropOpts(g,p,st);if(!o)return;const a=o.ov.q,b=o.un.q,pf=a&&b?[(1/a)/(1/a+1/b),(1/b)/(1/a+1/b)]:[null,null];
-    [o.ov,o.un].forEach((x,i)=>C.push({k:'T'+o.key+x.name,kind:STX[st][0],n:p.n+' '+STX[st][0]+' '+x.name+' '+o.L,full:p.n+' '+STX[st][0]+' '+x.name+' '+o.L,p:x.pr,q:x.q,fair:pf[i],real:o.real,cur:o.P.cur,na:o.P.a.length,bs:o.P.bs}))})));
+    [o.ov,o.un].forEach((x,i)=>C.push({k:'T'+o.key+x.name,kind:STX[st][0],n:p.n+' '+STX[st][0]+' '+x.name+' '+o.L,full:p.n+' '+STX[st][0]+' '+x.name+' '+o.L,p:x.pr,q:x.q,fair:pf[i],real:o.real,cur:o.P.cur,na:o.P.a.length,bs:o.P.bs,arr:o.P.a.slice(0,10),L:o.L,side:x.name,meta:{t:'pr',pid:p.id,stat:st,side:x.name,line:o.L}}))})));
   return C}
 function nbCands(g){const out=[],veto=[];
   for(const c of nbAll(g)){
     if(!c.real||c.q==null||c.q<1.01)continue;
     if(c.fair!=null&&c.p-c.fair>.12){veto.push({n:c.n,p:c.p,ref:c.fair});continue}
-    const pr=c.fair!=null?.5*c.p+.5*c.fair:c.p,e=pr*c.q-1;
-    if(c.q<1.3||c.q>2.8||pr<.54||e<.02||e>.22)continue;
+    const F=FM(),pr=c.fair!=null?.5*c.p+.5*c.fair:c.p,e=pr*c.q-1,pmin={s:.56,b:.54,w:.5}[cfg.fm||'b']||.54;
+    if(c.q<F.qa||c.q>F.qb||pr<pmin||e<Math.max(F.ea,.01)||e>F.eb)continue;
     const sc=pr*.6+Math.min(e,.12)*1.5+(c.kind==='Partido'?.01:0)-(c.cur!=null&&c.cur<5?.03:0)-(c.fair==null?.02:0);
     out.push(Object.assign({},c,{p:pr,pm:c.p,e,sc}))}
   return{out:out.sort((a,b)=>b.sc-a.sc),veto}}
 // Sin cuota real: solo mercados de partido (con línea de ESPN o moneyline) y con tope de stake bajo.
-function nbLean(g){if(!gameModel(g))return null;const c=nbAll(g).filter(x=>x.kind==='Partido'&&x.q==null&&x.p>=.58).sort((a,b)=>b.p-a.p)[0];return c?Object.assign({},c,{e:null,sc:c.p}):null}
+function nbLean(g){if(!gameModel(g))return null;const c=nbAll(g).filter(x=>x.kind==='Partido'&&x.q==null&&x.p>=.55).sort((a,b)=>b.p-a.p)[0];return c?Object.assign({},c,{e:null,sc:c.p}):null}
 // Pick de jugador sin cuota real: busca una línea conservadora (segunda peor marca de los últimos 10) que el modelo y el historial respaldan.
 function nbLeanProp(g){let best=null;NB.dg=NB.dg||{n:0,ok:0};
   [g.h,g.a].forEach(s=>s.pl.forEach(p=>{if(p.st||p.mn<20)return;Object.keys(STX).forEach(st=>{
@@ -110,9 +110,15 @@ function nbLeanProp(g){let best=null;NB.dg=NB.dg||{n:0,ok:0};
     if(L<.5||L<.6*P.med)return;
     const hits=a.filter(x=>x>L).length/a.length,po=pOver({m:P.m*bs,v:P.v*bs,cur:P.cur},L),pe=(hits*a.length+2)/(a.length+4),pp=Math.min(po,pe);
     if(hits<.8||pp<(P.cur>=5?.66:.6))return;
-    const c={k:'TP'+g.id+p.id+st,kind:STX[st][0],n:p.n+' '+STX[st][0]+' Más '+L,full:p.n+' '+STX[st][0]+' Más '+L,p:pp,q:null,e:null,fair:null,real:false,cur:P.cur,na:a.length,bs,hits:a.filter(x=>x>L).length+'/'+a.length,sc:pp};
+    const c={k:'TP'+g.id+p.id+st,kind:STX[st][0],n:p.n+' '+STX[st][0]+' Más '+L,full:p.n+' '+STX[st][0]+' Más '+L,p:pp,q:null,e:null,fair:null,real:false,cur:P.cur,na:a.length,bs,hits:a.filter(x=>x>L).length+'/'+a.length,sc:pp,arr:a,L,side:'Más',meta:{t:'pr',pid:p.id,stat:st,side:'Más',line:L}};
     if(!best||c.sc>best.sc)best=c})}));
   return best}
+// Barras estilo props.cash: últimos 10 juegos contra la línea + aciertos de los últimos 5 y 10
+function nbBars(c){if(!c.arr||c.L==null)return '';const a=[...c.arr].slice(0,10),over=c.side!=='Menos',hit=x=>over?x>c.L:x<c.L,o=[...a].reverse(),mx=Math.max(c.L*1.5,...a,1);
+  const bars=o.map(x=>`<div class="nb-b"><i class="${hit(x)?'ok':'no'}" style="height:${Math.max(4,x/mx*100)}%"></i><span>${x}</span></div>`).join('');
+  const hr=n=>{const z=a.slice(0,n),h=z.filter(hit).length;return `<span class="chip2 ${z.length&&h/z.length>=.7?'ok':'bad'}">Últ. ${n}: ${h}/${z.length}</span>`};
+  const avg=a.reduce((t,x)=>t+x,0)/a.length;
+  return `<div class="nb-bars" style="--ln:${c.L/mx*100}%">${bars}<u></u></div><div class="nb-ln">Línea <b>${c.L}</b> (${over?'más':'menos'}) · promedio <b>${f1(avg)}</b> · ${hr(5)} ${hr(10)}</div>`}
 function nbStake(c){let b=c.p>=.7?7:c.p>=.63?6:c.p>=.58?5:4;
   if(c.e==null||c.e<.03)b=Math.min(b,3);else if(c.e<.06)b=Math.min(b,5);else if(c.e<.1)b=Math.min(b,6);
   if(c.fair==null)b=Math.min(b,4);
@@ -121,17 +127,18 @@ function nbStake(c){let b=c.p>=.7?7:c.p>=.63?6:c.p>=.58?5:4;
   return Math.max(1,Math.min(9,b))}
 function nbWhy(g,veto){
   if(!gameModel(g))return 'Sin datos suficientes de los equipos (ESPN no devolvió sus últimos partidos).';
-  if(!NB.od)return 'No hay cuotas reales para este partido (falta la llave de The Odds API o no se emparejó). Sin cuota no se puede comprobar el valor.';
+  const t=nbAll(g).filter(x=>x.kind==='Partido').sort((a,b)=>b.p-a.p)[0],dg=t?' Mejor lectura del modelo: '+esc(t.n)+' ('+Math.round(t.p*100)+'%), sin ventaja suficiente: partido parejo.':'';
+  if(!NB.od)return 'Partido parejo para el modelo (ninguna lectura llega a 55%) y no hay cuotas reales (falta la llave de The Odds API o no se emparejó).'+dg;
   if(veto&&veto.length){const v=veto.sort((a,b)=>(b.p-b.ref)-(a.p-a.ref))[0];return 'El modelo está mucho más optimista que el mercado en '+esc(v.n)+' (modelo '+Math.round(v.p*100)+'% contra '+Math.round(v.ref*100)+'% del mercado). Se descarta: suele ser error del modelo.'}
-  return 'Ningún mercado cumple a la vez cuota de 1,30 a 2,80, probabilidad de 54% o más y valor de 2% a 22%.'}
+  {const F=FM();return 'Ningún mercado cumple a la vez cuota de '+F.qa+' a '+F.qb+', probabilidad suficiente y valor de '+Math.round(Math.max(F.ea,.01)*100)+'% a '+Math.round(F.eb*100)+'% (filtro «'+({s:'estricto',b:'equilibrado',w:'amplio'}[cfg.fm||'b'])+'» de Ajustes).'+dg}}
 function nbTicket(g,c,lean,veto,label){
   if(!c)return '<div class="nopick2"><b>Sin pick con ventaja clara</b><p>'+nbWhy(g,veto)+'</p></div>';
-  NB.reg[c.k]={t:c.full,p:c.p,q:c.q,g:g.a.ab+'@'+g.h.ab,st:c.kind};
   const st=nbStake(c);
+  NB.reg[c.k]={t:c.full,p:c.p,q:c.q,g:g.a.ab+'@'+g.h.ab,st:c.kind,sk:st,gid:g.id,ko:g.date,meta:c.meta||null};
   return `<div class="tk ${lean?'':'A'}"><small class="tkl">${label||(lean?'LECTURA DEL MODELO · SIN CUOTA REAL':'PICK DE LA APP · SEGÚN REGLAS')}</small><div class="tk1"><b class="n">${esc(c.n)}</b></div>
 <div class="tk2"><span><b>${Math.round(c.p*100)}%</b> prob.</span>${c.q?`<span>cuota <b>@${c.q}</b></span><span>valor <b>${c.e>=0?'+':''}${Math.round(c.e*100)}%</b></span>`:`<span>cuota mínima <b>@${(1.05/c.p).toFixed(2)}</b></span>`}<span>stake base <b>${st}/9</b></span></div>
 <div class="meter${st>=5?' hi':''}" role="img" aria-label="Stake ${st} de 9">${Array.from({length:9},(_,k)=>`<i class="${k<st?'f':''}"></i>`).join('')}</div>
-${c.hits?'<div class="mr-s" style="margin-top:6px">Superó esa línea en <b>'+c.hits+'</b> de sus últimos partidos. Verifica que tu casa tenga esa línea (o más baja) y confirma que juega.</div>':''}${lean?'<div class="tkw">Sin cuota real no hay valor comprobable. Solo úsalo si tu casa paga al menos la cuota mínima. Con una llave gratis de The Odds API la app verifica el valor.</div>':''}
+${nbBars(c)}${c.hits?'<div class="mr-s" style="margin-top:6px">Superó esa línea en <b>'+c.hits+'</b> de sus últimos partidos. Verifica que tu casa tenga esa línea (o más baja) y confirma que juega.</div>':''}${lean?'<div class="tkw">Sin cuota real no hay valor comprobable. Solo úsalo si tu casa paga al menos la cuota mínima. Con una llave gratis de The Odds API la app verifica el valor.</div>':''}
 <div class="acts2" style="margin-top:8px"><button class="btn s" onclick="nbLog('${c.k}')">＋ Registrar pick</button></div></div>`}
 const nbPlayers=g=>[g.h,g.a].flatMap(s=>s.pl).sort((a,b)=>b.mn-a.mn).map(p=>{const s=NB.sel[p.id]||'pts';return `<div class="nb-p"><div class="nb-ph"><b>${esc(p.n)}</b><small>${p.tm} · ${p.pos} · ${Math.round(p.mn)} min${p.st?' · <i class="bad">'+({doubt:'Duda fuerte',q:'Duda'}[p.st]||p.st)+'</i>':''}</small></div><div class="nb-ch">${Object.keys(STX).map(k=>`<button class="${k===s?'on':''}" onclick="NB.sel['${p.id}']='${k}';nbDraw()">${STX[k][0]}</button>`).join('')}</div>${propBlk(g,p,s)}</div>`}).join('');
 function nbCard(g){
@@ -149,12 +156,66 @@ function nbDraw(){nbK();const box=$('#nbres');if(!NB.g.length){box.innerHTML='';
     const L=real.length?real:lean,isLean=!real.length;
     head=`<div class="card"><h2>Mejor pick NBA</h2><small>${L.length?(isLean?'Ningún mercado tiene cuota real con valor (o falta la llave de cuotas). Estas son las lecturas más fuertes del modelo, sin cuota verificada.':'Los '+L.length+' picks con mejor puntaje de '+NB.g.length+' partidos revisados. Cuota real, valor estimado entre 2% y 22% y sin contradecir al mercado.'):'De '+NB.g.length+' partidos revisados, ninguno tiene un pick que pase los filtros. Es normal: casi nunca hay.'}</small>${L.map(x=>`<div class="mt" style="margin-top:12px"><b>${esc(x.g.a.n)}</b><em>@</em><b>${esc(x.g.h.n)}</b></div>${nbTicket(x.g,x.c,isLean)}`).join('')}</div>`}
   box.innerHTML=head+NB.g.map(nbCard).join('');nbPicks()}
-function nbLog(k){const r=NB.reg[k];if(!r)return;NB.picks.unshift({id:Date.now(),t:r.t,p:+r.p.toFixed(3),q:r.q,st:r.st||'',res:null,d:today()});SV('nbapicks',NB.picks);nbPicks();toast('Pick NBA registrado')}
-function nbRes(i,v){NB.picks[i].res=v;SV('nbapicks',NB.picks);nbPicks()}
+function nbLog(k){const r=NB.reg[k];if(!r)return;const kf=x=>x.meta?x.gid+JSON.stringify(x.meta):x.t+'|'+x.d;if(NB.picks.some(x=>kf(x)===kf({meta:r.meta,gid:r.gid||null,t:r.t,d:today()}))){toast('Ese pick ya está registrado');return}NB.picks.unshift({id:Date.now(),t:r.t,p:+r.p.toFixed(3),q:r.q,st:r.st||'',sk:r.sk||null,gid:r.gid||null,ko:r.ko||null,meta:r.meta||null,res:null,d:today()});SV('nbapicks',NB.picks);nbPicks();toast('Pick NBA registrado')}
 function nbK(){const D=NB.picks.filter(x=>x.res),w=D.filter(x=>x.res==='w').length,E=D.reduce((t,x)=>t+x.p,0);NB.k=Math.max(.45,Math.min(.85,.75*(D.length>=8?(w+6)/(E+6):1)))}
-function nbPicks(){nbK();const D=NB.picks.filter(x=>x.res),w=D.filter(x=>x.res==='w').length,roi=D.filter(x=>x.q).reduce((t,x)=>t+(x.res==='w'?x.q-1:-1),0);
-  const grp=(f,lab)=>{const ks=[...new Set(D.map(f))].sort();return ks.length?`<div class="sec">${lab}</div>`+ks.map(k=>{const a=D.filter(x=>f(x)===k);return rwRow(k,a.filter(x=>x.res==='w').length,a.length,Math.round(100*a.reduce((t,x)=>t+x.p,0)/a.length))}).join(''):''};
-  $('#nbpk').innerHTML=`<div class="card"><h2>Modelo NBA</h2><small>${D.length?`${w} de ${D.length} acertados (${Math.round(100*w/D.length)}%) · ROI ${roi>=0?'+':''}${roi.toFixed(1)} u${D.length>=8?' · el motor ya ajusta su confianza con tu historial':' · con 8 resueltos empieza a calibrarse solo'}`:'Registra picks con ＋ y márcalos ✓ o ✗ para medir el motor.'}</small>${D.length>=3?grp(x=>x.st||'Sin tipo','Acierto por tipo de pick')+grp(x=>Math.round(x.p*10)*10+'%','Acierto por probabilidad'):''}</div><div class="card"><h2>Mis picks NBA</h2>${NB.picks.slice(0,30).map((x,i)=>`<div class="nb-t"><span>${esc(x.t)}<small>${x.d} · ${Math.round(x.p*100)}%${x.q?' @'+x.q:''}</small></span>${x.res?`<b class="${x.res==='w'?'ok':'bad'}">${x.res==='w'?'✓':'✗'}</b><button class="btn s" onclick="nbRes(${i},null)">↺</button>`:`<button class="btn s" onclick="nbRes(${i},'w')">✓</button><button class="btn s" onclick="nbRes(${i},'l')">✗</button>`}</div>`).join('')||'<small>Aún no hay picks.</small>'}</div>`}
+// ---- Registro de aciertos NBA (mismo estilo del menú Modelo de fútbol) ----
+function nbTab(t){NB.tab=t;nbPicks()}
+function nbSetRes(id,r){const k=NB.picks.find(x=>String(x.id)===String(id));if(!k)return;k.res=r;SV('nbapicks',NB.picks);nbPicks()}
+function nbDel(id){NB.picks=NB.picks.filter(x=>String(x.id)!==String(id));SV('nbapicks',NB.picks);nbPicks()}
+// Resuelve solo los picks pendientes con el boxscore de ESPN (partido, spread, total y props de jugador)
+async function nbAutoRes(manual){
+  const P=NB.picks.filter(x=>!x.res&&x.gid&&x.meta);let n=0;
+  if(!P.length){if(manual)toast('No hay picks pendientes con datos para resolver');return}
+  const ids=[...new Set(P.map(x=>x.gid))];
+  await pool(ids,3,async gid=>{
+    const j=await nbj(NE+'summary?event='+gid),c=((j.header||{}).competitions||[])[0];
+    if(!c||!(c.status&&c.status.type&&c.status.type.completed))return;
+    const sc={};for(const x of c.competitors||[])sc[x.team.abbreviation]=+x.score;
+    const box={};for(const t of (j.boxscore&&j.boxscore.players)||[]){const S=(t.statistics||[])[0];if(!S)continue;const lab=S.labels||[],ix=q=>lab.indexOf(q);
+      for(const a of S.athletes||[]){const st=a.stats||[];if(!a.athlete)continue;box[a.athlete.id]={min:+st[ix('MIN')]||0,pts:+st[ix('PTS')]||0,reb:+st[ix('REB')]||0,ast:+st[ix('AST')]||0,tp:+String(st[ix('3PT')]||'0').split('-')[0]||0}}}
+    const abs=Object.keys(sc);
+    for(const pk of P.filter(x=>x.gid===gid)){const m=pk.meta;let r=null;
+      const cmp=(v,l,over)=>v===l?'v':((over?v>l:v<l)?'w':'l');
+      if(m.t==='ml'&&abs.length===2){const o=abs.find(x=>x!==m.tm);if(sc[m.tm]!=null&&sc[o]!=null)r=sc[m.tm]>sc[o]?'w':'l'}
+      else if(m.t==='sp'&&abs.length===2){const o=abs.find(x=>x!==m.tm);if(sc[m.tm]!=null&&sc[o]!=null)r=cmp(sc[m.tm]-sc[o]+m.line,0,true)}
+      else if(m.t==='tot'&&abs.length===2)r=cmp(sc[abs[0]]+sc[abs[1]],m.line,m.side==='over');
+      else if(m.t==='pr'){const b=box[m.pid];if(!b||b.min<=0)r='v';else{const v=m.stat==='pra'?b.pts+b.reb+b.ast:b[m.stat];r=cmp(v,m.line,m.side!=='Menos')}}
+      if(r){pk.res=r;n++}}
+  });
+  if(n){SV('nbapicks',NB.picks);nbPicks()}
+  if(manual)toast(n?n+' picks resueltos':'Aún no terminan los partidos de tus picks pendientes');
+}
+function nbPicks(){nbK();
+  const P=NB.picks,D=P.filter(x=>x.res==='w'||x.res==='l'),pend=P.filter(x=>!x.res).length,nW=D.filter(x=>x.res==='w').length,nL=D.length-nW,nV=P.filter(x=>x.res==='v').length,tab=NB.tab||'res';
+  const pr=a=>a.length?Math.round(100*a.reduce((t,x)=>t+x.p,0)/a.length):0,hit=a=>a.length?Math.round(100*a.filter(x=>x.res==='w').length/a.length):0;
+  const row=(t,a)=>a.length?rwRow(t,a.filter(x=>x.res==='w').length,a.length,pr(a)):'';
+  const brier=D.length?D.reduce((t,x)=>t+Math.pow(x.p-(x.res==='w'?1:0),2),0)/D.length:null,Dq=D.filter(x=>x.q),roi=Dq.reduce((t,x)=>t+(x.res==='w'?x.q-1:-1),0);
+  const tabs=[['res','Resumen',''],['s','Stake',''],['w','Acertó',nW],['l','Falló',nL],['p','Pendientes',pend]];if(nV)tabs.push(['v','Nulos',nV]);
+  const menu=`<div class="seg m" role="tablist" aria-label="Secciones del modelo NBA">${tabs.map(([k,t,n])=>`<button type="button" role="tab" aria-selected="${tab===k}" class="${tab===k?'on':''}" onclick="nbTab('${k}')"><span>${t}</span>${n!==''?`<b class="${k==='w'?'ok':k==='l'?'bad':''}">${n}</b>`:''}</button>`).join('')}</div><button class="btn" onclick="nbAutoRes(true)">Actualizar resultados</button>`;
+  const item=x=>{const B=(r,t)=>`<button class="btn s ${x.res===r?'on':''}" onclick="nbSetRes(${x.id},'${r}')">${t}</button>`;
+    return `<div class="bet"><div class="bet-h"><b>${esc(x.t)}</b><span class="st ${x.res||'p'}">${{w:'Acertó',l:'Falló',v:'Nulo'}[x.res]||'Pendiente'}</span></div><small>${x.d} · ${esc(x.st||'Pick')} · modelo ${Math.round(x.p*100)}%${x.q?' · cuota '+x.q:' · sin cuota real'}${x.sk?' · Stake '+x.sk+'/9':''}</small><div>${B('w','Acertó')}${B('l','Falló')}${B('v','Nulo')}<button class="btn s" onclick="nbSetRes(${x.id},null)">↺</button><button class="btn s" onclick="nbDel(${x.id})">Borrar</button></div></div>`};
+  let body='';
+  if(tab==='res'){
+    const gap=hit(D)-pr(D),V=D.length<10?{t:'Aún sin conclusiones',d:'Faltan '+Math.max(0,30-D.length)+' picks resueltos para sacar conclusiones. Mientras tanto no cambies reglas por rachas.'}:gap>=-3?{t:'Acierta lo que promete',d:'Las probabilidades parecen razonables. Confírmalo con el ROI.'}:gap>=-8?{t:'Algo optimista',d:'Acierta un poco menos de lo que dice. Sé prudente con el stake.'}:{t:'Demasiado optimista',d:'Acierta bastante menos de lo que promete. No te fíes de sus probabilidades altas.'};
+    const rec=[...D].reverse().slice(-12).map(x=>`<i class="dot ${x.res==='w'?'G':'P'}">${x.res==='w'?'G':'P'}</i>`).join('');
+    const bk=[[0,.5,'Menos de 50%'],[.5,.6,'50-60%'],[.6,.7,'60-70%'],[.7,.8,'70-80%'],[.8,1.01,'80% o más']],kinds=[...new Set(D.map(x=>x.st||'Sin tipo'))].sort(),bands=[[1,3,'Stake bajo 1–3'],[4,6,'Stake medio 4–6'],[7,9,'Stake alto 7–9']];
+    body=`<p class="status"><b>Cómo leer las barras:</b> el relleno es lo que realmente acertó; la marca negra es lo que el modelo prometía. Si el relleno llega a la marca o la pasa, el modelo cumple. El % de acierto solo no demuestra rentabilidad: mira también el ROI. Los picks se resuelven con el botón «Actualizar resultados».</p>
+    <div class="card"><div class="vhero">${ringSvg(nW,nL)}<div><h2>${V.t}</h2><p>${V.d}</p></div></div>
+    <div class="counts"><span><b class="ok">${nW}</b>acertó</span><span><b class="bad">${nL}</b>falló</span><span><b>${pend}</b>pendientes</span>${nV?`<span><b>${nV}</b>nulos</span>`:''}</div>
+    <div class="prog" role="progressbar" aria-valuenow="${Math.min(30,D.length)}" aria-valuemin="0" aria-valuemax="30"><i style="width:${Math.min(100,Math.round(D.length/30*100))}%"></i></div><small>${Math.min(30,D.length)} de 30 picks resueltos para sacar conclusiones</small>${rec?`<div class="dots"><small>Últimos resultados (de más viejo a más nuevo)</small><br>${rec}</div>`:''}</div>
+    <div class="tiles"><div class="tile"><small>Prometía</small><b>${D.length?pr(D)+'%':'—'}</b><span>probabilidad media</span></div><div class="tile"><small>Acertó</small><b>${D.length?hit(D)+'%':'—'}</b><span>${D.length?delta(hit(D),pr(D)):'sin datos aún'}</span></div><div class="tile"><small>Brier (menor es mejor)</small><b>${brier!=null?brier.toFixed(3):'—'}</b><span>0.25 equivale a adivinar</span></div><div class="tile"><small>ROI (con cuota)</small><b class="${roi>=0?'ok':'bad'}">${Dq.length?(100*roi/Dq.length).toFixed(1)+'%':'—'}</b><span>${Dq.length?(roi>=0?'+':'')+roi.toFixed(1)+' u · '+Dq.length+' picks':'registra picks con cuota'}</span></div></div>
+    ${D.length?`<div class="card"><h2>Por probabilidad</h2><small>Si el modelo dice 60%, de cada 10 picks debería acertar unos 6.</small>${bk.map(([x,y,t])=>row(t,D.filter(k=>k.p>=x&&k.p<y))).join('')}</div>
+    <div class="card"><h2>Por tipo de pick</h2><small>Partido, puntos, rebotes, asistencias, triples o PRA: dónde le va mejor y peor.</small>${kinds.map(k=>row(k,D.filter(x=>(x.st||'Sin tipo')===k))).join('')}</div>
+    <div class="card"><h2>Por nivel de stake</h2>${bands.map(([a,b,t])=>row(t,D.filter(x=>x.sk>=a&&x.sk<=b))).join('')||''}<small>Si el stake alto no acierta más que el bajo, el stake no está aportando.</small></div>`:'<p class="status">Aún no hay picks resueltos. Registra picks con «＋ Registrar pick» y pulsa «Actualizar resultados» cuando terminen los partidos.</p>'}`;
+  }else if(tab==='s'){
+    const S=P.filter(x=>x.sk>=1&&x.sk<=9);
+    body=`<div class="card stake-summary"><h2>Resultados por Stake</h2><p class="mut">Solo cuenta picks con stake guardado.</p>${S.length?[1,2,3,4,5,6,7,8,9].map(st=>{const a=S.filter(x=>x.sk===st);if(!a.length)return '';const done=a.filter(x=>x.res==='w'||x.res==='l'),w=done.filter(x=>x.res==='w').length,rate=done.length?Math.round(100*w/done.length):null,tp=[...new Set(a.map(x=>x.st||'Pick'))];
+      return `<div class="stake-row"><div class="stake-head"><b>Stake ${st}/9</b><span>${done.length?w+' de '+done.length+' aciertos · '+rate+'%':'Sin resultados resueltos'}</span></div><div class="stake-track"><i style="width:${rate==null?0:rate}%"></i></div><small>${done.length-w} fallos · ${a.filter(x=>!x.res).length} pendientes</small><div class="stake-markets">${tp.map(m=>`<span>${esc(m)} <b>${a.filter(x=>(x.st||'Pick')===m&&x.res==='w').length}✓ / ${a.filter(x=>(x.st||'Pick')===m&&x.res==='l').length}✕</b></span>`).join('')}</div></div>`}).join(''):'<p class="mut">Todavía no hay picks con stake guardado.</p>'}</div>`;
+  }else{
+    const sel=P.filter(x=>tab==='p'?!x.res:x.res===tab),T={w:['Picks que acertó','No hay picks acertados todavía.'],l:['Picks que falló','No hay picks fallados todavía.'],p:['Pendientes','No hay picks pendientes.'],v:['Picks nulos','No hay picks nulos.']}[tab];
+    body=`<div class="card"><h2>${T[0]} <small>(${sel.length})</small></h2>${tab==='p'?'<small>Pulsa «Actualizar resultados» cuando terminen los partidos. Si un jugador no jugó, queda como nulo. ↺ devuelve a pendiente.</small>':'<small>Si algún resultado está mal, corrígelo con los botones de cada pick.</small>'}${sel.slice(0,40).map(item).join('')||`<p class="mut">${T[1]}</p>`}</div>`;
+  }
+  $('#nbpk').innerHTML=menu+body}
 async function nbTest(){const o=$('#nbmsg');const R=[];const t=async(n,f)=>{try{R.push('✔ '+n+': '+await f())}catch(e){R.push('✘ '+n+': '+e.message)}o.textContent=R.join(' · ')};
   let tid,pid;await t('Calendario ESPN',async()=>{const j=await nbj(NE+'scoreboard');tid=((j.events||[])[0]||{competitions:[{competitors:[{team:{id:13}}]}]}).competitions[0].competitors[0].team.id;return (j.events||[]).length+' partidos'});
   await t('Plantilla',async()=>{const j=await nbj(NE+'teams/'+(tid||13)+'/roster'),A=(j.athletes||[]).flatMap(x=>x.items||[x]);pid=A[0]&&A[0].id;return A.length+' jugadores'});
@@ -169,22 +230,31 @@ const nzInj=s=>{s=String(s||'').toLowerCase();return /\bout\b|fuera/.test(s)?'ou
 async function nbInj(){const o={};try{const j=await nbj(NE+'injuries');for(const t of j.injuries||[])for(const x of t.injuries||[]){const s=nzInj(x.status);if(s&&x.athlete)o[nz(x.athlete.displayName)]={s,c:x.shortComment||x.status}}}catch{}return o}
 function ns(name){const nn=nz(name);if(nn.length<5)return null;for(const ln of String(NC.news||'').split('\n')){if(!nz(ln).includes(nn))continue;const w=ln.toLowerCase(),c=ln.trim().slice(0,90);
   if(/\b(out|fuera|baja|descartad|ruled out|inactiv)/.test(w))return{s:'out',c};if(/doubt|dudoso/.test(w))return{s:'doubt',c};if(/question|day-to-day|gtd|duda|probable/.test(w))return{s:'q',c}}return null}
-function gameCands(g){const m=gameModel(g);if(!m)return [];const od=(NB.od&&NB.od[g.id]&&NB.od[g.id].o)||{},C=[],fp=(a,b)=>a&&b&&a.q&&b.q?(1/a.q)/(1/a.q+1/b.q):null,add=(n,p,o,fair)=>C.push({n,p:shr(p,9),q:o?o.q:null,fair}),mar=m.mar;
+function gameCands(g){const m=gameModel(g);if(!m)return [];const od=(NB.od&&NB.od[g.id]&&NB.od[g.id].o)||{},C=[],fp=(a,b)=>a&&b&&a.q&&b.q?(1/a.q)/(1/a.q+1/b.q):null,add=(n,p,o,fair,meta)=>C.push({n,p:shr(p,9),q:o?o.q:null,fair,meta}),mar=m.mar;
   const ln=g.ln||{},hw=od['h2h|'+nz(g.h.n)+'|'],aw=od['h2h|'+nz(g.a.n)+'|'],sh=od['spreads|'+nz(g.h.n)+'|']||(ln.sp!=null?{p:ln.sp,q:null}:null),sa=od['spreads|'+nz(g.a.n)+'|']||(ln.sp!=null?{p:-ln.sp,q:null}:null),ov=od['totals|over|']||(ln.ou!=null?{p:ln.ou,q:null}:null),un=od['totals|under|']||(ln.ou!=null?{p:ln.ou,q:null}:null);
-  add('Gana '+g.h.ab,1-Phi(-mar/12),hw,fp(hw,aw));add('Gana '+g.a.ab,Phi(-mar/12),aw,fp(aw,hw));
-  if(sh&&sa){add(g.h.ab+' '+(sh.p>0?'+':'')+sh.p,1-Phi((-sh.p-mar)/12),sh,fp(sh,sa));add(g.a.ab+' '+(sa.p>0?'+':'')+sa.p,1-Phi((mar-sa.p)/12),sa,fp(sa,sh))}
-  if(ov&&un){add('Total más de '+ov.p,1-Phi((ov.p-m.tot)/17),ov,fp(ov,un));add('Total menos de '+un.p,Phi((un.p-m.tot)/17),un,fp(un,ov))}
+  add('Gana '+g.h.ab,1-Phi(-mar/12),hw,fp(hw,aw),{t:'ml',tm:g.h.ab});add('Gana '+g.a.ab,Phi(-mar/12),aw,fp(aw,hw),{t:'ml',tm:g.a.ab});
+  if(sh&&sa){add(g.h.ab+' '+(sh.p>0?'+':'')+sh.p,1-Phi((-sh.p-mar)/12),sh,fp(sh,sa),{t:'sp',tm:g.h.ab,line:sh.p});add(g.a.ab+' '+(sa.p>0?'+':'')+sa.p,1-Phi((mar-sa.p)/12),sa,fp(sa,sh),{t:'sp',tm:g.a.ab,line:sa.p})}
+  if(ov&&un){add('Total más de '+ov.p,1-Phi((ov.p-m.tot)/17),ov,fp(ov,un),{t:'tot',side:'over',line:ov.p});add('Total menos de '+un.p,Phi((un.p-m.tot)/17),un,fp(un,ov),{t:'tot',side:'under',line:un.p})}
   return C}
 const lect=g=>{const c=gameCands(g).filter(x=>/^Gana/.test(x.n)).sort((a,b)=>b.p-a.p)[0];return c?' · '+c.n+' '+Math.round(c.p*100)+'%':''};
 async function llm(messages){let err='';
   if(cfg.gq){try{const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+cfg.gq},body:JSON.stringify({model:MODEL,temperature:0,max_completion_tokens:1800,messages})}),j=await r.json();if(r.ok&&j.choices)return j.choices[0].message.content;err='Groq: '+((j.error&&j.error.message)||r.status)}catch(e){err='Groq: '+e.message}}
   if(cfg.or){try{const r=await fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+cfg.or,'HTTP-Referer':'https://github.com/','X-Title':'RadarPi'},body:JSON.stringify({model:'openrouter/free',temperature:0,max_tokens:1800,messages})}),j=await r.json();if(r.ok&&j.choices)return j.choices[0].message.content;err+=' OpenRouter: '+((j.error&&j.error.message)||r.status)}catch(e){err+=' OpenRouter: '+e.message}}
   throw new Error(err||'configura Groq u OpenRouter en Ajustes')}
-async function nbAI(id){const g=NB.g.find(x=>x.id==id),box=$('#nbai'+id);box.hidden=false;box.style.whiteSpace='pre-wrap';box.textContent='Analizando…';
-  const m=gameModel(g),props=[];[g.h,g.a].forEach(s=>s.pl.forEach(p=>Object.keys(STX).forEach(st=>{const o=nbPropOpts(g,p,st);if(!o)return;const x=o.ov.pr>=o.un.pr?o.ov:o.un;props.push({jugador:p.n,equipo:p.tm,stat:STX[st][0],lado:x.name,linea:o.L,prob_pct:Math.round(x.pr*100),cuota:x.q,valor_pct:x.e!=null?Math.round(x.e*100):null,linea_real:o.real,ultimos10:o.P.a.slice(0,10),minutos:Math.round(p.mn),estado:p.st||null})})));
-  props.sort((a,b)=>(b.linea_real-a.linea_real)||b.prob_pct-a.prob_pct);
-  const data={partido:g.a.n+' @ '+g.h.n,proyeccion:m?{[g.a.ab]:Math.round(m.ap),[g.h.ab]:Math.round(m.hp),total:+m.tot.toFixed(1)}:null,mercados_partido:gameCands(g).map(c=>({mercado:c.n,prob_pct:Math.round(c.p*100),cuota:c.q})),bajas:{[g.h.ab]:g.h.out||[],[g.a.ab]:g.a.out||[]},bajas_pegadas_por_usuario:String(NC.news||'').slice(0,1500),props:props.slice(0,14)};
-  try{box.textContent=await llm([{role:'system',content:'Eres analista escéptico de apuestas NBA. Usa solo los datos recibidos; no inventes lesiones, rachas ni cuotas. Las probabilidades salen de un modelo simple (últimos juegos, sin defensa rival ni ritmo), trátalas como estimaciones. Responde en español, breve: 1) lectura del partido, 2) hasta 3 picks (mercado, lado, línea, por qué, riesgo principal) solo si hay línea real y valor; si no, escribe "sin valor claro", 3) qué verificar antes de apostar (alineaciones, minutos). Sin garantías.'},{role:'user',content:JSON.stringify(data)}])}catch(e){box.textContent='Error de IA: '+e.message}}
+async function nbAI(id){const g=NB.g.find(x=>x.id==id),box=$('#nbai'+id);box.hidden=false;box.style.whiteSpace='normal';box.innerHTML='<p class="mr-s">Analizando…</p>';
+  const m=gameModel(g),R0=nbCands(g),best=R0.out[0]||null,lean=best?null:nbLean(g),pr=R0.out.find(c=>c.kind!=='Partido'&&(!best||c.k!==best.k)),
+    A=best||lean,B=pr||((best&&best.kind!=='Partido')?null:nbLeanProp(g));
+  const sum=(c,l)=>c?{id:l,pick:c.n,prob_pct:Math.round(c.p*100),cuota:c.q,valor_pct:c.e!=null?Math.round(c.e*100):null,cuota_real:!!c.q,ultimos10:c.arr||null,stake:nbStake(c)}:null;
+  const data={partido:g.a.n+' @ '+g.h.n,proyeccion:m?{[g.a.ab]:Math.round(m.ap),[g.h.ab]:Math.round(m.hp),total:+m.tot.toFixed(1)}:null,picks:[sum(A,'A'),sum(B,'B')].filter(Boolean),bajas:{[g.h.ab]:g.h.out||[],[g.a.ab]:g.a.out||[]},bajas_pegadas_por_usuario:String(NC.news||'').slice(0,1200)};
+  if(!data.picks.length){box.innerHTML='<p class="mr-s">Este partido no tiene pick que analizar.</p>';return}
+  try{const t=await llm([{role:'system',content:'Eres analista escéptico de apuestas NBA. Usa solo los datos recibidos; no inventes lesiones, rachas ni cuotas. Los picks A y B ya los eligió la app con reglas fijas: no los cambies ni propongas otros. Para cada uno decide "apostar" o "no_apostar" (no_apostar solo con un motivo concreto en los datos: bajas, pocos juegos, sin cuota real, línea dudosa) y da una razón de máximo 25 palabras. Añade hasta 2 riesgos y hasta 2 cosas por verificar, de máximo 12 palabras cada una. Responde SOLO con JSON válido, sin texto fuera de él: {"A":{"decision":"apostar|no_apostar","razon":""},"B":{"decision":"apostar|no_apostar","razon":""},"riesgos":[],"verificar":[]}'},{role:'user',content:JSON.stringify(data)}]);
+    let j=null;try{j=JSON.parse((t.match(/\{[\s\S]*\}/)||[''])[0])}catch{}
+    if(!j){box.innerHTML='<details open class="afd"><summary><b>✦ Veredicto IA</b><small>Tocar para recoger</small></summary><p class="mr-s">'+esc(String(t).slice(0,500))+'</p></details>';return}
+    const dec=d=>d==='apostar'?'<span class="chip2 ok">APOSTAR</span>':'<span class="chip2 bad">NO APOSTAR</span>',
+      blk=(c,l,lab)=>c&&j[l]?`<div class="stake-row"><small class="tkl">${lab}</small><div class="stake-head"><b>${esc(c.n)}</b>${dec(j[l].decision)}</div><p class="mut">${esc(String(j[l].razon||'').slice(0,220))}</p></div>`:'',
+      ls=(a,t)=>Array.isArray(a)&&a.length?`<p class="mr-s"><b>${t}:</b> ${a.slice(0,2).map(x=>esc(String(x).slice(0,100))).join(' · ')}</p>`:'';
+    box.innerHTML='<details open class="afd"><summary><b>✦ Veredicto IA</b><small>Tocar para recoger</small></summary>'+blk(A,'A',A&&A.kind==='Partido'?'PICK DE PARTIDO':'PICK')+blk(B,'B','PICK DE JUGADOR')+ls(j.riesgos,'Riesgos')+ls(j.verificar,'Verifica antes de apostar')+'<p class="mr-s">Es una validación sobre los datos del modelo, no una garantía.</p></details>'
+  }catch(e){box.innerHTML='<p class="bad">Error de IA: '+esc(e.message)+'</p>'}}
 window.nbCombiSource=async say=>{if(!NC.keys.trim())throw new Error('necesita llave de The Odds API (Ajustes NBA)');if(!NB.g.length||!NB.od){say&&say('NBA: escaneando…');await nbScan()}if(!NB.od)throw new Error('sin cuotas reales de NBA');
   return NB.g.map(g=>{const m=[],q={},fc={},put=(n,p,qq,fair)=>{if(!qq)return;m.push([n,p]);q[n]=qq;if(fair)fc[n]=fair};
     gameCands(g).forEach(c=>put(g.a.ab+'@'+g.h.ab+': '+c.n,c.p,c.q,c.fair));
@@ -198,6 +268,6 @@ function nbInit(){$('#nba-root').innerHTML=`<div class="combo-page-head"><div cl
 <label>Sports Game Odds (llave, opcional)<input type="password" value="${esc(NC.sgo)}" onchange="NC.sgo=this.value.trim();nbSet()"></label><label>balldontlie (llave, opcional)<input type="password" value="${esc(NC.bdl)}" onchange="NC.bdl=this.value.trim();nbSet()"></label><p class="status">Sports Game Odds y balldontlie quedan guardadas y se comprueban en «Probar fuentes»; todavía no alimentan los picks.</p><label>Partidos por escaneo<input type="number" min="1" max="10" value="${NC.games}" onchange="NC.games=Math.max(1,+this.value||3);nbSet()"></label><label>Jugadores por equipo<input type="number" min="3" max="12" value="${NC.per}" onchange="NC.per=Math.max(3,+this.value||8);nbSet()"></label>
 <p class="status">«Buscar el mejor pick NBA» revisa hasta 12 partidos y, con llave, gasta ~3 créditos + 5 por partido. Cada partido con props gasta ~5 créditos y el resumen del día 3 (500 gratis al mes por cuenta). Las cuotas son de casas de EE. UU., como referencia; confirma la de tu casa.</p></details>`;nbPicks()}
 function nbSet(){SV('nbcfg',NC);document.querySelectorAll('#nbday button').forEach((b,i)=>b.classList.toggle('on',i===NC.day))}
-nbInit();
-Object.assign(window,{NB,NC,nbScan,nbCard,nbTest,nbLog,nbRes,nbSet,nbDraw,nbAI});
+nbInit();nbAutoRes(false).catch(()=>{});
+Object.assign(window,{NB,NC,nbScan,nbCard,nbTest,nbLog,nbTab,nbSetRes,nbDel,nbAutoRes,nbSet,nbDraw,nbAI});
 })();

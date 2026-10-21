@@ -525,6 +525,7 @@ $('#go').onclick=async()=>{
       huntTxt=R.length?`Búsqueda en todas las ligas: ${tot} partidos con cuotas, ${R.length} cumplen (cuota de ${cfg.qm} o más y stake de ${cfg.sm} o más).`:`Búsqueda en todas las ligas: de ${tot} partidos con cuotas, ninguno cumple cuota de ${cfg.qm} o más y stake de ${cfg.sm} o más. Es normal: casi nunca hay uno.`;
     }
     msg.textContent=(huntTxt||(rev?`${rev} partidos revisados, ${R.length} con patrones.`:'No hay partidos pendientes ('+((cfg.dd||1)>=2?'hoy y mañana':'hoy')+') en esas ligas.'))+(bad.length?' No cargaron: '+bad.join('; ')+'.':'')+diag+(OD&&rev&&!mq?' Ningún partido se emparejó con la casa. ESPN trae: '+enames.slice(0,4).join('; ')+'. OddsPapi trae: '+(OD.fx.slice(0,4).map(x=>x.h+' vs '+x.w).join('; ')||'nada')+'.':'')+(nShort?' '+nShort+' partidos tienen menos de 5 partidos de historial y no se analizan.':'')+(OD&&nNoQ?' '+nNoQ+' partidos sin cuotas de la casa.':'');
+    if(!hunt&&rev){const nb=R.filter(r=>bestOf(r)).length;msg.textContent+=` Con pick: ${nb} de ${rev}. Filtro «${({s:'estricto',b:'equilibrado',w:'amplio'})[cfg.fm||'b']}».`}
     drawRes();SV('scan',{d:today(),t:Date.now(),R,msg:msg.textContent});afterScan();$('#scanbox').open=false;updScan();
   }catch(e){msg.textContent='Error: '+e.message}
   finally{$('#go').disabled=false;$('#go').classList.remove('busy');autoRun=false;hunt=false}
@@ -763,13 +764,14 @@ async function showInfoRun(i){
 }
 
 // ===== Combi: escaneo independiente de los picks normales =====
-function comboStake(r,n,p,q,e,ref){
+const CMODES={s:{p:.64,pn:.58,e:.01,n:8,st:5},b:{p:.62,pn:.56,e:.01,n:8,st:5},w:{p:.58,pn:.54,e:0,n:6,st:4}};const CM=()=>CMODES[cfg.fm]||CMODES.b;
+function comboStake(r,n,p,q,e,ref){const C=CM();
   // El stake de Combi es propio: una cuota baja puede entrar si la probabilidad es alta,
   // la ventaja es positiva, hay suficiente historial y existe contraste de mercado.
-  if(!q||q<1.1||e<0.01||e>0.22||p<(r.nba?0.56:0.62)||!ref||r.A.n<8||r.B.n<8)return 1;
+  if(!q||q<1.1||e<C.e||e>0.22||p<(r.nba?C.pn:C.p)||!ref||r.A.n<C.n||r.B.n<C.n)return 1;
   const delta=ref==null?99:Math.abs(p-ref);
   if(delta>0.10)return 1;
-  let st=5;
+  let st=C.st;
   if(p>=0.78&&e>=0.025&&r.A.n>=10&&r.B.n>=10)st=6;
   if(p>=0.84&&e>=0.035&&r.A.n>=12&&r.B.n>=12)st=7;
   if(p>=0.88&&e>=0.04&&r.A.n>=16&&r.B.n>=16)st=8;
@@ -783,7 +785,7 @@ function comboHtml(source){
       if(isHalfMarket(n)||!Number.isFinite(p0)||!r.q||!r.q[n])continue;const p=calP(r,n,p0);
       const q=+r.q[n],e=p*q-1,ref=(r.mod.f&&r.mod.f[n]!=null)?r.mod.f[n]:(r.mod.fc&&r.mod.fc[n]!=null?r.mod.fc[n]:null);
       const st=comboStake(r,n,p,q,e,ref);
-      if(st>=5&&q>=1.1&&e>=0.01&&e<=0.22&&p>=(r.nba?0.56:0.62)){
+      if(st>=CM().st&&q>=1.1&&e>=CM().e&&e<=0.22&&p>=(r.nba?CM().pn:CM().p)){
         const sc=(p*.55)+(Math.min(e,.15)*1.8)+(st*.015)-(ref==null?0.2:Math.abs(p-ref));
         legs.push({idx,r,b:{n,q,p,e,sc,ref},st,event:String(r.ev||`${r.h}-${r.w}-${r.ko||''}`)});
       }
@@ -817,7 +819,7 @@ function comboHtml(source){
   COMBI_CURRENT=unique.map(c=>({...c,stakeFinal:comboFinalStake(c)}));
   const best=COMBI_CURRENT.length?COMBI_CURRENT.reduce((a,b)=>b.p>a.p?b:a):null;
   const bestHtml=best?`<div class="combo-best"><b>★ Combinada de mayor confianza estimada</b><p>${best.legs.map(l=>esc(l.r.h)+' vs '+esc(l.r.w)).join(' · ')} · ${best.legs.length} líneas</p><div class="combo-stats"><div><small>Probabilidad conjunta aprox.</small><b>${Math.round(best.p*100)}%</b></div><div><small>Cuota combinada</small><b>@${best.q.toFixed(2)}</b></div><div><small>Valor estimado</small><b>${best.e>=0?'+':''}${Math.round(best.e*100)}%</b></div></div><p><b>Stake definitivo combinado: ${best.stakeFinal}/9.</b> El stake final es menor que el de cada línea porque combinar partidos reduce la probabilidad conjunta. Es una escala prudente, no una garantía.</p></div>`:'';
-  const content=COMBI_CURRENT.length?COMBI_CURRENT.map((c,i)=>`<article class="combo-item"><div class="combo-title"><span>${best===c?'★ MAYOR CONFIANZA':'COMBINADA '+(i+1)}</span><strong class="combo-odds">@${c.q.toFixed(2)}</strong></div>${c.legs.map((l,j)=>`<div class="combo-pick"><div class="combo-pick-head"><b>${j+1}. ${esc(l.r.h)} <span>vs</span> ${esc(l.r.w)}</b><span class="combo-stake">Línea ${l.st}/9</span></div><div class="combo-meta">${esc(l.b.n)} · cuota individual @${l.b.q.toFixed(2)} · prob. modelo ${Math.round(l.b.p*100)}% · valor estimado ${l.b.e>=0?'+':''}${Math.round(l.b.e*100)}%</div></div>`).join('')}<div class="combo-stats"><div><small>Probabilidad conjunta aprox.</small><b>${Math.round(c.p*100)}%</b></div><div><small>Valor estimado combinado</small><b class="${c.e>0?'ok':'bad'}">${c.e>=0?'+':''}${Math.round(c.e*100)}%</b></div><div><small>Stake final combinado</small><b>${c.stakeFinal}/9</b></div></div><div class="combo-register"><label>Cuota final en tu casa<input id="comboRealQ${i}" type="number" min="1.01" step="0.01" value="${c.q.toFixed(2)}"></label><button class="btn s" type="button" onclick="registerCombo(${i})">＋ Registrar</button></div><p class="combo-note">La cuota inicial es teórica. Corrígela si tu casa ofrece otra.</p></article>`).join(''):`<div class="combo-empty"><div class="combo-empty-icon">✦</div><b>No hay combinadas que pasen los filtros</b><p>Combi necesita al menos dos encuentros con líneas de stake 5 o superior, probabilidad alta, cuota real y valor positivo. Prueba ampliar las ligas o seleccionar «Hoy y mañana».</p></div>`;
+  const content=COMBI_CURRENT.length?COMBI_CURRENT.map((c,i)=>`<article class="combo-item"><div class="combo-title"><span>${best===c?'★ MAYOR CONFIANZA':'COMBINADA '+(i+1)}</span><strong class="combo-odds">@${c.q.toFixed(2)}</strong></div>${c.legs.map((l,j)=>`<div class="combo-pick"><div class="combo-pick-head"><b>${j+1}. ${esc(l.r.h)} <span>vs</span> ${esc(l.r.w)}</b><span class="combo-stake">Línea ${l.st}/9</span></div><div class="combo-meta">${esc(l.b.n)} · cuota individual @${l.b.q.toFixed(2)} · prob. modelo ${Math.round(l.b.p*100)}% · valor estimado ${l.b.e>=0?'+':''}${Math.round(l.b.e*100)}%</div></div>`).join('')}<div class="combo-stats"><div><small>Probabilidad conjunta aprox.</small><b>${Math.round(c.p*100)}%</b></div><div><small>Valor estimado combinado</small><b class="${c.e>0?'ok':'bad'}">${c.e>=0?'+':''}${Math.round(c.e*100)}%</b></div><div><small>Stake final combinado</small><b>${c.stakeFinal}/9</b></div></div><div class="combo-register"><label>Cuota final en tu casa<input id="comboRealQ${i}" type="number" min="1.01" step="0.01" value="${c.q.toFixed(2)}"></label><button class="btn s" type="button" onclick="registerCombo(${i})">＋ Registrar</button></div><p class="combo-note">La cuota inicial es teórica. Corrígela si tu casa ofrece otra.</p></article>`).join(''):`<div class="combo-empty"><div class="combo-empty-icon">✦</div><b>No hay combinadas que pasen los filtros</b><p>Combi necesita al menos dos encuentros con líneas de stake 5 o superior, probabilidad alta, cuota real y valor positivo. Líneas que pasaron el filtro: ${legs.length} en ${byGame.size} partido(s) de ${(source||[]).length} revisados. Filtro actual «${({s:'estricto',b:'equilibrado',w:'amplio'})[cfg.fm||'b']}» (Ajustes → Filtros de picks). Prueba el filtro «amplio», más ligas o «Hoy y mañana».</p></div>`;
   return `<div class="combo-wrap"><div class="combo-hero"><div class="combo-eyebrow">BÚSQUEDA INDEPENDIENTE</div><h2>Combinadas RadarPi</h2><p>Las combinadas se ordenan por probabilidad conjunta y se intenta evitar repetir casi los mismos partidos. Cada registro queda separado de los picks sencillos.</p><div class="combo-pills"><span>2–4 partidos</span><span>Stake por línea 5–9</span><span>Objetivo @${target.toFixed(2)}+</span></div></div>${bestHtml}<div class="combo-results-head"><b>${COMBI_CURRENT.length?`${COMBI_CURRENT.length} combinada${COMBI_CURRENT.length===1?'':'s'} candidata${COMBI_CURRENT.length===1?'':'s'}`:'Sin combinadas válidas'}</b><span>Máximo 6 resultados</span></div>${content}<p class="combo-disclaimer">Las probabilidades conjuntas se aproximan multiplicando probabilidades individuales; los partidos no son necesariamente independientes. El modelo aún necesita validación histórica. Una cuota alta no garantiza rentabilidad.</p></div>`;
 }
 function comboFinalStake(c){
