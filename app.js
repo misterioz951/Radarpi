@@ -52,10 +52,11 @@ $('#save').onclick=()=>{cfg.gq=$('#k-gq').value.trim();cfg.gk=$('#k-gm').value.t
 // ESPN puede bloquear o fallar desde algunas redes/navegadores. Se intenta directo y luego dos proxies públicos solo para ESPN.
 async function fetchESPN(url,options){
   let err='';
-  try{const r=await fetch(url,options);if(r.ok)return r;err='HTTP '+r.status;}catch(e){err=e&&e.message||'fallo de red';}
+  const timed=async (u,ms)=>{const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),ms);try{return await fetch(u,{...(options||{}),signal:ctl.signal})}finally{clearTimeout(timer)}};
+  try{const r=await timed(url,4500);if(r.ok)return r;err='HTTP '+r.status;}catch(e){err=e&&e.name==='AbortError'?'tiempo agotado':(e&&e.message||'fallo de red');}
   const proxies=[u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),u=>'https://corsproxy.io/?url='+encodeURIComponent(u)];
-  for(const make of proxies){try{const r=await fetch(make(url),options);if(r.ok)return r;err+='; proxy HTTP '+r.status;}catch(e){err+='; proxy '+(e&&e.message||'fallo de red');}}
-  throw new Error('ESPN no respondió ('+err+'). Comprueba conexión o vuelve a intentar.');
+  for(const make of proxies){try{const r=await timed(make(url),2500);if(r.ok)return r;err+='; proxy HTTP '+r.status;}catch(e){err+='; proxy '+(e&&e.name==='AbortError'?'tiempo agotado':(e&&e.message||'fallo de red'));}}
+  throw new Error('ESPN no respondió ('+err+'). Se omitió esta consulta para que el escaneo pueda continuar.');
 }
 // ESPN (API pública no oficial, sin llave). Sin rangos de fechas: partidos de hoy + calendario de cada equipo
 async function espn(path){
@@ -68,21 +69,9 @@ const sc=x=>+(x.score&&x.score.value!=null?x.score.value:x.score);
 const CONT=['uefa.champions','uefa.europa','uefa.europa.conf','conmebol.libertadores','conmebol.sudamericana'];
 const DOM=['eng.1','esp.1','ita.1','ger.1','fra.1','por.1','ned.1','bel.1','tur.1','sco.1','gre.1','aut.1','sui.1','cze.1','den.1','nor.1','swe.1','pol.1','ukr.1','cro.1','srb.1','cyp.1','isr.1','rou.1','bul.1','hun.1','svk.1','svn.1','fin.1','aze.1','geo.1','kaz.1','irl.1','wal.1','nir.1','isl.1','lva.1','est.1','ltu.1','mlt.1','blr.1','arm.1','mda.1','alb.1','bih.1','mkd.1','mne.1','arg.1','bra.1','col.1','chi.1','uru.1','par.1','per.1','ecu.1','bol.1','ven.1','mex.1','usa.1'];
 async function domMap(){
-  // DOM5 invalida el mapa antiguo: podía quedar incompleto durante dos semanas.
-  const c=LS('DOM5',null);if(c&&Date.now()-c.t<3*864e5&&c.v)return c.v;
-  const v={};let okN=0;
-  const lim=6;
-  for(let i=0;i<DOM.length;i+=lim){
-    await Promise.all(DOM.slice(i,i+lim).map(async sl=>{
-      try{
-        const r=await fetchESPN('https://site.api.espn.com/apis/site/v2/sports/soccer/'+sl+'/teams?limit=200');
-        const j=await r.json(),L=((j.sports||[])[0]||{}).leagues||[{}];okN++;
-        for(const t of (L[0].teams||[])){const team=t.team||t;if(team.id&&!v[String(team.id)])v[String(team.id)]=sl}
-      }catch{}
-    }));
-  }
-  if(okN>=Math.floor(DOM.length*0.65))SV('DOM5',{t:Date.now(),v});
-  return v;
+  // No buscar las plantillas de todas las ligas en tiempo real: esa búsqueda masiva
+  // bloqueaba el primer partido de los torneos continentales. Usa solo el mapa cacheado.
+  const c=LS('DOM5',null);return c&&Date.now()-c.t<14*864e5&&c.v?c.v:{};
 }
 const CAL=new Set(['arg.1','bra.1','col.1','chi.1','uru.1','par.1','per.1','ecu.1','bol.1','ven.1','usa.1','nor.1','swe.1','fin.1','isl.1','irl.1','conmebol.libertadores','conmebol.sudamericana']);
 const prevSeason=sl=>{const d=new Date(),y=d.getFullYear();return CAL.has(sl)?y-1:(d.getMonth()>=6?y-1:y-2)};
@@ -106,22 +95,8 @@ function toGames(evs,id){
 }
 // Si el equipo no está en el mapa de ligas locales, se busca su liga probando las ligas una por una (se guarda por equipo).
 async function domOf(id,known){
-  id=String(id);
-  const m=await domMap();if(m[id])return m[id];
-  const T=LS('DOMT3',{}),c=T[id];
-  // Un resultado null solo dura 15 min; antes bloqueaba nuevos intentos durante 6 horas.
-  if(c&&(c.s||Date.now()-c.t<15*60e3))return c.s;
-  let found=null;
-  for(let i=0;i<DOM.length&&!found;i+=8){
-    const res=await Promise.all(DOM.slice(i,i+8).map(async sl=>{
-      const e=await schedEvs(sl,id);
-      return toGames(e,id).some(g=>!known.has(g.id))?sl:null;
-    }));
-    found=res.find(Boolean)||null;
-  }
-  if(found){T[id]={s:found,t:Date.now()};SV('DOMT3',T)}
-  else {T[id]={s:null,t:Date.now()};SV('DOMT3',T)}
-  return found;
+  // Si el mapa cacheado no conoce al equipo, no sondear decenas de ligas durante el escaneo.
+  const m=await domMap();return m[String(id)]||null;
 }
 // Fuerza del rival: cada partido del historial se ajusta por lo que ese rival suele marcar y recibir (tabla de su liga).
 // Los goles crudos (gf, ga) se conservan para los patrones; el modelo usa gfa/gaa. En torneos continentales el ajuste se recorta a la mitad.
@@ -504,7 +479,7 @@ $('#go').onclick=async()=>{
         if(hunt&&!oddsQ(OD,hf,wf,e.date)){rev--;continue}
         msg.textContent=`Analizando ${hn} vs ${wn}…`;
         let A,B;
-        try{A=st(await teamForm(slug,H.team.id));B=st(await teamForm(slug,W.team.id))}
+        try{const forms=await Promise.all([teamForm(slug,H.team.id),teamForm(slug,W.team.id)]);A=st(forms[0]);B=st(forms[1])}
         catch(err){bad.push(hn+' vs '+wn+' ('+err.message.slice(0,60)+')');continue}
         const SL=STD[slug];A.ss=SL&&SL.t[H.team.id];B.ss=SL&&SL.t[W.team.id];A.mu=SL?SL.mu:null;adjT+=2;adjN+=(A.adj>0)+(B.adj>0);
         const p=[];
@@ -942,7 +917,7 @@ async function scanCombi(){
         const hn=H.team.shortDisplayName||H.team.displayName,wn=W.team.shortDisplayName||W.team.displayName,hf=H.team.displayName||hn,wf=W.team.displayName||wn;
         const q=oddsQ(OD,hf,wf,e.date);if(!q||!Object.keys(q).length)continue;seen++;
         msg.textContent=`Analizando líneas propias: ${hn} vs ${wn}…`;
-        let A,B;try{A=st(await teamForm(slug,H.team.id));B=st(await teamForm(slug,W.team.id))}catch{continue}
+        let A,B;try{const forms=await Promise.all([teamForm(slug,H.team.id),teamForm(slug,W.team.id)]);A=st(forms[0]);B=st(forms[1])}catch{continue}
         A.ss=SL&&SL.t[H.team.id];B.ss=SL&&SL.t[W.team.id];A.mu=SL?SL.mu:null;
         // Combi puede añadir datos de córners/tarjetas si la opción está activa.
         if(cfg.ex){try{const sum=await ev(slug,e.id),a=sum&&sum[H.team.id],b=sum&&sum[W.team.id];if(a&&b){if(a.c!=null){A.cf=A.cf==null?a.c:(A.cf+a.c)/2;A.ca=B.ca==null?b.c:(B.ca+b.c)/2}if(b.c!=null){B.cf=B.cf==null?b.c:(B.cf+b.c)/2;B.ca=A.ca==null?a.c:(A.ca+a.c)/2}if(a.y!=null)A.y=(A.y||0)+a.y;if(b.y!=null)B.y=(B.y||0)+b.y}}catch{}}
