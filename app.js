@@ -293,12 +293,12 @@ async function tourIds(){
   });
 }
 async function mkMap(){
-  return cached('opmk_v5',30,async()=>{
+  return cached('opmk_v6',30,async()=>{
     const ms=await op('markets'),o={};
     for(const m of ms){
       if(+m.sportId!==10||m.playerProp)continue;
       const nm=m.marketName||'',h=m.handicap,oc=m.outcomes||[],ky=i=>m.marketId+'_'+oc[i].outcomeId;
-      const per=String(m.period||'').toLowerCase().replace(/[^a-z0-9]/g,''),first=/firsthalf|1sthalf|half1|period1/.test(per)||/first half|1st half/i.test(nm),second=/secondhalf|2ndhalf|half2|period2/.test(per)||/second half|2nd half/i.test(nm),full=!first&&!second&&(!per||/^(fulltime|fullmatch|match|90min|regulation)$/.test(per));
+      const per=String(m.period||'').toLowerCase().replace(/[^a-z0-9]/g,''),first=/firsthalf|1sthalf|half1|period1/.test(per)||/first half|1st half/i.test(nm),second=/secondhalf|2ndhalf|half2|period2/.test(per)||/second half|2nd half/i.test(nm),full=!first&&!second&&(!per||/^(fulltime|ft|fullmatch|match|game|90min|90minutes|regulation|regulartime|normaltime|result)$/.test(per));
       // Mapear por el nombre semántico del resultado, nunca por outcomeId supuesto:
       // los IDs pueden variar entre mercados/proveedores y podrían intercambiar Sí/No.
       const idx=re=>oc.findIndex(x=>re.test(String(x.outcomeName||'').trim().toLowerCase()));
@@ -314,7 +314,7 @@ async function mkMap(){
         // Si los nombres no permiten distinguir ambos resultados, no importamos esas cuotas.
         if(yi>=0&&ni>=0&&yi!==ni){o['Ambos marcan: sí']=ky(yi);o['Ambos marcan: no']=ky(ni)}
       }
-      else if(full&&oc.length===2&&idx(/^over/)>=0&&idx(/^under/)>=0){
+      else if(full&&oc.length===2&&idx(/^over/)>=0&&idx(/^under/)>=0&&/(home|host|away|visitor|visiting)/i.test(nm)){
         // Mercados de goles por equipo: solo se aceptan si el nombre identifica explícitamente local/visitante.
         const homeTotal=/(home|host).*(team|total|goal)|(team|total|goal).*(home|host)/i.test(nm);
         const awayTotal=/(away|visitor|visiting).*(team|total|goal)|(team|total|goal).*(away|visitor|visiting)/i.test(nm);
@@ -340,7 +340,7 @@ async function mkMap(){
   });
 }
 async function loadOdds(bm,lg){
-  bm=bm||cfg.bm;lg=lg||cfg.lg;const key='btts-map-v5|'+bm+'|'+lg.join(','),cacheKey='odds_v5_'+bm,c=LS(cacheKey,null);
+  bm=bm||cfg.bm;lg=lg||cfg.lg;const key='btts-map-v6|'+bm+'|'+lg.join(','),cacheKey='odds_v6_'+bm,c=LS(cacheKey,null);
   if(autoRun&&!(c&&c.k===key))throw new Error('el escaneo automático no gasta cuotas; haz un escaneo manual');
   if(c&&c.k===key&&(Date.now()-c.t<3*36e5||autoRun))return c.v;
   const MK=await mkMap(),T=await tourIds(),P=await cached('oppart',30,()=>op('participants',{sportId:10}));
@@ -467,10 +467,10 @@ $('#go').onclick=async()=>{
       leagues=leagues.filter((_,i)=>ok[i]);
       if(!leagues.length){msg.textContent='No hay partidos pendientes en ninguna liga para el periodo elegido.';return}
     }
-    const names=Object.fromEntries(Object.entries(LG).map(([n,s])=>[s,n])),names0=names,bad0=[];let OD=null,ODP=null,diag='',mq=0,nShort=0,nNoQ=0;const enames=[];const STD={};
+    const names=Object.fromEntries(Object.entries(LG).map(([n,s])=>[s,n])),names0=names,bad0=[];let OD=null,ODP=null,diag='',mq=0,nShort=0,nNoQ=0;const shortL=[];const enames=[];const STD={};
     if(cfg.ok){
       if(!cfg.bm)msg.textContent='Elige tu casa en Ajustes para traer cuotas.';
-      else{msg.textContent='Cargando cuotas…';try{OD=await loadOdds(undefined,leagues);const T=(LS('optour',null)||{}).v||{},sin=leagues.filter(x=>!T[x]).map(x=>names0[x]||x);if(cfg.pn){try{ODP=await loadOdds('pinnacle',leagues);diag+=` Pinnacle: ${ODP.fx.length} partidos.`}catch(e){ODP=null;bad0.push('Pinnacle ('+e.message.slice(0,60)+')')}}
+      else{msg.textContent='Cargando cuotas…';try{OD=await loadOdds(undefined,leagues);const T=(LS('optour_v3',null)||{}).v||{},sin=leagues.filter(x=>!T[x]).map(x=>names0[x]||x);if(cfg.pn){try{ODP=await loadOdds('pinnacle',leagues);diag+=` Pinnacle: ${ODP.fx.length} partidos.`}catch(e){ODP=null;bad0.push('Pinnacle ('+e.message.slice(0,60)+')')}}
       diag+=` Cuotas de ${cfg.bm}: ${OD.fx.length} partidos en las próximas 48 h.`+(sin.length?' Sin torneo en OddsPapi: '+sin.join(', ')+'.':'')}catch(e){OD=null;bad0.push('Cuotas ('+e.message.slice(0,90)+')')}}
     }
     let rev=0,adjN=0,adjT=0;const bad=bad0;
@@ -512,7 +512,7 @@ $('#go').onclick=async()=>{
           if(A.y!=null&&B.y!=null&&A.y+B.y>=cfg.ta)p.push(`Tarjetas: promedian ${A.y.toFixed(1)} y ${B.y.toFixed(1)} por partido (suman ${(A.y+B.y).toFixed(1)})`);
         }
         const mod=model(A,B),q=oddsQ(OD,hf,wf,e.date),qbad=(oddsQ.last||[]).slice(),mfx=OD?oddsFx(OD,hf,wf,e.date):null;
-        if(A.n<5||B.n<5)nShort++;if(!(q&&Object.keys(q).length))nNoQ++;enames.push(hn+' vs '+wn);
+        if(A.n<5||B.n<5){nShort++;if(A.n<5)shortL.push(hn+' ('+A.n+')');if(B.n<5)shortL.push(wn+' ('+B.n+')')}if(!(q&&Object.keys(q).length))nNoQ++;enames.push(hn+' vs '+wn);
         const qp=ODP?oddsQ(ODP,hf,wf,e.date):null,fair=qp?fairP(qp):null;
         // Mantener separadas las probabilidades del modelo y las probabilidades justas del mercado.
         // No mezclarlas con pesos arbitrarios hasta calibrar el modelo con resultados fuera de muestra.
@@ -538,7 +538,7 @@ $('#go').onclick=async()=>{
       R=R.map(r=>({r,b:bestOf(r)})).filter(x=>x.b&&x.b.q&&x.b.q>=(cfg.qm||1.5)&&baseStake(x.r,x.b.n,x.b.q)>=cfg.sm).sort((a,b)=>b.b.sc-a.b.sc).slice(0,3).map(x=>x.r);
       huntTxt=R.length?`Búsqueda en todas las ligas: ${tot} partidos con cuotas, ${R.length} cumplen (cuota de ${cfg.qm} o más y stake de ${cfg.sm} o más).`:`Búsqueda en todas las ligas: de ${tot} partidos con cuotas, ninguno cumple cuota de ${cfg.qm} o más y stake de ${cfg.sm} o más. Es normal: casi nunca hay uno.`;
     }
-    msg.textContent=(huntTxt||(rev?`${rev} partidos revisados, ${R.length} con patrones.`:'No hay partidos pendientes ('+((cfg.dd||1)>=2?'hoy y mañana':'hoy')+') en esas ligas.'))+(bad.length?' No cargaron: '+bad.join('; ')+'.':'')+diag+(OD&&rev&&!mq?' Ningún partido se emparejó con la casa. ESPN trae: '+enames.slice(0,4).join('; ')+'. OddsPapi trae: '+(OD.fx.slice(0,4).map(x=>x.h+' vs '+x.w).join('; ')||'nada')+'.':'')+(nShort?' '+nShort+' partidos tienen menos de 5 partidos de historial y no se analizan.':'')+(OD&&nNoQ?' '+nNoQ+' partidos sin cuotas de la casa.':'');
+    msg.textContent=(huntTxt||(rev?`${rev} partidos revisados, ${R.length} con patrones.`:'No hay partidos pendientes ('+((cfg.dd||1)>=2?'hoy y mañana':'hoy')+') en esas ligas.'))+(bad.length?' No cargaron: '+bad.join('; ')+'.':'')+diag+(OD&&rev&&!mq?' Ningún partido se emparejó con la casa. ESPN trae: '+enames.slice(0,4).join('; ')+'. OddsPapi trae: '+(OD.fx.slice(0,4).map(x=>x.h+' vs '+x.w).join('; ')||'nada')+'.':'')+(nShort?' '+nShort+' partidos tienen menos de 5 partidos de historial y no se analizan'+(shortL.length?': '+shortL.slice(0,6).join(', '):'')+'.':'')+(OD&&nNoQ?' '+nNoQ+' partidos sin cuotas de la casa.':'');
     if(!hunt&&rev){const nb=R.filter(r=>bestOf(r)).length;msg.textContent+=` Con pick: ${nb} de ${rev}. Filtro «${({s:'estricto',b:'equilibrado',w:'amplio'})[cfg.fm||'b']}». Fuerza del rival aplicada en ${adjN} de ${adjT} equipos.`}
     drawRes();SV('scan',{d:today(),t:Date.now(),R,msg:msg.textContent});afterScan();$('#scanbox').open=false;updScan();
   }catch(e){msg.textContent='Error: '+e.message}
