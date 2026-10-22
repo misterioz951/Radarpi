@@ -69,9 +69,20 @@ const sc=x=>+(x.score&&x.score.value!=null?x.score.value:x.score);
 const CONT=['uefa.champions','uefa.europa','uefa.europa.conf','conmebol.libertadores','conmebol.sudamericana'];
 const DOM=['eng.1','esp.1','ita.1','ger.1','fra.1','por.1','ned.1','bel.1','tur.1','sco.1','gre.1','aut.1','sui.1','cze.1','den.1','nor.1','swe.1','pol.1','ukr.1','cro.1','srb.1','cyp.1','isr.1','rou.1','bul.1','hun.1','svk.1','svn.1','fin.1','aze.1','geo.1','kaz.1','irl.1','wal.1','nir.1','isl.1','lva.1','est.1','ltu.1','mlt.1','blr.1','arm.1','mda.1','alb.1','bih.1','mkd.1','mne.1','arg.1','bra.1','col.1','chi.1','uru.1','par.1','per.1','ecu.1','bol.1','ven.1','mex.1','usa.1'];
 async function domMap(){
-  // No buscar las plantillas de todas las ligas en tiempo real: esa búsqueda masiva
-  // bloqueaba el primer partido de los torneos continentales. Usa solo el mapa cacheado.
+  // Usa el mapa aprendido en escaneos anteriores; no fuerza una búsqueda global al iniciar.
   const c=LS('DOM5',null);return c&&Date.now()-c.t<14*864e5&&c.v?c.v:{};
+}
+// Descubre la liga doméstica del club cuando el mapa aún no conoce un equipo europeo.
+// Prueba primero ligas frecuentes en lotes pequeños y se detiene al encontrar su calendario.
+async function discoverDomestic(id){
+  const key='DOMTEAM_'+String(id),cached=LS(key,null);
+  if(cached&&Date.now()-cached.t<30*864e5)return cached.v||null;
+  const priority=['eng.1','esp.1','ita.1','ger.1','fra.1','por.1','ned.1','bel.1','tur.1','sco.1','gre.1','aut.1','sui.1','cze.1','den.1','nor.1','swe.1','pol.1','ukr.1','cro.1','srb.1','cyp.1','isr.1','rou.1','bul.1','hun.1','svk.1','svn.1','fin.1','aze.1','geo.1','kaz.1','irl.1','wal.1','nir.1','isl.1','lva.1','est.1','ltu.1','mlt.1','blr.1','arm.1','mda.1','alb.1','bih.1','mkd.1','mne.1','arg.1','bra.1','col.1','chi.1','uru.1','par.1','per.1','ecu.1','bol.1','ven.1','mex.1','usa.1'];
+  for(let i=0;i<priority.length;i+=8){
+    const batch=priority.slice(i,i+8),found=await Promise.all(batch.map(async sl=>{try{const ev=await schedEvs(sl,id);return toGames(ev,id).length?sl:null}catch{return null}}));
+    const sl=found.find(Boolean);if(sl){try{const m=await domMap();m[String(id)]=sl;SV('DOM5',{t:Date.now(),v:m});SV(key,{t:Date.now(),v:sl})}catch{}return sl;}
+  }
+  try{SV(key,{t:Date.now(),v:null})}catch{}return null;
 }
 const CAL=new Set(['arg.1','bra.1','col.1','chi.1','uru.1','par.1','per.1','ecu.1','bol.1','ven.1','usa.1','nor.1','swe.1','fin.1','isl.1','irl.1','conmebol.libertadores','conmebol.sudamericana']);
 const prevSeason=sl=>{const d=new Date(),y=d.getFullYear();return CAL.has(sl)?y-1:(d.getMonth()>=6?y-1:y-2)};
@@ -118,7 +129,10 @@ async function teamForm(slug,id){
   const sls=[slug];
   // Torneos cortos (Champions, Europa, Libertadores…): se completa con la liga local del equipo.
   if(CONT.includes(slug)){
-    const dom=await domOf(id,new Set(evs.map(x=>x[0].id)));
+    let dom=await domOf(id,new Set(evs.map(x=>x[0].id)));
+    // Si no existe mapeo guardado (frecuente en Europa/Conference al inicio de temporada),
+    // localizar la competición doméstica real del club en vez de usar solo partidos UEFA.
+    if(!dom)dom=await discoverDomestic(id);
     if(dom&&dom!==slug){sls.push(dom);evs=evs.concat(await schedEvs(dom,id))}
   }
   // Si aún hay menos de 10 partidos (inicio de temporada), se suma la temporada anterior de esas mismas competiciones.
