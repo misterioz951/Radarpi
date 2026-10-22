@@ -1,31 +1,37 @@
+/* NBA · acento naranja (--sx se define por sección en styles.css).
+   Ojo: .nb-bars recibe --ln en línea (posición de la línea del juego); dentro de ella no se usa --ln como color. */
 .nb-g>summary{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.nb-pj{margin:8px 0;font-size:14px}
-.nb-gr,.nb-t{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--ln)}
+.nb-pj{margin:8px 0;font-size:14.5px}
+.nb-gr,.nb-t{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--ln)}
 .nb-gr span,.nb-t span{flex:1;font-size:14px}.nb-t span small{display:block;color:var(--mut)}
-.nb-gr b,.nb-t b{font:700 19px 'Archivo Narrow',sans-serif}.nb-gr small,.nb-t>small{color:var(--mut);font-size:12px}
-.nb-p{border-top:1px solid var(--ln);padding:12px 0}
+.nb-gr b,.nb-t b{font:700 19px var(--f-d)}.nb-gr small,.nb-t>small{color:var(--mut);font-size:12.5px}
+.nb-p{border-top:1px solid var(--ln);padding:13px 0}
 .nb-ph{display:flex;flex-direction:column;gap:2px}.nb-ph small{color:var(--mut)}
-.nb-ch{display:flex;gap:6px;margin:8px 0}.nb-ch button{flex:1;border:1px solid var(--ln);background:var(--s2);color:var(--ink);border-radius:10px;padding:7px 0;font:600 12.5px Archivo,sans-serif}.nb-ch button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
-.nb-bars{position:relative;display:flex;align-items:flex-end;gap:4px;height:96px;padding:0 2px;margin:6px 0}
-.nb-bars u{position:absolute;left:0;right:0;bottom:var(--ln);border-top:2px dashed var(--ink);opacity:.6;pointer-events:none}
+.nb-ch{display:flex;gap:6px;margin:9px 0}
+.nb-ch button{flex:1;border:1px solid var(--ln);background:var(--s2);color:var(--ink);border-radius:12px;padding:8px 0;font:600 13px var(--f-b)}
+.nb-ch button.on{background:var(--sx);color:var(--onsx);border-color:var(--sx)}
+/* Barras estilo props.cash: últimos juegos contra la línea */
+.nb-bars{position:relative;display:flex;align-items:flex-end;gap:5px;height:104px;padding:0 2px;margin:8px 0}
+.nb-bars u{position:absolute;left:0;right:0;bottom:var(--ln);border-top:2px dashed var(--ink);opacity:.55;pointer-events:none}
 .nb-b{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;position:relative}
-.nb-b i{display:block;width:100%;border-radius:5px 5px 0 0}.nb-b i.ok{background:var(--ok)}.nb-b i.no{background:var(--bad);opacity:.75}
-.nb-b span{position:absolute;bottom:100%;font-size:10px;color:var(--mut);margin-bottom:-2px;display:none}.nb-b:last-child span,.nb-b:nth-child(n+1):hover span{display:block}
-.nb-ln{font-size:13px;color:var(--mut);display:flex;gap:6px;align-items:center;flex-wrap:wrap}.nb-ln input{width:70px}.nb-ln em{font-style:normal;font-size:11.5px}
+.nb-b i{display:block;width:100%;border-radius:6px 6px 2px 2px}.nb-b i.ok{background:var(--ok)}.nb-b i.no{background:var(--bad);opacity:.7}
+.nb-b span{position:absolute;bottom:100%;font-size:10.5px;color:var(--mut);margin-bottom:-2px;display:none}.nb-b:last-child span,.nb-b:hover span{display:block}
+.nb-ln{font-size:13px;color:var(--mut);display:flex;gap:6px;align-items:center;flex-wrap:wrap}.nb-ln input{width:72px}.nb-ln em{font-style:normal;font-size:12px}
 .nb-sd{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
-.nb-s{display:flex;flex-direction:column;align-items:center;gap:2px;border:2px solid var(--ln);background:var(--s2);color:var(--ink);border-radius:14px;padding:9px 6px}
-.nb-s b{font-size:13px}.nb-s span{font:700 22px 'Archivo Narrow',sans-serif}.nb-s small{font-size:11.5px;color:var(--mut)}
+.nb-s{display:flex;flex-direction:column;align-items:center;gap:2px;border:2px solid var(--ln);background:var(--s2);color:var(--ink);border-radius:16px;padding:10px 6px}
+.nb-s b{font-size:13px}.nb-s span{font:700 23px var(--f-d)}.nb-s small{font-size:12px;color:var(--mut)}
 .nb-s.va{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 10%,var(--s2))}
 
-/* Tarjetas NBA compactas: el resumen deja ver el pick sin ocupar una pantalla por partido. */
-.nb-game{display:block;margin:10px 0;border:1px solid var(--ln);border-radius:16px;background:var(--card);overflow:hidden}
-.nb-game>summary{list-style:none;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) 18px;align-items:center;gap:10px;padding:12px;cursor:pointer}
+/* Partido NBA compacto: el resumen deja ver el pick sin ocupar una pantalla por partido. */
+.nb-game{display:block;margin:10px 0;border:1px solid var(--ln);border-radius:22px;background:var(--card);overflow:hidden;box-shadow:var(--sh)}
+.nb-game>summary{list-style:none;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) 18px;align-items:center;gap:10px;padding:14px;cursor:pointer;font:inherit;letter-spacing:0}
+.nb-game>summary::after{display:none}
 .nb-game>summary::-webkit-details-marker{display:none}
 .nb-game-title,.nb-game-picks{display:flex;min-width:0;flex-direction:column;gap:4px}
-.nb-game-title>b{font-size:13px;line-height:1.25;overflow-wrap:anywhere}
-.nb-game-title>small,.nb-game-picks>small{font-size:11px;color:var(--mut);line-height:1.35}
-.nb-game-picks>b{font-size:12px;line-height:1.35;overflow-wrap:anywhere}
+.nb-game-title>b{font:700 15px/1.2 var(--f-d);overflow-wrap:anywhere}
+.nb-game-title>small,.nb-game-picks>small{font-size:12px;color:var(--mut);line-height:1.35}
+.nb-game-picks>b{font-size:12.5px;line-height:1.35;overflow-wrap:anywhere}
 .nb-game-arrow{font-size:18px;color:var(--mut);transition:transform .18s}
 .nb-game[open]>.nb-game-arrow,.nb-game[open]>summary .nb-game-arrow{transform:rotate(180deg)}
-.nb-game>.mc{margin:0;border:0;border-top:1px solid var(--ln);border-radius:0;padding:12px}
-@media(max-width:480px){.nb-game>summary{grid-template-columns:minmax(0,1fr) 18px;gap:8px}.nb-game-picks{grid-column:1;grid-row:2}.nb-game-arrow{grid-column:2;grid-row:1 / span 2}.nb-game-title{grid-column:1;grid-row:1}.nb-game-picks>b{font-size:11.5px}}
+.nb-game>.mc{margin:0;border:0;border-top:1px solid var(--ln);border-radius:0;padding:14px;box-shadow:none}
+@media(max-width:480px){.nb-game>summary{grid-template-columns:minmax(0,1fr) 18px;gap:8px}.nb-game-picks{grid-column:1;grid-row:2}.nb-game-arrow{grid-column:2;grid-row:1 / span 2}.nb-game-title{grid-column:1;grid-row:1}}

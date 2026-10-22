@@ -1,11 +1,11 @@
 <!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Radar de patrones</title>
-<meta name="theme-color" content="#0E1A33">
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@600;700&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="nba.css"></head><body>
-<header><div class="logo"><svg viewBox="0 0 32 32" fill="none" stroke="#F5B800" stroke-width="2.4" stroke-linecap="round"><path d="M5 21a11 11 0 0 1 22 0"/><path d="M10 21a6 6 0 0 1 12 0"/><circle cx="16" cy="22.5" r="2.3" fill="#F5B800" stroke="none"/></svg></div>
-<div><h1>Radar de patrones</h1><small>Fútbol · análisis exigente, tú decides</small></div></header>
+<title>RadarPi</title>
+<meta name="theme-color" content="#E6EEEC" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#051C20" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=sonar1"><link rel="stylesheet" href="nba.css?v=sonar1"></head><body>
+<header><div class="logo" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="13" stroke="#3CC9C3" stroke-opacity=".55" stroke-width="1.5"/><circle cx="16" cy="16" r="8" stroke="#3CC9C3" stroke-opacity=".55" stroke-width="1.5"/><path d="M16 16L26.5 9.5A12.3 12.3 0 0 0 16 3.7z" fill="#FFB21E" fill-opacity=".9"/><circle cx="16" cy="16" r="2.2" fill="#FFB21E"/></svg></div>
+<div><h1>RadarPi</h1><small>Fútbol, NBA y combinadas</small></div></header>
 
 <section id="s-f">
 <details class="card cfgbox" id="scanbox" open><summary>Ligas y días <small id="scansum"></small></summary>
@@ -15,7 +15,7 @@
 <div class="seg" id="dd" role="group" aria-label="Días a escanear"><button type="button" data-d="1">Hoy</button><button type="button" data-d="2">Hoy y mañana</button></div>
 </details>
 <button class="btn" id="go"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 12l5.5-5.5"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg><span>Escanear partidos</span></button>
-<button class="btn s" id="hunt" type="button" style="width:100%;min-height:46px;margin:10px 0 0">Buscar el mejor pick en todas las ligas</button>
+<button class="btn s wide" id="hunt" type="button">Buscar el mejor pick en todas las ligas</button>
 <p class="status" id="msg"></p>
 <div id="res"><div class="empty"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="32" cy="32" r="26"/><circle cx="32" cy="32" r="15"/><path d="M32 32l16-16"/></svg><b>Todo listo para escanear</b>Elige tus ligas y toca el botón. Te muestro solo los partidos con patrones o con valor.</div></div>
 </section>
