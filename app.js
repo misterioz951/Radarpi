@@ -46,7 +46,24 @@ function switchRadarTab(tab){
 }
 function openSettings(){switchRadarTab('a');}
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>switchRadarTab(b.dataset.t));
-document.querySelectorAll('[data-home-go]').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.homeFilter&&b.dataset.homeGo==='m')setMdlTab(b.dataset.homeFilter);switchRadarTab(b.dataset.homeGo)}));
+document.querySelectorAll('[data-home-go]').forEach(b=>b.addEventListener('click',()=>{
+  if(b.dataset.homeFilter){openGlobalSummary(b.dataset.homeFilter);return;}
+  switchRadarTab(b.dataset.homeGo);
+}));
+function openGlobalSummary(filter='all',module='all'){
+  const sources={f:{name:'Fútbol',items:LS('picks',[])},c:{name:'Combi',items:LS('combipicks',[])},n:{name:'NBA',items:LS('nbapicks',[])}};
+  const labels={all:'Registrados',p:'Pendientes',w:'Acertados',l:'Fallados'};
+  const state=x=>x?.res==='w'?'w':x?.res==='l'?'l':x?.res==='v'?'v':'p';
+  let root=document.getElementById('global-summary-overlay');
+  if(!root){root=document.createElement('div');root.id='global-summary-overlay';root.className='global-summary-overlay';root.innerHTML='<section class="global-summary-panel" role="dialog" aria-modal="true" aria-label="Resumen general"><header class="global-summary-head"><button type="button" class="btn s" data-gs-close>‹ Inicio</button><div><h2 id="gs-title">Resumen general</h2><small id="gs-count"></small></div></header><div class="global-summary-filters" id="gs-status"></div><div class="global-summary-filters" id="gs-modules"></div><div id="gs-results"></div></section>';document.body.appendChild(root);root.addEventListener('click',e=>{if(e.target===root||e.target.closest('[data-gs-close]'))root.remove();const b=e.target.closest('[data-gs-filter]');if(b)openGlobalSummary(b.dataset.gsFilter,root.dataset.module||'all');const m=e.target.closest('[data-gs-module]');if(m)openGlobalSummary(root.dataset.filter||'all',m.dataset.gsModule);});}
+  root.dataset.filter=filter;root.dataset.module=module;root.querySelector('#gs-title').textContent=labels[filter]||'Resumen general';
+  root.querySelector('#gs-status').innerHTML=[['all','Todos'],['p','Pendientes'],['w','Acertados'],['l','Fallados']].map(([k,t])=>`<button class="btn s ${filter===k?'on':''}" data-gs-filter="${k}">${t}</button>`).join('');
+  root.querySelector('#gs-modules').innerHTML=[['all','Todos los módulos'],['f','Fútbol'],['n','NBA'],['c','Combi']].map(([k,t])=>`<button class="btn s ${module===k?'on':''}" data-gs-module="${k}">${t}</button>`).join('');
+  const rows=Object.entries(sources).filter(([k])=>module==='all'||module===k).flatMap(([k,src])=>src.items.filter(x=>x&& (filter==='all'||state(x)===filter)).map(x=>({x,k,name:src.name,state:state(x)}))).sort((a,b)=>new Date(b.x.ko||b.x.date||0)-new Date(a.x.ko||a.x.date||0));
+  root.querySelector('#gs-count').textContent=`${rows.length} registro${rows.length===1?'':'s'} · ${module==='all'?'Todos los módulos':sources[module].name}`;
+  root.querySelector('#gs-results').innerHTML=rows.length?rows.map(({x,k,name,state})=>`<article class="card global-summary-item"><div><span class="pill">${name}</span><span class="st ${state}">${({p:'Pendiente',w:'Acertado',l:'Fallado',v:'Nulo'})[state]}</span></div><b>${esc(x.m||x.match||x.partido||x.event||'Pick registrado')}</b><p>${esc(x.mk||x.market||x.pick||x.seleccion||'Pronóstico')}${x.liga?' · '+esc(x.liga):''}</p><div class="global-summary-meta">${x.q?'Cuota '+esc(x.q)+' · ':''}${x.stake!=null?'Stake '+esc(x.stake):x.s!=null?'Stake '+esc(x.s):''}${x.sc?' · Marcador '+esc(x.sc):''}</div></article>`).join(''):'<p class="status">No hay registros en esta categoría.</p>';
+  root.hidden=false;switchRadarTab('h');
+}
 function renderHomeDashboard(){
   const football=LS('picks',[]), combi=LS('combipicks',[]), nba=LS('nbapicks',[]);
   const settled=a=>a.filter(x=>x&&(x.res==='w'||x.res==='l'));
