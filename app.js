@@ -1,6 +1,8 @@
 const $=s=>document.querySelector(s);
 const LS=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??d}catch{return d}};
-const SV=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
+// Guardado seguro: si el almacenamiento está lleno, borra cachés viejas y reintenta; si aun así falla, avisa (antes fallaba en silencio)
+let svWarned=0;
+const SV=(k,v)=>{const s=JSON.stringify(v);try{localStorage.setItem(k,s);return true}catch(e){try{cleanCaches(true);localStorage.setItem(k,s);return true}catch(e2){if(Date.now()-svWarned>30000){svWarned=Date.now();try{toast('⚠ Almacenamiento lleno: no se pudo guardar «'+k+'». Exporta una copia y usa «Limpiar cachés» en Ajustes.')}catch{}}return false}}};
 const dlab=d=>{const k=iso(new Date(d));return k===today()?'':k===iso(new Date(Date.now()+864e5))?'Mañana · ':new Date(d).toLocaleDateString('es',{weekday:'short',day:'numeric'})+' · '};
 const okDay=d=>{const k=iso(new Date(d));return k===today()||((cfg.dd||1)>=2&&k===iso(new Date(Date.now()+864e5)))};
 function toast(t,ms){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),ms||2600)}
@@ -1732,3 +1734,26 @@ try{if(!LS('purge2',0)){Object.keys(localStorage).filter(k=>k==='DOM3'||k==='DOM
   if(saved==='a')openSettings();else if(target)target.click();
   if(saved==='c'){const sub=LS('activeCombiTab','buscar');if(sub==='modelo')showCombiTab('modelo');}
 })();
+
+// ===== Almacenamiento: limpieza de cachés (nunca toca picks, apuestas ni ajustes) =====
+function cleanCaches(force){
+  const keep=new Set(['picks','bets','cfg','seen','scan','nbapicks','combipicks','nbcfg','afUsed','purge2','radarpi_backup_last_export']),now=Date.now(),max=(force?.04:14)*864e5;let n=0,bytes=0;
+  for(const k of Object.keys(localStorage)){
+    if(keep.has(k)||k.startsWith('radarpi_'))continue;
+    let o;try{o=JSON.parse(localStorage.getItem(k))}catch{continue}
+    if(!o||typeof o!=='object'||Array.isArray(o))continue;
+    if(k==='nba_gl'){let ch=0;for(const id in o)if(!o[id]||now-(o[id].t||0)>max){delete o[id];ch++}if(ch){n+=ch;try{localStorage.setItem(k,JSON.stringify(o))}catch{}}continue}
+    const t=typeof o.t==='number'?o.t:(o.d?Date.parse(o.d):NaN);
+    if(isNaN(t))continue;
+    if(!('v' in o)&&!/^(af_fixtures_|Y\d|DOM|nba_)/.test(k))continue;
+    if(now-t>max){bytes+=(localStorage.getItem(k)||'').length;localStorage.removeItem(k);n++}
+  }
+  return{n,kb:Math.round(bytes*2/1024)};
+}
+function storKB(){let b=0;for(const k of Object.keys(localStorage))b+=(k.length+(localStorage.getItem(k)||'').length)*2;return Math.round(b/1024)}
+function drawStor(txt){const el=$('#storMsg');if(!el)return;const kb=storKB(),pc=Math.min(100,Math.round(kb/5120*100));
+  el.textContent=(txt?txt+' ':'')+'Almacenamiento usado: '+(kb/1024).toFixed(1)+' MB de ~5 MB ('+pc+'%).'+(pc>=80?' ⚠ Casi lleno: limpia cachés y exporta una copia.':' Tus picks y ajustes no se tocan al limpiar.');
+  el.style.color=pc>=80?'var(--bad)':''}
+try{cleanCaches(false)}catch{}
+if($('#storClean'))$('#storClean').addEventListener('click',()=>{const r=cleanCaches(true);drawStor('Se liberaron ~'+r.kb+' KB ('+r.n+' cachés).')});
+drawStor();
