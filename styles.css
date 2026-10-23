@@ -550,3 +550,27 @@ nav button{font-size:10px}
 /* Filtros de modelo desplazables en pantallas estrechas */
 #mdl>.seg,#nbpk>.seg{display:flex;flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;gap:5px}
 #mdl>.seg button,#nbpk>.seg button{flex:0 0 auto;white-space:nowrap}
+
+
+/* Filtros compactos y estados consistentes en Fútbol, Combi y NBA */
+.model-filter-bar{display:flex;gap:5px;overflow-x:auto;align-items:stretch;padding:4px;margin:10px 0;border-radius:13px;scrollbar-width:thin}
+.model-filter-bar button{flex:1 0 72px;min-width:0;min-height:42px;padding:5px 4px;gap:3px;border-radius:10px;font-size:11px;white-space:nowrap}
+.model-filter-bar button b{font:750 14px var(--f-d);line-height:1.1;color:var(--mut)}
+.model-filter-bar button b.ok{color:var(--ok)}
+.model-filter-bar button b.bad{color:var(--bad)}
+.model-filter-bar button b.pending{color:var(--acc)}
+.st.p{background:color-mix(in srgb,var(--acc) 18%,transparent);color:var(--acc)}
+@media(max-width:420px){.model-filter-bar{gap:3px}.model-filter-bar button{flex-basis:66px;min-height:39px;font-size:10.5px;padding:4px 2px}}
+
+.combo-record-status.pending{color:var(--acc)}
+#nba-root .bet.is-win{border-left:4px solid var(--ok)}
+#nba-root .bet.is-loss{border-left:4px solid var(--bad)}
+#nba-root .bet.is-pending{border-left:4px solid var(--acc)}
+#nba-root .bet.is-void{border-left:4px solid var(--mut)}
+/* Semántica de resultados estable en todos los temas: verde ganado, rojo fallado, amarillo pendiente */
+.model-filter-bar button b.pending{color:#FFB21E}
+.st.p{background:color-mix(in srgb,#FFB21E 20%,transparent);color:#FFB21E}
+.model-pick.is-win,#nba-root .bet.is-win,.combo-record.is-win{border-left-color:#20A66A}
+.model-pick.is-loss,#nba-root .bet.is-loss,.combo-record.is-loss{border-left-color:#E05252}
+.model-pick.is-pending,#nba-root .bet.is-pending,.combo-record.is-pending{border-left-color:#FFB21E}
+.combo-record-status.pending{color:#FFB21E}

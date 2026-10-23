@@ -4,7 +4,7 @@
 const NE='https://site.api.espn.com/apis/site/v2/sports/basketball/nba/',NW='https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/',NO='https://api.the-odds-api.com/v4/sports/basketball_nba/';
 async function nbFetchESPN(url,options){let err='';try{const r=await fetch(url,options);if(r.ok)return r;err='HTTP '+r.status}catch(e){err=e&&e.message||'fallo de red'}for(const make of [u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),u=>'https://corsproxy.io/?url='+encodeURIComponent(u)]){try{const r=await fetch(make(url),options);if(r.ok)return r;err+='; proxy HTTP '+r.status}catch(e){err+='; proxy '+(e&&e.message||'fallo de red')}}throw new Error('ESPN no respondió ('+err+').')}
 const NC=Object.assign({keys:'',games:3,per:8,day:0,news:'',sgo:'',bdl:'',apisports:''},LS('nbcfg',{}));
-const NB={g:[],od:null,sel:{},ln:{},reg:{},picks:LS('nbapicks',[]),ki:0};
+const NB={g:[],od:null,sel:{},ln:{},reg:{},picks:LS('nbapicks',[]),ki:0,tab:'all'};
 const nz=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\b(jr|sr|ii|iii|iv)\b/g,'').replace(/[^a-z ]/g,'').replace(/\s+/g,' ').trim();
 const Phi=x=>{const t=1/(1+.2316419*Math.abs(x)),p=.3989423*Math.exp(-x*x/2)*t*(.3193815+t*(-.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return x>0?1-p:p};
 const nbj=async u=>{const r=await nbFetchESPN(u);return r.json()};
@@ -329,15 +329,15 @@ async function nbAutoRes(manual){
   if(n){SV('nbapicks',NB.picks);nbPicks()}
   if(manual)toast(n?n+' picks resueltos':'Aún no terminan los partidos de tus picks pendientes');
 }
-function nbPicks(){nbK();
-  const P=NB.picks,D=P.filter(x=>x.res==='w'||x.res==='l'),pend=P.filter(x=>!x.res).length,nW=D.filter(x=>x.res==='w').length,nL=D.length-nW,nV=P.filter(x=>x.res==='v').length,tab=NB.tab||'res';
+function nbPicks(target='#nbpk',statsOnly=false){nbK();
+  const P=NB.picks,D=P.filter(x=>x.res==='w'||x.res==='l'),pend=P.filter(x=>!x.res).length,nW=D.filter(x=>x.res==='w').length,nL=D.length-nW,nV=P.filter(x=>x.res==='v').length,tab=statsOnly?'res':(NB.tab||'all');
   const pr=a=>a.length?Math.round(100*a.reduce((t,x)=>t+x.p,0)/a.length):0,hit=a=>a.length?Math.round(100*a.filter(x=>x.res==='w').length/a.length):0;
   const row=(t,a)=>a.length?rwRow(t,a.filter(x=>x.res==='w').length,a.length,pr(a)):'';
   const brier=D.length?D.reduce((t,x)=>t+Math.pow(x.p-(x.res==='w'?1:0),2),0)/D.length:null,Dq=D.filter(x=>x.q),roi=Dq.reduce((t,x)=>t+(x.res==='w'?x.q-1:-1),0);
-  const tabs=[['res','Resumen',''],['all','Todos',P.length],['p','Pendientes',pend],['w','Acertados',nW],['l','Fallados',nL],['s','Stake','']];if(nV)tabs.push(['v','Nulos',nV]);
-  const menu=`<div class="seg m" role="tablist" aria-label="Secciones del modelo NBA">${tabs.map(([k,t,n])=>`<button type="button" role="tab" aria-selected="${tab===k}" class="${tab===k?'on':''}" onclick="nbTab('${k}')"><span>${t}</span>${n!==''?`<b class="${k==='w'?'ok':k==='l'?'bad':''}">${n}</b>`:''}</button>`).join('')}</div><button class="btn" onclick="nbAutoRes(true)">Actualizar resultados</button>`;
+  const tabs=[['all','Todos',P.length],['p','Pendientes',pend],['w','Acertados',nW],['l','Fallados',nL]];if(nV)tabs.push(['v','Nulos',nV]);
+  const menu=statsOnly?'':`<div class="seg m model-filter-bar" role="tablist" aria-label="Filtros del Modelo NBA">${tabs.map(([k,t,n])=>`<button type="button" role="tab" aria-selected="${tab===k}" class="${tab===k?'on':''}" onclick="nbTab('${k}')"><span>${t}</span><b class="${k==='w'?'ok':k==='l'?'bad':k==='p'?'pending':''}">${n}</b></button>`).join('')}</div><button class="btn" onclick="nbAutoRes(true)">Actualizar resultados</button>`;
   const item=x=>{const B=(r,t)=>`<button class="btn s ${x.res===r?'on':''}" onclick="nbSetRes(${x.id},'${r}')">${t}</button>`;
-    return `<div class="bet"><div class="bet-h"><b>${esc(x.t)}</b><span class="st ${x.res||'p'}">${{w:'Acertó',l:'Falló',v:'Nulo'}[x.res]||'Pendiente'}</span></div><small>${x.d} · ${esc(x.st||'Pick')} · modelo ${Math.round(x.p*100)}%${x.q?' · cuota '+x.q:' · sin cuota real'}${x.sk?' · Stake '+x.sk+'/9':''}</small><div>${B('w','Acertó')}${B('l','Falló')}${B('v','Nulo')}<button class="btn s" onclick="nbSetRes(${x.id},null)">↺</button><button class="btn s" onclick="nbDel(${x.id})">Borrar</button></div></div>`};
+    return `<div class="bet ${x.res==='w'?'is-win':x.res==='l'?'is-loss':x.res==='v'?'is-void':'is-pending'}"><div class="bet-h"><b>${esc(x.t)}</b><span class="st ${x.res||'p'}">${{w:'Acertó',l:'Falló',v:'Nulo'}[x.res]||'Pendiente'}</span></div><small>${x.d} · ${esc(x.st||'Pick')} · modelo ${Math.round(x.p*100)}%${x.q?' · cuota '+x.q:' · sin cuota real'}${x.sk?' · Stake '+x.sk+'/9':''}</small><div>${B('w','Acertó')}${B('l','Falló')}${B('v','Nulo')}<button class="btn s" onclick="nbSetRes(${x.id},null)">↺</button><button class="btn s" onclick="nbDel(${x.id})">Borrar</button></div></div>`};
   let body='';
   if(tab==='res'){
     const gap=hit(D)-pr(D),V=D.length<10?{t:'Aún sin conclusiones',d:'Faltan '+Math.max(0,30-D.length)+' picks resueltos para sacar conclusiones. Mientras tanto no cambies reglas por rachas.'}:gap>=-3?{t:'Acierta lo que promete',d:'Las probabilidades parecen razonables. Confírmalo con el ROI.'}:gap>=-8?{t:'Algo optimista',d:'Acierta un poco menos de lo que dice. Sé prudente con el stake.'}:{t:'Demasiado optimista',d:'Acierta bastante menos de lo que promete. No te fíes de sus probabilidades altas.'};
@@ -359,7 +359,7 @@ function nbPicks(){nbK();
     const sel=tab==='all'?P:tab==='p'?P.filter(x=>!x.res):tab==='v'?P.filter(x=>x.res==='v'):P.filter(x=>x.res===tab),T={all:['Todos los picks','No hay picks registrados todavía.'],w:['Picks acertados','No hay picks acertados todavía.'],l:['Picks fallados','No hay picks fallados todavía.'],p:['Pendientes','No hay picks pendientes.'],v:['Picks nulos','No hay picks nulos.']}[tab];
     body=`<div class="card"><h2>${T[0]} <small>(${sel.length})</small></h2>${tab==='p'?'<small>Pulsa «Actualizar resultados» cuando terminen los partidos. Si un jugador no jugó, queda como nulo. ↺ devuelve a pendiente.</small>':'<small>Si algún resultado está mal, corrígelo con los botones de cada pick.</small>'}${sel.slice(0,40).map(item).join('')||`<p class="mut">${T[1]}</p>`}</div>`;
   }
-  $('#nbpk').innerHTML=menu+body}
+  const el=typeof target==='string'?$(target):target;if(el)el.innerHTML=menu+body}
 async function nbTest(){const o=$('#nbmsg');const R=[];const t=async(n,f)=>{try{R.push('✔ '+n+': '+await f())}catch(e){R.push('✘ '+n+': '+e.message)}o.textContent=R.join(' · ')};
   let tid,pid;await t('Calendario ESPN',async()=>{const j=await nbj(NE+'scoreboard');tid=((j.events||[])[0]||{competitions:[{competitors:[{team:{id:13}}]}]}).competitions[0].competitors[0].team.id;return (j.events||[]).length+' partidos'});
   await t('Plantilla',async()=>{const j=await nbj(NE+'teams/'+(tid||13)+'/roster'),A=(j.athletes||[]).flatMap(x=>x.items||[x]);pid=A[0]&&A[0].id;return A.length+' jugadores'});
@@ -417,5 +417,5 @@ function nbInitGeneralSettings(){
 }
 function nbSet(){SV('nbcfg',NC);document.querySelectorAll('#nbday button').forEach((b,i)=>b.classList.toggle('on',i===NC.day))}
 nbInit();nbAutoRes(false).catch(()=>{});
-Object.assign(window,{NB,NC,nbScan,nbCard,nbTest,nbLog,nbTab,nbSetRes,nbDel,nbAutoRes,nbSet,nbDraw,nbAI});
+Object.assign(window,{NB,NC,nbScan,nbCard,nbTest,nbLog,nbTab,nbPicks,nbSetRes,nbDel,nbAutoRes,nbSet,nbDraw,nbAI});
 })();
