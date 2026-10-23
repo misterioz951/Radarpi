@@ -16,22 +16,14 @@
     <button class="home-metric" type="button" data-home-go="m" data-home-filter="w"><span>Acertados</span><b id="home-wins">0</b><small>Resultados registrados</small></button>
     <button class="home-metric" type="button" data-home-go="m" data-home-filter="l"><span>Fallados</span><b id="home-losses">0</b><small>Resultados registrados</small></button>
   </div>
-  <div class="home-section-head"><h3>Rendimiento por módulo</h3><span>Separado por deporte</span></div>
-  <div class="home-module-list">
-    <button class="home-module" type="button" data-home-go="f"><span class="home-module-icon football-icon">⚽</span><span class="home-module-copy"><b>Fútbol</b><small id="home-football-meta">Sin picks registrados</small></span><span class="home-module-stat" id="home-football-rate">—</span><span class="home-chevron">›</span></button>
-    <button class="home-module" type="button" data-home-go="c"><span class="home-module-icon combi-icon">✦</span><span class="home-module-copy"><b>Combi</b><small id="home-combi-meta">Sin combinadas registradas</small></span><span class="home-module-stat" id="home-combi-rate">—</span><span class="home-chevron">›</span></button>
-    <button class="home-module" type="button" data-home-go="n"><span class="home-module-icon nba-icon">🏀</span><span class="home-module-copy"><b>NBA</b><small id="home-nba-meta">Sin picks registrados</small></span><span class="home-module-stat" id="home-nba-rate">—</span><span class="home-chevron">›</span></button>
-  </div>
-  <div class="home-section-head"><h3>Panel de rendimiento</h3><span>Solo resultados resueltos</span></div>
-  <div class="home-performance card">
-    <div class="performance-top"><div><b>Efectividad general</b><small id="home-settled-meta">Todavía no hay resultados suficientes</small></div><strong id="home-overall-rate">—</strong></div>
-    <div class="performance-track"><i id="home-overall-bar" style="width:0%"></i></div>
-    <div class="performance-breakdown">
-      <div><span>⚽ Fútbol</span><b id="home-football-perf">—</b><small id="home-football-sample">0 resueltos</small><div class="performance-track"><i id="home-football-bar" style="width:0%"></i></div></div>
-      <div><span>✦ Combi</span><b id="home-combi-perf">—</b><small id="home-combi-sample">0 resueltos</small><div class="performance-track"><i id="home-combi-bar" style="width:0%"></i></div></div>
-      <div><span>🏀 NBA</span><b id="home-nba-perf">—</b><small id="home-nba-sample">0 resueltos</small><div class="performance-track"><i id="home-nba-bar" style="width:0%"></i></div></div>
+  <div class="home-section-head"><h3>Rendimiento</h3><span>Solo resultados resueltos</span></div>
+  <div class="card perf2">
+    <div class="perf2-top">
+      <div class="perf-donut"><span id="perf-ring"></span><b id="home-overall-rate">—</b></div>
+      <div class="perf2-sum"><b>Efectividad general</b><small id="home-settled-meta">Registra y resuelve picks para ver tu efectividad</small><span class="perf2-legend"><i class="g"></i>aciertos <i class="r"></i>fallos <i class="n"></i>pendientes</span></div>
     </div>
-    <p class="performance-footnote">La efectividad es aciertos ÷ (aciertos + fallos). No equivale a rentabilidad ni garantiza resultados futuros.</p>
+    <div class="home-module-list" id="home-mods"></div>
+    <p class="performance-footnote">Efectividad = aciertos ÷ (aciertos + fallos). «Unidades» = ganancia suponiendo 1 unidad por pick a la cuota registrada; no es dinero real ni garantiza resultados futuros.</p>
   </div>
   <div class="home-note"><b>Importante</b><span>Las estadísticas se calculan con los resultados guardados en este navegador. Los pendientes no cuentan como aciertos ni fallos.</span></div>
 </section>
@@ -136,4 +128,4 @@
 </nav>
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script src="app.js?v=20261024sec"></script><script src="nba.js?v=20261023v3model"></script></body></html>
+<script src="app.js?v=20261025ui"></script><script src="nba.js?v=20261023v3model"></script></body></html>

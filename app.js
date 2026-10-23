@@ -76,15 +76,20 @@ function renderHomeDashboard(){
   const set=(id,v)=>{const e=$('#'+id);if(e)e.textContent=String(v)};
   const total=football.length+combi.length+nba.length;
   set('home-total',total);set('home-pending',pending(football)+pending(combi)+pending(nba));set('home-wins',wins(football)+wins(combi)+wins(nba));set('home-losses',losses(football)+losses(combi)+losses(nba));
-  set('home-football-meta',`${football.length} picks · ${wins(football)} acertados · ${losses(football)} fallados · ${pending(football)} pendientes`);
-  set('home-combi-meta',`${combi.length} combinadas · ${wins(combi)} ganadas · ${losses(combi)} perdidas · ${pending(combi)} pendientes`);
-  set('home-nba-meta',`${nba.length} picks · ${wins(nba)} acertados · ${losses(nba)} fallados · ${pending(nba)} pendientes`);
-  set('home-football-rate',rate(football));set('home-combi-rate',rate(combi));set('home-nba-rate',rate(nba));
-  const all=[football,combi,nba];
-  const done=all.reduce((n,a)=>n+settled(a).length,0),won=all.reduce((n,a)=>n+a.filter(x=>x&&x.res==='w').length,0),overall=done?Math.round(won/done*100):null;
-  set('home-overall-rate',overall===null?'—':overall+'%');set('home-settled-meta',done?`${won} aciertos de ${done} resultados resueltos`:'Registra y resuelve picks para ver tu efectividad');
-  const bar=(id,v)=>{const e=$('#'+id);if(e)e.style.width=(v===null?0:v)+'%'};bar('home-overall-bar',overall);
-  [['football',football],['combi',combi],['nba',nba]].forEach(([key,a])=>{const d=settled(a),w=d.filter(x=>x.res==='w').length,v=d.length?Math.round(w/d.length*100):null;set('home-'+key+'-perf',v===null?'—':v+'%');set('home-'+key+'-sample',`${d.length} resueltos · ${w} aciertos`);bar('home-'+key+'-bar',v)});
+  const ring=(w,l,p,size,sw)=>{const r=(size-sw)/2,C=2*Math.PI*r,t=(w+l+p)||1,c=size/2;let off=0;
+    const seg=(n,col)=>{const len=C*n/t,el=n?`<circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}" transform="rotate(-90 ${c} ${c})"/>`:'';off+=len;return el};
+    return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true"><circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="var(--s2)" stroke-width="${sw}"/>${seg(w,'var(--ok)')}${seg(l,'var(--bad)')}${seg(p,'var(--ln)')}</svg>`};
+  const all=[football,combi,nba],won=all.reduce((n,a)=>n+wins(a),0),lost=all.reduce((n,a)=>n+losses(a),0),pend=all.reduce((n,a)=>n+pending(a),0),done=won+lost;
+  const rg=$('#perf-ring');if(rg)rg.innerHTML=ring(won,lost,pend,116,14);
+  set('home-overall-rate',done?Math.round(won/done*100)+'%':'—');
+  set('home-settled-meta',done?`${won} aciertos de ${done} resueltos · ${pend} pendientes`:'Registra y resuelve picks para ver tu efectividad');
+  const box=$('#home-mods');
+  if(box){
+    box.innerHTML=[['f','⚽','Fútbol',football],['c','✦','Combi',combi],['n','🏀','NBA',nba]].map(([go,ic,nm,a])=>{
+      const w=wins(a),l=losses(a),p=pending(a),d=w+l,rt=d?Math.round(w/d*100):null,qa=a.filter(x=>x&&x.q>1&&(x.res==='w'||x.res==='l')),roi=qa.length?qa.reduce((t,x)=>t+(x.res==='w'?x.q-1:-1),0):null;
+      return `<button class="home-module" type="button" data-home-go="${go}"><span class="perf-ring">${ring(w,l,p,46,6)}<b>${rt===null?'—':rt+'%'}</b></span><span class="home-module-copy"><b>${ic} ${nm}</b><small>${w} acertados · ${l} fallados${p?' · '+p+' pend.':''}</small></span><span class="perf-roi ${roi===null?'':roi>=0?'pos':'neg'}">${roi===null?'—':(roi>=0?'+':'')+roi.toFixed(1)}<small>unidades</small></span><span class="home-chevron">›</span></button>`}).join('');
+    box.querySelectorAll('[data-home-go]').forEach(b=>b.onclick=()=>switchRadarTab(b.dataset.homeGo));
+  }
 }
 
 // ligas
@@ -714,26 +719,27 @@ function bttsAudit(r){
 }
 const fam=n=>/^Córners/.test(n)?'Córners':/^Tarjetas/.test(n)?'Tarjetas':/^Ambos/.test(n)?'Ambos marcan':/^Doble/.test(n)?'Doble oportunidad':/^(Over|Under|Goles)/.test(n)?'Goles':/^(Local|Visitante) (marca|deja)/.test(n)?'Goles por equipo':'Resultado';
 function famBest(r){const s={};for(const c of cands(r)){const f=fam(c.n);if(!s[f])s[f]=c}return Object.values(s).sort((a,b)=>b.sc-a.sc)}
-const altsHtml=(r,b)=>{const a=famBest(r).filter(x=>x.n!==b.n).slice(0,4);return a.length?`<div class="alts"><small>También con valor, en otros mercados</small>${a.map(x=>`<span><b>${esc(x.n)}</b> ${Math.round(x.p*100)}% @${x.q}</span>`).join('')}</div>`:''};
+const altsHtml=(r,b)=>{const a=famBest(r).filter(x=>x.n!==b.n).slice(0,4);return a.length?`<details class="more"><summary>Otros mercados con valor (${a.length})</summary><div class="alts">${a.map(x=>`<span><b>${esc(x.n)}</b> ${Math.round(x.p*100)}% @${x.q}</span>`).join('')}</div></details>`:''};
 const refOf=(r,n)=>(r.mod.f&&r.mod.f[n]!=null)?r.mod.f[n]:(r.mod.fc&&r.mod.fc[n]!=null?r.mod.fc[n]:null);
 function closest(r){const L=(r.mod.m||[]).filter(([n,p])=>!isHalfMarket(n)&&p>=.4&&p<=.9&&r.q&&r.q[n]).map(([n,p])=>{const pc=calP(r,n,p),q=r.q[n];return{n,pc,q,e:pc*q-1}}).sort((a,b)=>b.e-a.e).slice(0,3);
   return L.length?`<div class="alts"><small>Lo más cercano a tener valor (no pasa el filtro)</small>${L.map(x=>`<span><b>${esc(x.n)}</b> ${Math.round(x.pc*100)}% @${x.q} · valor ${x.e>=0?'+':''}${Math.round(x.e*100)}%</span>`).join('')}</div>`:''}
 // Línea segura: probabilidad alta y cuota baja. No es ventaja (el valor es ~0 o algo negativo): sirve de pata de combinada o con stake mínimo.
 function safeLine(r){if(r.A.n<5||r.B.n<5||!r.q)return '';
   const L=(r.mod.m||[]).filter(([n,p])=>!isHalfMarket(n)&&p>=.5&&r.q[n]).map(([n,p])=>{const pc=calP(r,n,p),q=r.q[n],rf=refOf(r,n);return{n,pc,q,e:pc*q-1,bad:rf!=null&&p-rf>.10}}).filter(x=>!x.bad&&x.q>=1.2&&x.q<=1.7&&x.pc>=.68&&x.e>=-.04).sort((a,b)=>b.pc-a.pc)[0];
-  return L?`<div class="tk safe"><small class="tkl">LÍNEA SEGURA · SIN VALOR CLARO</small><div class="tk1"><b class="n">${esc(L.n)}</b></div><div class="tk2"><span><b>${Math.round(L.pc*100)}%</b> prob.</span><span>cuota <b>@${L.q}</b></span><span>valor <b>${L.e>=0?'+':''}${Math.round(L.e*100)}%</b></span><span>stake sugerido <b>1/9</b></span></div><p class="status">Riesgo bajo, pero la cuota ya refleja esa probabilidad: no es una ventaja. Úsala como pata de combinada o con stake mínimo.</p></div>`:''}
+  return L?`<div class="tk safe"><small class="tkl">LÍNEA SEGURA · SIN VALOR CLARO</small><div class="tk1"><b class="n">${esc(L.n)}</b></div><div class="tk2"><span><b>${Math.round(L.pc*100)}%</b> prob.</span><span>cuota <b>@${L.q}</b></span><span>valor <b>${L.e>=0?'+':''}${Math.round(L.e*100)}%</b></span><span>stake sugerido <b>1/9</b></span></div><p class="status">Riesgo bajo, sin ventaja: pata de combinada o stake mínimo.</p></div>`:''}
 function reasons(r){if(r.A.n<5||r.B.n<5||!r.q)return '';const F=FM(),c={q:0,rng:0,pc:0,val:0,veto:0};
   for(const [n,p] of r.mod.m){if(isHalfMarket(n)||!(p>=.35&&p<=.9))continue;const q=r.q[n];if(!q||q<1.01)continue;c.q++;const pc=calP(r,n,p),e=pc*q-1,rf=refOf(r,n);
     if(q<F.qa||q>F.qb)c.rng++;else if(pc<F.pc)c.pc++;else if(rf!=null&&p-rf>.10)c.veto++;else if(e<F.ea)c.val++;else if(e>F.eb)c.veto++}
   return c.q?`<p class="status">Mercados con cuota: ${c.q}. Descartados: cuota fuera de rango ${c.rng}, probabilidad baja ${c.pc}, sin valor ${c.val}, modelo demasiado optimista frente al mercado ${c.veto}.</p>`:''}
+const shortWhy=r=>{const t=String(diagnose(r)).replace(/<[^>]+>/g,'').trim(),i=t.indexOf('. ');return esc(i>0&&i<130?t.slice(0,i+1):t.slice(0,120)+(t.length>120?'…':''))};
 function ticket(r){
   const b=bestOf(r);
-  if(!b)return `<div class="nopick2"><b>Sin pick con ventaja clara</b><p>${diagnose(r)}</p>${reasons(r)}${r.p.length?`<p>Hay ${r.p.length} patrón(es) detectado(s) en la pestaña Datos.</p>`:''}</div>${safeLine(r)}${closest(r)}`;
+  if(!b)return `<div class="nopick2"><b>Sin pick con ventaja clara</b><small>${shortWhy(r)}</small></div>${safeLine(r)}<details class="more"><summary>Ver motivos y alternativas</summary><p>${diagnose(r)}</p>${reasons(r)}${r.p.length?`<p>Hay ${r.p.length} patrón(es) detectado(s) en la pestaña Datos.</p>`:''}${closest(r)}</details>`;
   const st=baseStake(r,b.n,b.q),c=conflictOf(r,b.n),afReady=!!(r.afData||LS(afCacheKeyFor(r),null));
   return `<div class="tk ${b.t||''}"><small class="tkl">PICK DE LA APP · SEGÚN REGLAS</small><div class="tk1">${b.t?`<span class="tier tier${b.t}">${b.t}</span>`:''}<b class="n">${esc(b.n)}</b></div>
 <div class="tk2"><span><b>${Math.round(b.p*100)}%</b> prob.</span>${b.q?`<span>cuota <b>@${b.q}</b></span><span>valor <b>${b.e>=0?'+':''}${Math.round(b.e*100)}%</b></span>`:`<span>cuota mínima <b>@${(1.05/b.p).toFixed(2)}</b></span>`}<span>stake base <b>${st}/9</b></span></div>
 <div class="meter${st>=5?' hi':''}" role="img" aria-label="Stake ${st} de 9">${Array.from({length:9},(_,k)=>`<i class="${k<st?'f':''}"></i>`).join('')}</div>
-${altsHtml(r,b)}${r.qx&&r.qx[b.n]?'<div class="tkw">Cuota tomada de API-Football (promedio de casas), no de tu casa. Confírmala antes de apostar.</div>':''}${c?`<div class="tkw">⚠ Va contra el patrón detectado (${c}). Confírmalo con la IA antes de apostar.</div>`:''}${!afReady&&cfg.af?'<div class="tkw">API-Football aún no contrastado para este partido. Pulsa «Datos API-Football» antes de considerar un pick 1X2.</div>':''}</div>`;
+${altsHtml(r,b)}${r.qx&&r.qx[b.n]?'<div class="tkw">Cuota de API-Football, no de tu casa: confírmala.</div>':''}${c?`<div class="tkw">⚠ Va contra el patrón detectado (${c}). Confírmalo con la IA antes de apostar.</div>`:''}${!afReady&&cfg.af?'<div class="tkw">Falta contrastar con API-Football (botón «Datos»).</div>':''}</div>`;
 }
 const GUIA=`<details class="card hint"><summary>¿Cómo leer las tarjetas?</summary>
 <p><b>Barra azul, gris y amarilla:</b> probabilidad de que gane el local, empate o gane el visitante.</p>
@@ -770,7 +776,7 @@ function card(i){
     return `<article class="card mc"><div class="mh"><span class="pill">${esc(r.liga)}</span><span class="ko">${r.hora}</span></div>${r._fromPrevious?'<p class="status">Pick conservado de un escaneo anterior de hoy. Confirma que el partido siga pendiente y actualiza la cuota antes de apostar.</p>':''}
   <div class="mt"><b>${esc(r.h)}</b><em>vs</em><b>${esc(r.w)}</b></div>
   ${ticket(r)}
-  <div class="acts2"><button class="btn" onclick="ai(${i})">Analizar con IA</button><button class="btn s" onclick="showInfo(${i})">Noticias y bajas</button><button class="btn s" onclick="afMore(${i})">Datos API-Football</button><button class="btn s" onclick="regModel(${i})">Registrar en Modelo</button></div><div id="afp${i}" class="af-panel" hidden></div>
+  <div class="acts2"><button class="btn" onclick="regModel(${i})">Registrar en Modelo</button><button class="btn s" onclick="ai(${i})">Analizar con IA</button></div><details class="more"><summary>Más acciones</summary><div class="acts2"><button class="btn s" onclick="showInfo(${i})">Noticias y bajas</button><button class="btn s" onclick="afMore(${i})">Datos API-Football</button></div></details><div id="afp${i}" class="af-panel" hidden></div>
   <div class="cpanel" id="cp${i}" ${r.cardT?'':'hidden'}>
     <div class="seg m ct" role="tablist" aria-label="Análisis del partido">${[['v','Veredicto'],['n','Noticias'],['d','Datos'],['a','Mercados']].map(([k,t])=>`<button type="button" role="tab" data-t="${k}" aria-selected="${r.cardT===k}" class="${r.cardT===k?'on':''}" onclick="cardTab(${i},'${k}')"><span>${t}</span></button>`).join('')}<button type="button" class="x" aria-label="Cerrar panel" onclick="cardTab(${i},null)">✕</button></div>
     <div class="tp" data-t="v" ${r.cardT==='v'?'':'hidden'}><div class="ai" id="ai${i}" ${r.aiH?'':'hidden'}>${r.aiH||''}</div><p class="phd">Pulsa <b>Analizar con IA</b> para que valide el pick de la app, o elige otro mercado en la pestaña Mercados y analízalo.</p></div>
