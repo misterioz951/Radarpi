@@ -3,12 +3,30 @@
 <title>RadarPi</title>
 <meta name="theme-color" content="#E6EEEC" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#051C20" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=sonar1"><link rel="stylesheet" href="nba.css?v=sonar1"></head><body>
+<link rel="stylesheet" href="styles.css?v=20261023home1"><link rel="stylesheet" href="nba.css?v=20261023home1"></head><body>
 <header><div class="logo" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="13" stroke="#3CC9C3" stroke-opacity=".55" stroke-width="1.5"/><circle cx="16" cy="16" r="8" stroke="#3CC9C3" stroke-opacity=".55" stroke-width="1.5"/><path d="M16 16L26.5 9.5A12.3 12.3 0 0 0 16 3.7z" fill="#FFB21E" fill-opacity=".9"/><circle cx="16" cy="16" r="2.2" fill="#FFB21E"/></svg></div>
-<div><h1>RadarPi</h1><small>Fútbol, NBA y combinadas</small></div></header>
+<div class="brand-title"><h1>RadarPi</h1><small>Fútbol, NBA y combinadas</small></div><button class="header-settings" type="button" aria-label="Abrir ajustes generales" title="Ajustes" onclick="openSettings()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1-1.7 2.9-.1-.1a1.7 1.7 0 0 0-1.8.6l-.1.1h-3.4l-.1-.1a1.7 1.7 0 0 0-1.4-1.1l-.1-.1-2.4-2.4.1-.1a1.7 1.7 0 0 0-.4-1.8l-.1-.1v-3.4l.1-.1a1.7 1.7 0 0 0 1.1-1.4l.1-.1 2.4-2.4.1.1a1.7 1.7 0 0 0 1.8-.4l.1-.1h3.4l.1.1a1.7 1.7 0 0 0 1.4 1.1l.1.1 2.4 2.4-.1.1a1.7 1.7 0 0 0 .4 1.8l.1.1v3.4z"/></svg></button></header>
 
-<section id="s-f">
-<details class="card cfgbox" id="scanbox" open><summary>Ligas y días <small id="scansum"></small></summary>
+<section id="s-h">
+  <div class="home-welcome"><div><span class="home-eyebrow">CENTRO DE CONTROL</span><h2>Tu RadarPi</h2><p>Resumen de tus picks y rendimiento.</p></div><div class="home-orb">⌁</div></div>
+  <div class="home-section-head"><h3>Resumen general</h3><span id="home-updated">Datos guardados</span></div>
+  <div class="home-metrics">
+    <button class="home-metric" type="button" data-home-go="m"><span>Registrados</span><b id="home-total">0</b><small>Todos los módulos</small></button>
+    <button class="home-metric" type="button" data-home-go="m"><span>Pendientes</span><b id="home-pending">0</b><small>Por resolver</small></button>
+    <button class="home-metric" type="button" data-home-go="m"><span>Acertados</span><b id="home-wins">0</b><small>Resultados registrados</small></button>
+    <button class="home-metric" type="button" data-home-go="m"><span>Fallados</span><b id="home-losses">0</b><small>Resultados registrados</small></button>
+  </div>
+  <div class="home-section-head"><h3>Rendimiento por módulo</h3><span>Separado por deporte</span></div>
+  <div class="home-module-list">
+    <button class="home-module" type="button" data-home-go="f"><span class="home-module-icon football-icon">⚽</span><span class="home-module-copy"><b>Fútbol</b><small id="home-football-meta">Sin picks registrados</small></span><span class="home-module-stat" id="home-football-rate">—</span><span class="home-chevron">›</span></button>
+    <button class="home-module" type="button" data-home-go="c"><span class="home-module-icon combi-icon">✦</span><span class="home-module-copy"><b>Combi</b><small id="home-combi-meta">Sin combinadas registradas</small></span><span class="home-module-stat" id="home-combi-rate">—</span><span class="home-chevron">›</span></button>
+    <button class="home-module" type="button" data-home-go="n"><span class="home-module-icon nba-icon">🏀</span><span class="home-module-copy"><b>NBA</b><small id="home-nba-meta">Sin picks registrados</small></span><span class="home-module-stat" id="home-nba-rate">—</span><span class="home-chevron">›</span></button>
+  </div>
+  <div class="home-note"><b>Importante</b><span>Las estadísticas se calculan con los resultados guardados en este navegador. Los pendientes no cuentan como aciertos ni fallos.</span></div>
+</section>
+
+<section id="s-f" hidden>
+<details class="card cfgbox" id="scanbox"><summary>Ligas y días <small id="scansum"></small></summary>
 <div class="sec">Ligas</div>
 <input id="lgq" type="search" placeholder="Buscar liga por nombre…" aria-label="Buscar liga" autocomplete="off"><div class="chips" id="lg"></div><p class="status">Incluye ligas nacionales y torneos continentales. La cobertura de partidos, estadísticas y cuotas depende de cada proveedor.</p>
 <div class="sec">Días</div>
@@ -23,7 +41,7 @@
 <section id="s-c" hidden>
   <div class="combo-page-head"><div class="combo-page-icon">✦</div><div><h2>Combi</h2><p>Buscador y modelo independientes del escáner normal.</p></div></div>
   <div class="seg m" id="comboSubnav" role="tablist" aria-label="Secciones de Combi"><button type="button" class="on" data-combi-tab="buscar" onclick="showCombiTab('buscar')">✦ Buscar</button><button type="button" data-combi-tab="modelo" onclick="showCombiTab('modelo')">☷ Modelo <span id="comboCount">0</span></button></div>
-  <div id="comboSearchView"><div class="card combo-controls"><div class="combo-control-info"><b>Cómo busca</b><p>Explora las ligas que elijas aquí abajo (Fútbol y NBA) y los días seleccionados, calcula sus propias probabilidades y combina 2 a 4 partidos. Cada línea debe superar filtros de confianza y valor positivo.</p></div><div class="combo-control-pills"><span>Stake por línea ≥ 5</span><span>Cuotas desde 1,10</span><span>Partidos distintos</span></div><div class="sec">Ligas de Combi (elige Fútbol y/o NBA)</div><input id="clq" type="search" placeholder="Buscar liga…" aria-label="Buscar liga" autocomplete="off"><div class="chips" id="cl"></div><button class="btn" id="comboScanBtn" type="button">✦ Buscar combinadas</button><p class="status" id="comboMsg" aria-live="polite">La búsqueda de Combi es independiente. Puede tardar porque consulta partidos, historial y cuotas.</p></div>
+  <div id="comboSearchView"><div class="card combo-controls"><details class="combo-help"><summary>Cómo funciona Combi <span class="summary-hint">filtros y criterios</span></summary><div class="combo-control-info"><p>Explora las ligas que elijas, calcula sus propias probabilidades y combina de 2 a 4 partidos. Cada línea debe superar filtros de confianza y valor positivo.</p></div><div class="combo-control-pills"><span>Stake por línea ≥ 5</span><span>Cuotas desde 1,10</span><span>Partidos distintos</span></div></details><details class="combo-leagues"><summary>Elegir ligas <span class="summary-hint">Fútbol y/o NBA</span></summary><input id="clq" type="search" placeholder="Buscar liga…" aria-label="Buscar liga" autocomplete="off"><div class="chips" id="cl"></div></details><button class="btn" id="comboScanBtn" type="button">✦ Buscar combinadas</button><p class="status" id="comboMsg" aria-live="polite">La búsqueda de Combi es independiente. Puede tardar porque consulta partidos, historial y cuotas.</p></div>
   <div id="comboPanel" aria-live="polite"><div class="combo-empty"><div class="combo-empty-icon">✦</div><b>Combi está lista</b><p>Pulsa «Buscar combinadas» para buscar sus propias líneas, sin ejecutar antes el escáner de Fútbol.</p></div></div></div>
   <div id="comboModelView" hidden></div>
 </section>
@@ -35,13 +53,29 @@
 <section id="s-m" hidden><div id="mdl"></div></section>
 
 <section id="s-a" hidden>
-<details class="card grp" open><summary>Escaneo</summary>
+<details class="card grp theme-settings">
+<summary>🎨 Apariencia y colores</summary>
+<p>Elige un tema para toda la aplicación. Los textos, títulos, tarjetas, campos y botones adaptan sus colores para conservar el contraste.</p>
+<label for="c-theme">Tema de RadarPi</label>
+<select id="c-theme">
+<option value="auto">Automático (según el celular)</option>
+<option value="light">Claro</option>
+<option value="dark">Oscuro</option>
+<option value="blue">Azul tecnológico</option>
+<option value="neon">Verde neón</option>
+<option value="purple">Morado</option>
+<option value="red">Rojo oscuro</option>
+</select>
+<div class="theme-preview" aria-label="Vista previa de los colores"><span class="theme-swatch sw-bg">Fondo</span><span class="theme-swatch sw-card">Tarjeta</span><span class="theme-swatch sw-accent">Acción</span><span class="theme-swatch sw-text">Texto</span></div>
+<p class="status" id="theme-status" aria-live="polite">El tema se aplica inmediatamente y se guarda en este navegador.</p>
+</details>
+<details class="card grp"><summary>Escaneo</summary>
 <div class="g2"><label>Partidos máx.<input id="c-m" type="number"></label><label>Bankroll<input id="c-k" type="number"></label></div>
 <label class="tg-row"><span>Córners y tarjetas<small>Más datos; el primer escaneo es más lento</small></span><input id="c-x" type="checkbox"></label>
 <label class="tg-row"><span>Escanear al abrir la app<small>Como máximo cada 3 horas</small></span><input id="c-au" type="checkbox"></label>
 <label class="tg-row"><span>Alertas con la app abierta<small>Escanea solo y te avisa de partidos nuevos con sonido, vibración y un punto rojo. Se pausa si bloqueas el celular o cierras la app.</small></span><input id="c-aa" type="checkbox"></label>
 <label>Cada cuántos minutos (mínimo 15)<input id="c-iv" type="number"></label></details>
-<details class="card grp" open><summary>Picks y combinadas</summary><p>La cuota mínima de «Buscar el mejor pick en todas las ligas» se mantiene separada del objetivo de las combinadas.</p>
+<details class="card grp"><summary>Picks y combinadas</summary><p>La cuota mínima de «Buscar el mejor pick en todas las ligas» se mantiene separada del objetivo de las combinadas.</p>
 <div class="g2"><label>Cuota mínima (mejor pick)<input id="c-qm" type="number" step="0.05"></label><label>Stake mínimo (búsqueda)<input id="c-sm" type="number"></label><label>Cuota objetivo combinadas<input id="c-cq" type="number" min="1.01" step="0.05"></label></div>
 <p class="status">El menú Combi ejecuta su propia búsqueda de partidos y mercados; no necesita escanear primero en Fútbol. Busca líneas con stake calculado 5–9, cuota real desde 1,10, probabilidad alta y valor estimado positivo. Puede combinar 2 a 4 partidos distintos; si no hay suficientes líneas válidas, no fuerza una combinada.</p>
 <label class="tg-row"><span>Mostrar mercados por mitades<small>Experimentales: no están validados y nunca se eligen como pick automático</small></span><input id="c-hm" type="checkbox"></label></details>
@@ -66,7 +100,8 @@
 <div class="g2"><label>Goles/partido mín.<input id="c-g" type="number" step="0.1"></label><label>Ambos marcan % mín.<input id="c-b" type="number"></label>
 <label>Under: goles máx.<input id="c-u" type="number" step="0.1"></label><label>Victorias % mín.<input id="c-r" type="number"></label>
 <label>Córners por equipo mín.<input id="c-co" type="number" step="0.1"></label><label>Tarjetas (suma) mín.<input id="c-ta" type="number" step="0.1"></label></div></details>
-<details class="card grp" open><summary>Respaldo y restauración</summary>
+<details class="card grp" id="nba-general-settings"><summary>🏀 Fuentes y ajustes de NBA</summary><p>Configura aquí las fuentes de NBA sin ocupar espacio en la pantalla principal de NBA.</p><label>Llaves The Odds API (una por línea; si una se agota usa la siguiente)<textarea id="nba-keys-general" rows="3" autocomplete="off" placeholder="Una llave por línea"></textarea></label><label>Sports Game Odds (llave, opcional)<input id="nba-sgo-general" type="password" autocomplete="off"></label><label>API-NBA / API-Sports (opcional)<input id="nba-apisports-general" type="password" autocomplete="off"></label><label>balldontlie (llave, opcional)<input id="nba-bdl-general" type="password" autocomplete="off"></label><div class="g2"><label>Partidos por escaneo<input id="nba-games-general" type="number" min="1" max="10"></label><label>Jugadores por equipo<input id="nba-per-general" type="number" min="3" max="12"></label></div><p class="status">Los picks actuales priorizan datos de la temporada vigente. API-NBA no se usará para pronósticos actuales si el plan solo ofrece temporadas históricas.</p><button class="btn s" type="button" id="nba-settings-save">Guardar ajustes NBA</button><span id="nba-settings-status" class="status" role="status"></span></details>
+<details class="card grp"><summary>Respaldo y restauración</summary>
 <p><b>Protege RadarPi:</b> descarga una copia después de cambiar ajustes, ligas, registrar apuestas o modificar el modelo. Incluye todos los datos que RadarPi guarda en el almacenamiento local de este navegador.</p>
 <p><small><b>Importante:</b> la copia puede incluir llaves API. Guárdala en un lugar privado. No la compartas. Una copia guardada solo en Chrome no protege contra borrar los datos del sitio: descarga el JSON y consérvalo en Descargas, Drive privado o en otro dispositivo.</small></p>
 <div class="tools"><button class="btn" id="backupOut" type="button">Descargar copia de seguridad</button><button class="btn s" id="backupInBtn" type="button">Restaurar desde una copia</button></div>
@@ -76,14 +111,14 @@
 <button class="btn" id="save">Guardar ajustes</button>
 </section>
 
-<nav>
-<button data-t="f" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5l4 2.9-1.5 4.7h-5L8 10.4z"/></svg>Fútbol</button>
+<nav aria-label="Navegación principal">
+<button data-t="h" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7"/><path d="M5 9v11h14V9M9 20v-6h6v6"/></svg>Inicio</button>
+<button data-t="f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5l4 2.9-1.5 4.7h-5L8 10.4z"/></svg>Fútbol</button>
 <button data-t="c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h7l2 3h7M4 17h7l2-3h7"/><circle cx="4" cy="7" r="1.5"/><circle cx="20" cy="10" r="1.5"/><circle cx="4" cy="17" r="1.5"/></svg>Combi</button>
-<button data-t="n"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3v18M5.6 5.6c3 3 3 9.8 0 12.8M18.4 5.6c-3 3-3 9.8 0 12.8"/></svg>NBA</button>
+<button data-t="n"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3v18M5.6 5.6c3 3 3 9.8 0 12.8M18.4 5.6c-3-3 3 9.8 0 12.8"/></svg>NBA</button>
 <button data-t="r"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>Registro</button>
 <button data-t="m"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20v-6M11 20V5M17 20v-9M3 20h18"/></svg>Modelo</button>
-<button data-t="a"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>Ajustes</button>
 </nav>
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script src="app.js?v=20261021compact2"></script><script src="nba.js?v=20261021compact2"></script></body></html>
+<script src="app.js?v=20261023home1"></script><script src="nba.js?v=20261023home1"></script></body></html>
