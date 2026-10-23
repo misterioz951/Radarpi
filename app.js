@@ -399,10 +399,10 @@ async function mkMap(){
     return o;
   });
 }
-async function loadOdds(bm,lg){
-  bm=bm||cfg.bm;lg=lg||cfg.lg;const key='market-map-v6|'+bm+'|'+lg.join(','),cacheKey='odds_v6_'+bm,c=LS(cacheKey,null);
+async function loadOdds(bm,lg,opts){
+  opts=opts||{};bm=bm||cfg.bm;lg=lg||cfg.lg;const key='market-map-v6|'+bm+'|'+lg.join(','),cacheKey='odds_v6_'+bm,c=LS(cacheKey,null);
   if(autoRun&&!(c&&c.k===key))throw new Error('el escaneo automático no gasta cuotas; haz un escaneo manual');
-  if(c&&c.k===key&&(Date.now()-c.t<3*36e5||autoRun))return c.v;
+  if(!opts.force&&c&&c.k===key&&(Date.now()-c.t<3*36e5||autoRun))return c.v;
   const MK=await mkMap(),T=await tourIds(),P=await cached('oppart',30,()=>op('participants',{sportId:10}));
   const ids=lg.map(x=>T[x]).filter(Boolean);
   if(!ids.length)throw new Error('no encontré esas ligas en OddsPapi');
@@ -422,7 +422,7 @@ async function loadOdds(bm,lg){
     }
     out.push({h:P[f.participant1Id]||'',w:P[f.participant2Id]||'',t,pr});
   }
-  const v={fx:out,mk:MK};SV(cacheKey,{k:key,t:Date.now(),v});return v;
+  const v={fx:out,mk:MK};if(!opts.noSave)SV(cacheKey,{k:key,t:Date.now(),v});return v;
 }
 const ALIAS={koln:'cologne',munchen:'munich',muenchen:'munich',wien:'vienna',praha:'prague',kobenhavn:'copenhagen',beograd:'belgrade',lisboa:'lisbon',internazionale:'inter',sankt:'st',saint:'st'};
 const nz=s=>String(s).toLowerCase().replace(/ø/g,'o').replace(/æ/g,'ae').replace(/ß/g,'ss').replace(/ł/g,'l').replace(/đ/g,'d').replace(/œ/g,'oe').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\b(fc|cf|afc|sc|ac|cd|club|de|the|1)\b/g,' ').split(/\s+/).filter(Boolean).map(w=>ALIAS[w]||w).join(' ');
@@ -1528,7 +1528,7 @@ function drawModel(){
       :{t:'Demasiado optimista',d:'Acierta bastante menos de lo que promete. No te fíes de sus probabilidades altas.'};
     const rec=[...D].sort((a,b)=>new Date(a.ko)-new Date(b.ko)).slice(-12).map(k=>`<i class="dot ${k.res==='w'?'G':'P'}">${k.res==='w'?'G':'P'}</i>`).join('');
     body=`<p class="status">Importante: el porcentaje de acierto por sí solo no demuestra rentabilidad. Evalúa el ROI con cuotas reales, suficientes picks y resultados verificados; no cambies reglas mirando solo los resultados recientes.</p><p class="status"><b>Cómo leer las barras:</b> el relleno es lo que realmente acertó; la marca negra vertical es lo que el modelo prometía. Si el relleno llega a la marca o la pasa, el modelo cumple.</p>
-    ${engineCard()}
+    ${engineCard()}${clvCard()}
     <div class="card"><div class="vhero">${ringSvg(nW,nL)}<div><h2>${V.t}</h2><p>${V.d}</p></div></div>
     <div class="model-quick-stats" aria-label="Acceso rápido a resultados"><button type="button" class="model-quick-card win" onclick="setMdlTab('w')"><small>Acertados</small><b>${nW}</b><span>Ver picks ›</span></button><button type="button" class="model-quick-card loss" onclick="setMdlTab('l')"><small>Fallados</small><b>${nL}</b><span>Ver picks ›</span></button><button type="button" class="model-quick-card pending" onclick="setMdlTab('p')"><small>Pendientes</small><b>${pend}</b><span>Tocar para ver ›</span></button>${nV?`<button type="button" class="model-quick-card" onclick="setMdlTab('v')"><small>Nulos</small><b>${nV}</b><span>Ver picks ›</span></button>`:''}</div>
     <div class="prog" role="progressbar" aria-valuenow="${Math.min(30,D.length)}" aria-valuemin="0" aria-valuemax="30"><i style="width:${Math.min(100,Math.round(D.length/30*100))}%"></i></div>
@@ -1607,8 +1607,8 @@ function drawBets(){
     :'<div class="empty"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="8" width="36" height="48" rx="5"/><path d="M23 22h18M23 32h18M23 42h10"/></svg><b>Sin apuestas todavía</b>Las que registres desde las tarjetas aparecerán aquí.</div>';
 }
 // ===== Copia de seguridad de RadarPi: exporta todas las claves locales =====
-const SECRETS=['gq','gk','or','br','ok','af'];
-const NB_SECRETS=['keys','sgo','bdl'];   // llaves dentro de los ajustes NBA (nbcfg)
+const SECRETS=['gq','gk','or','br','ok','ok2','af'];
+const NB_SECRETS=['keys','sgo','bdl','apisports'];   // llaves dentro de los ajustes NBA (nbcfg)
 const BACKUP_KEYS=['picks','bets','cfg','seen','scan','nbapicks','combipicks','nbcfg'];
 function exportRadarBackup(){
   const msg=$('#backupMsg');
@@ -1674,8 +1674,51 @@ setTimeout(()=>{
   }catch{}
 },1500);
 
+// ===== Cuota de cierre (CLV): ¿conseguiste mejor precio que el del último momento antes del partido? =====
+// Cada escaneo nuevo, antes de que empiece el partido, actualiza la «cuota de cierre» (qc) de los picks pendientes con la cuota actual de esa casa.
+// La última observación previa al inicio queda como cierre. Por eso conviene escanear de nuevo 10-30 min antes del partido.
+function updateClosing(){
+  const P=LS('picks',[]);let ch=0;
+  for(const k of P){
+    if(k.res||!(k.q>1)||!k.ev||k.experimental)continue;
+    const ko=Date.parse(k.ko);if(!ko||Date.now()>=ko)continue;
+    const r=R.find(x=>x.ev===k.ev&&x.slug===k.slug),qn=r&&r.q?+r.q[k.mk]:0;
+    if(qn>1&&!(r.qx&&r.qx[k.mk])){k.qc=qn;k.qct=Date.now();ch++}   // no usa cuotas de respaldo de otra casa
+  }
+  if(ch)SV('picks',P);
+}
+// Botón: consulta SOLO las ligas de tus picks pendientes (1-2 peticiones a OddsPapi), sin tocar la caché del escaneo normal
+async function refreshClosing(){
+  const btn=$('#clvBtn'),msg=$('#clvMsg'),say=t=>{if(msg)msg.textContent=t},now=Date.now();
+  const P=LS('picks',[]),pend=P.filter(k=>!k.res&&k.q>1&&k.ev&&!k.experimental&&Date.parse(k.ko)>now&&Date.parse(k.ko)<now+36*36e5);
+  if(!pend.length){say('No hay picks pendientes con partido en las próximas 36 horas.');return}
+  if(!cfg.ok||!cfg.bm){say('Falta la llave de OddsPapi o la casa en Ajustes.');return}
+  if(btn)btn.disabled=true;
+  try{
+    const lg=[...new Set(pend.map(k=>k.slug))];say('Consultando '+lg.length+' liga(s)…');
+    const OD=await loadOdds(undefined,lg,{force:true,noSave:true});let ch=0;const miss=[];
+    for(const k of pend){
+      const [h,w]=String(k.m).split(/ vs | v /i),q=h&&w?oddsQ(OD,h,w,k.ko):null,qn=q?+q[k.mk]:0;
+      if(qn>1){k.qc=qn;k.qct=Date.now();ch++}else miss.push(k.m);
+    }
+    SV('picks',P);
+    say('Cierres actualizados: '+ch+' de '+pend.length+'.'+(miss.length?' Sin cuota ahora: '+miss.slice(0,3).join(', ')+(miss.length>3?'…':'')+'.':''));
+    if(typeof drawModel==='function')drawModel();
+  }catch(e){say('Error: '+e.message)}finally{if(btn)btn.disabled=false}
+}
+function clvBtnHtml(){const now=Date.now(),n=LS('picks',[]).filter(k=>!k.res&&k.q>1&&k.ev&&!k.experimental&&Date.parse(k.ko)>now&&Date.parse(k.ko)<now+36*36e5).length;
+  return n?`<button class="btn s" id="clvBtn" type="button" onclick="refreshClosing()">Actualizar cierres ahora (${n} pick${n>1?'s':''})</button><p class="status" id="clvMsg" role="status"></p>`:''}
+function clvCard(){
+  const P=LS('picks',[]).filter(k=>!k.experimental),D=P.filter(k=>k.q>1&&k.qc>1),pend=P.filter(k=>!k.res&&k.q>1&&!k.qc).length;
+  if(!D.length)return pend?`<div class="card"><h2>Cuota de cierre (CLV)</h2><p class="status">Aún sin datos. Tienes ${pend} pick(s) pendientes: vuelve a escanear 10–30 minutos antes del partido y la app guardará la cuota de cierre para comparar con la que tomaste. También puedes pulsar el botón.</p>${clvBtnHtml()}</div>`:'';
+  const v=D.map(k=>k.q/k.qc-1),avg=v.reduce((a,b)=>a+b,0)/v.length,pos=v.filter(x=>x>0).length,ok=avg>=0;
+  return `<div class="card"><h2>Cuota de cierre (CLV)</h2><small>Compara la cuota que tomaste con la última cuota antes del partido. Si es mejor de forma constante, tu método tiene ventaja real.</small>
+  <div class="band"><div><small>CLV medio</small><b class="${ok?'ok':'bad'}">${ok?'+':''}${(avg*100).toFixed(1)}%</b></div><div><small>Picks con CLV +</small><b>${Math.round(100*pos/v.length)}%</b><small>${pos} de ${v.length}</small></div><div><small>Con cierre</small><b>${D.length}</b><small>${pend?pend+' sin cierre':'todos'}</small></div></div>
+  <p class="status">${D.length<30?'Muestra pequeña ('+D.length+'): con menos de 30 picks no concluyas nada. ':''}Un CLV medio positivo sostenido con 100 o más picks sugiere ventaja; negativo, que el mercado te supera. Solo cuenta cuotas de tu casa, no las de respaldo.</p>${clvBtnHtml()}</div>`;
+}
 // ===== Alertas dentro de la app (funcionan con la app abierta) =====
 function afterScan(){
+  try{updateClosing()}catch{}
   const S=LS('seen',null),k=(S&&S.d===today())?S.k:[],fresh=R.filter(r=>!k.includes(r.ev));
   SV('seen',{d:today(),k:[...new Set([...k,...R.map(r=>r.ev)])]});
   if(autoRun&&fresh.length)notify(fresh);
