@@ -621,3 +621,19 @@ nav button{font-size:10px}
 .perf-ring>b{position:absolute;inset:0;display:grid;place-items:center;font:800 11px/1 var(--f-b);color:var(--ink)}
 .perf-roi{display:flex;flex-direction:column;align-items:flex-end;font:800 15px/1.1 var(--f-b);white-space:nowrap}.perf-roi small{font:500 10px/1.2 var(--f-b);color:var(--mut)}
 .perf-roi.pos{color:var(--ok)}.perf-roi.neg{color:var(--bad)}
+
+/* ===== v: colores nuevos y tarjetas de combinadas ===== */
+:root{--mint:#1FB89A;--gold:#D9A400;--rose:#E0568A;--sky:#3AA0E8}
+.cl{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--ln);--fc:var(--blue)}
+.cl>div{flex:1;min-width:0}.cl b{display:block;font-size:14px;line-height:1.3}.cl b span{color:var(--mut);font-weight:500}.cl small{display:block;font-size:12px;color:var(--mut);margin-top:2px}
+.cl-n{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font:700 12px var(--f-b);color:#fff;background:var(--fc)}
+.cl-q{flex:none;font:800 13px var(--f-b);padding:5px 9px;border-radius:99px;color:var(--fc);background:color-mix(in srgb,var(--fc) 13%,transparent);border:1px solid color-mix(in srgb,var(--fc) 35%,transparent)}
+.fam-res{--fc:var(--blue)}.fam-goles{--fc:var(--ember)}.fam-ambos{--fc:var(--vio)}.fam-cor{--fc:var(--lag)}.fam-tar{--fc:var(--gold)}.fam-dc{--fc:var(--mint)}.fam-rose{--fc:var(--rose)}.fam-nba{--fc:var(--sky)}
+.combo-record{border-left:5px solid var(--ln)}.combo-record.is-win{border-left-color:var(--ok)}.combo-record.is-loss{border-left-color:var(--bad)}.combo-record.is-pending{border-left-color:var(--gold)}.combo-record.is-void{border-left-color:var(--mut)}
+.combo-record-summary{display:flex;align-items:center;gap:12px}.cr-main{flex:1;min-width:0}.cr-main b{display:block;font-size:14px}.cr-main small{display:block;font-size:12px;color:var(--mut);margin-top:2px}
+.cr-odds{flex:none;font:800 17px var(--f-b);padding:8px 11px;border-radius:14px;color:var(--vio);background:color-mix(in srgb,var(--vio) 12%,transparent)}
+.combo-record.is-win .cr-odds{color:var(--ok);background:color-mix(in srgb,var(--ok) 13%,transparent)}.combo-record.is-loss .cr-odds{color:var(--bad);background:color-mix(in srgb,var(--bad) 13%,transparent)}.combo-record.is-pending .cr-odds{color:var(--gold);background:color-mix(in srgb,var(--gold) 15%,transparent)}
+.combo-record-status{flex:none;font-size:12px;font-weight:700}.combo-record-status.pending{color:var(--gold)}
+.combo-title{flex-wrap:wrap}.ci-tag{font:700 12.5px var(--f-b);padding:4px 10px;border-radius:99px;color:var(--vio);background:color-mix(in srgb,var(--vio) 12%,transparent)}
+.ci-sub{flex-basis:100%;font-size:12.5px;color:var(--mut);margin-top:2px}.ci-sub b.ok{color:var(--ok)}.ci-sub b.bad{color:var(--bad)}
+.combo-item{border-left:5px solid var(--vio)}

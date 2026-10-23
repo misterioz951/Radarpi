@@ -329,13 +329,13 @@ async function nbAutoRes(manual){
   if(n){SV('nbapicks',NB.picks);nbPicks()}
   if(manual)toast(n?n+' picks resueltos':'Aún no terminan los partidos de tus picks pendientes');
 }
-function nbPicks(target='#nbpk',statsOnly=false){nbK();
+function nbPicks(target='#nbpk',statsOnly=false,noMenu=false){nbK();
   const P=NB.picks,D=P.filter(x=>x.res==='w'||x.res==='l'),pend=P.filter(x=>!x.res).length,nW=D.filter(x=>x.res==='w').length,nL=D.length-nW,nV=P.filter(x=>x.res==='v').length,tab=statsOnly?'res':(NB.tab||'all');
   const pr=a=>a.length?Math.round(100*a.reduce((t,x)=>t+x.p,0)/a.length):0,hit=a=>a.length?Math.round(100*a.filter(x=>x.res==='w').length/a.length):0;
   const row=(t,a)=>a.length?rwRow(t,a.filter(x=>x.res==='w').length,a.length,pr(a)):'';
   const brier=D.length?D.reduce((t,x)=>t+Math.pow(x.p-(x.res==='w'?1:0),2),0)/D.length:null,Dq=D.filter(x=>x.q),roi=Dq.reduce((t,x)=>t+(x.res==='w'?x.q-1:-1),0);
   const tabs=[['all','Todos',P.length],['p','Pendientes',pend],['w','Acertados',nW],['l','Fallados',nL]];if(nV)tabs.push(['v','Nulos',nV]);
-  const menu=statsOnly?'':`<div class="seg m model-filter-bar" role="tablist" aria-label="Filtros del Modelo NBA">${tabs.map(([k,t,n])=>`<button type="button" role="tab" aria-selected="${tab===k}" class="${tab===k?'on':''}" onclick="nbTab('${k}')"><span>${t}</span><b class="${k==='w'?'ok':k==='l'?'bad':k==='p'?'pending':''}">${n}</b></button>`).join('')}</div><button class="btn" onclick="nbAutoRes(true)">Actualizar resultados</button>`;
+  const menu=(statsOnly||noMenu)?'':`<div class="seg m model-filter-bar" role="tablist" aria-label="Filtros del Modelo NBA">${tabs.map(([k,t,n])=>`<button type="button" role="tab" aria-selected="${tab===k}" class="${tab===k?'on':''}" onclick="nbTab('${k}')"><span>${t}</span><b class="${k==='w'?'ok':k==='l'?'bad':k==='p'?'pending':''}">${n}</b></button>`).join('')}</div><button class="btn" onclick="nbAutoRes(true)">Actualizar resultados</button>`;
   const item=x=>{const B=(r,t)=>`<button class="btn s ${x.res===r?'on':''}" onclick="nbSetRes(${x.id},'${r}')">${t}</button>`;
     return `<div class="bet ${x.res==='w'?'is-win':x.res==='l'?'is-loss':x.res==='v'?'is-void':'is-pending'}"><div class="bet-h"><b>${esc(x.t)}</b><span class="st ${x.res||'p'}">${{w:'Acertó',l:'Falló',v:'Nulo'}[x.res]||'Pendiente'}</span></div><small>${x.d} · ${esc(x.st||'Pick')} · modelo ${Math.round(x.p*100)}%${x.q?' · cuota '+x.q:' · sin cuota real'}${x.sk?' · Stake '+x.sk+'/9':''}</small><div>${B('w','Acertó')}${B('l','Falló')}${B('v','Nulo')}<button class="btn s" onclick="nbSetRes(${x.id},null)">↺</button><button class="btn s" onclick="nbDel(${x.id})">Borrar</button></div></div>`};
   let body='';
