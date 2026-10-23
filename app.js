@@ -14,7 +14,7 @@ const LG={
 let cfg=Object.assign({fd:'',gq:'',or:'',br:'',g:3,b:70,m:12,u:2,qm:1.5,cq:1.5,af:'',dd:1,sm:5,hm:false,r:75,co:5,ta:5,ex:true,au:false,aa:false,iv:60,ok:'',bm:'',pn:true,lg:['col.1','eng.1','esp.1'],theme:'auto'},LS('cfg',{}));
 cfg.lg=cfg.lg.filter(x=>Object.values(LG).includes(x));if(!cfg.lg.length)cfg.lg=['col.1','eng.1','esp.1'];
 // Temas visuales: solo modifican variables CSS; no alteran el motor de predicciones.
-const THEMES=['auto','light','dark','blue','neon','purple','red'];
+const THEMES=['auto','light','dark','black','blue','neon','purple','red','cyan'];
 function applyTheme(name){
   const theme=THEMES.includes(name)?name:'auto';
   if(theme==='auto')document.documentElement.removeAttribute('data-theme');
@@ -22,10 +22,10 @@ function applyTheme(name){
   const meta=document.querySelector('meta[name="theme-color"]');
   if(meta){const colors={light:'#E6EEEC',dark:'#151922',blue:'#102536',neon:'#102720',purple:'#241B33',red:'#2B2020'};meta.setAttribute('content',colors[theme]||'#E6EEEC');}
   const status=document.querySelector('#theme-status');
-  if(status)status.textContent=({auto:'El tema sigue la apariencia del celular.',light:'Tema claro activo.',dark:'Grafito elegante activo.',blue:'Océano profundo activo.',neon:'Esmeralda activa.',purple:'Violeta suave activo.',red:'Cobre nocturno activo.'})[theme];
+  if(status)status.textContent=({auto:'El tema sigue la apariencia del celular.',light:'Tema claro activo.',dark:'Grafito elegante activo.',black:'Negro total activo.',blue:'Océano profundo activo.',neon:'Esmeralda activa.',purple:'Violeta suave activo.',red:'Cobre nocturno activo.',cyan:'Cian tecnológico activo.'})[theme];
 }
 applyTheme(cfg.theme||'auto');
-let openRes=false,autoRun=false,hunt=false,mdlTab='res',mdlAll=false;
+let openRes=false,autoRun=false,hunt=false,mdlTab='hub',mdlAll=false;
 let COMBI_CURRENT=[],combiTab='buscar';
 let MODEL='openai/gpt-oss-120b';
 let R=[],Rcombo=[],bets=LS('bets',[]);
@@ -926,11 +926,11 @@ function registerCombo(i){
   P.unshift(rec);SV('combipicks',P);toast('Combinada guardada en Modelo Combi.');showCombiTab('modelo');
 }
 let COMBI_MODEL_FILTER='all';
-function setCombiFilter(t){COMBI_MODEL_FILTER=t;drawCombiModel()}
-function setCombiResult(id,res){const P=LS('combipicks',[]),k=P.find(x=>x.id===id);if(!k)return;k.res=res;k.manual=!!res;SV('combipicks',P);drawCombiModel();}
-function deleteCombi(id){if(!confirm('¿Borrar esta combinada del Modelo Combi?'))return;SV('combipicks',LS('combipicks',[]).filter(x=>x.id!==id));drawCombiModel();}
-async function showCombiTab(t){combiTab=t;SV('activeCombiTab',t);$('#comboSearchView').hidden=t!=='buscar';$('#comboModelView').hidden=t!=='modelo';document.querySelectorAll('[data-combi-tab]').forEach(b=>b.classList.toggle('on',b.dataset.combiTab===t));if(t==='modelo'){try{await settleCombi()}catch{}drawCombiModel();}}
-function drawCombiModel(){
+function setCombiFilter(t){COMBI_MODEL_FILTER=t;drawCombiModel(mdlTab==='combi'?'#model-combi-content':'#comboModelView')}
+function setCombiResult(id,res){const P=LS('combipicks',[]),k=P.find(x=>x.id===id);if(!k)return;k.res=res;k.manual=!!res;SV('combipicks',P);drawCombiModel(mdlTab==='combi'?'#model-combi-content':'#comboModelView');}
+function deleteCombi(id){if(!confirm('¿Borrar esta combinada del Modelo Combi?'))return;SV('combipicks',LS('combipicks',[]).filter(x=>x.id!==id));drawCombiModel(mdlTab==='combi'?'#model-combi-content':'#comboModelView');}
+async function showCombiTab(t){if(t==='modelo'){try{await settleCombi()}catch{}SV('activeCombiTab','buscar');switchRadarTab('m');setMdlTab('combi');return;}combiTab='buscar';SV('activeCombiTab','buscar');$('#comboSearchView').hidden=false;$('#comboModelView').hidden=true;document.querySelectorAll('[data-combi-tab]').forEach(b=>b.classList.toggle('on',b.dataset.combiTab==='buscar'));}
+function drawCombiModel(target){
   const P=LS('combipicks',[]),done=P.filter(x=>x.res==='w'||x.res==='l'),wins=done.filter(x=>x.res==='w').length,loss=done.length-wins,pending=P.filter(x=>!x.res).length;
   const units=done.reduce((a,x)=>a+(x.res==='w'?x.stake*(x.q-1):-x.stake),0),risk=done.reduce((a,x)=>a+x.stake,0),roi=risk?units/risk*100:0;
   $('#comboCount').textContent=pending;
@@ -939,7 +939,7 @@ function drawCombiModel(){
   const filterBar=`<div class="seg m model-filter-bar" role="tablist" aria-label="Filtros del Modelo Combi">${[['all','Todos',P.length],['p','Pendientes',pending],['w','Acertados',wins],['l','Fallados',loss]].map(([k,t,n])=>`<button type="button" role="tab" aria-selected="${COMBI_MODEL_FILTER===k}" class="${COMBI_MODEL_FILTER===k?'on':''}" onclick="setCombiFilter('${k}')"><span>${t}</span><b class="${k==='w'?'ok':k==='l'?'bad':k==='p'?'pending':''}">${n}</b></button>`).join('')}</div>`;
   const cards=visible.length?visible.map(k=>`<details class="combo-record ${k.res==='w'?'is-win':k.res==='l'?'is-loss':!k.res?'is-pending':''}"><summary class="combo-record-summary"><div><h3>${k.legs.length} líneas · @${(+k.q).toFixed(2)} · Stake ${k.stake}/9</h3><small>${new Date(k.created).toLocaleDateString('es',{day:'numeric',month:'short'})} · Prob. ${Math.round(k.p*100)}% · valor ${k.e>=0?'+':''}${Math.round(k.e*100)}%</small></div><span class="combo-record-status ${k.res==='w'?'ok':k.res==='l'?'bad':!k.res?'pending':''}">${k.res==='w'?'Acertó':k.res==='l'?'Falló':k.res==='v'?'Nula':'Pendiente'} <b>＋</b></span></summary><div class="combo-record-body">${k.legs.map((l,i)=>`<div class="combo-pick"><div class="combo-pick-head"><b>${i+1}. ${esc(l.match)}</b><span class="combo-stake">@${(+l.odds).toFixed(2)}</span></div><div class="combo-meta">${esc(l.league)} · ${esc(l.market)} · prob. ${Math.round(l.p*100)}%</div></div>`).join('')}<div class="combo-record-actions">${k.res?`<button class="btn s" onclick="setCombiResult('${k.id}',null)">↺ Pendiente</button>`:`<button class="btn s" onclick="setCombiResult('${k.id}','w')">✓ Acertó</button><button class="btn s" onclick="setCombiResult('${k.id}','l')">✕ Falló</button><button class="btn s" onclick="setCombiResult('${k.id}','v')">Nula</button>`}<button class="btn s" onclick="deleteCombi('${k.id}')">Borrar</button></div></div></details>`).join(''):'<div class="combo-empty"><div class="combo-empty-icon">☷</div><b>El Modelo Combi está vacío</b><p>Cuando encuentres una combinada que te interese, pulsa «Registrar». Aquí quedará guardada para medir resultados separada de los picks sencillos y las apuestas reales.</p></div>';
   const grpRows=(f,lab)=>{const ks=[...new Set(done.map(f))].sort();return ks.length?`<div class="card"><h2>${lab}</h2>${ks.map(k=>{const a=done.filter(x=>f(x)===k),w=a.filter(x=>x.res==='w').length;return rwRow(k,w,a.length,Math.round(100*a.reduce((t,x)=>t+x.p,0)/a.length))}).join('')}</div>`:''};
-  $('#comboModelView').innerHTML=`<div class="combo-wrap"><div class="combo-hero"><div class="combo-eyebrow">SEGUIMIENTO SEPARADO</div><h2>Modelo Combi</h2><p>Solo aparecen las combinadas que registres en este menú.</p></div>${stats}${grpRows(x=>x.legs.length+' líneas','Acierto por número de líneas')}${grpRows(x=>'Stake '+x.stake+'/9','Acierto por stake combinado')}${filterBar}${cards}</div>`;
+  const dest=typeof target==='string'?$(target):target;if(dest)dest.innerHTML=`<div class="combo-wrap"><div class="combo-hero"><div class="combo-eyebrow">SEGUIMIENTO SEPARADO</div><h2>Modelo Combi</h2><p>Solo aparecen las combinadas que registres en este menú.</p></div>${stats}${grpRows(x=>x.legs.length+' líneas','Acierto por número de líneas')}${grpRows(x=>'Stake '+x.stake+'/9','Acierto por stake combinado')}${filterBar}${cards}</div>`;
 }
 async function settleCombi(){
   const P=LS('combipicks',[]);let changed=false;
@@ -1449,6 +1449,8 @@ async function settle(){
 }
 const grp=n=>/^Córners/.test(n)?'Córners':/^Tarjetas/.test(n)?'Tarjetas':/^(Local|Visitante) (marca|deja)/.test(n)?'Goles de un equipo':/^Ambos/.test(n)?'Ambos marcan':/^(Over|Under|Goles)/.test(n)?'Goles totales':'Resultado';
 function setMdlTab(t){mdlTab=t;mdlAll=false;drawModel()}
+function openModelCategory(t){setMdlTab(t)}
+function modelHub(){setMdlTab('hub')}
 const delta=(h,p)=>{const d=h-p;return `<span class="delta ${d>=-3?'ok':d<-8?'bad':''}">${d>=0?'+':''}${d} pts</span>`};
 function ringSvg(w,l){
   const n=w+l,f=n?w/n:0,C=2*Math.PI*42;
@@ -1471,6 +1473,13 @@ function profitSvg(bs){
   return `<svg class="chart" viewBox="0 0 300 130" role="img" aria-label="Evolución de la ganancia"><line x1="20" x2="280" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}" style="stroke:var(--ln);stroke-dasharray:3 3"/><path d="${d}" style="fill:none;stroke:${col};stroke-width:2.5;stroke-linejoin:round"/><circle cx="${X(pts.length-1)}" cy="${Y(last).toFixed(1)}" r="4.5" style="fill:${col}"/></svg>`;
 }
 function drawModel(){
+  if(mdlTab==='hub'){
+    const P=LS('picks',[]),C=LS('combipicks',[]),N=LS('nbapicks',[]);
+    const stats=a=>{const w=a.filter(x=>x.res==='w').length,l=a.filter(x=>x.res==='l').length,p=a.filter(x=>!x.res).length,d=w+l;return {w,l,p,rate:d?Math.round(w/d*100)+'%':'—',total:a.length}};
+    const f=stats(P),c=stats(C),n=stats(N);
+    const card=(id,icon,name,desc,x,cls)=>`<button class="model-category ${cls}" type="button" onclick="openModelCategory('${id}')"><span class="model-category-icon">${icon}</span><span class="model-category-copy"><b>${name}</b><small>${desc}</small><span class="model-category-counts"><i class="pending">${x.p} pendientes</i><i class="ok">${x.w} ganados</i><i class="bad">${x.l} fallados</i></span></span><span class="model-category-rate">${x.rate}<small>efectividad</small></span><span class="model-category-arrow">›</span></button>`;
+    $('#mdl').innerHTML=`<div class="model-hub-head"><span class="home-eyebrow">CENTRO DE ESTADÍSTICAS</span><h2>Modelo</h2><p>Elige qué módulo quieres consultar. Cada uno conserva sus picks, estadísticas y gráficas por separado.</p></div><div class="model-category-list">${card('res','⚽','Fútbol','Pronósticos y rendimiento de fútbol',f,'football')}${card('nba','🏀','NBA','Estadísticas de jugadores, equipos y picks NBA',n,'nba')}${card('combi','✦','Combi','Seguimiento y resultados de combinadas',c,'combi')}</div>`;return;
+  }
   const P=LS('picks',[]),D=P.filter(k=>(k.res==='w'||k.res==='l')&&!k.experimental),pend=P.filter(k=>!k.res).length;
   const nW=D.filter(k=>k.res==='w').length,nL=D.length-nW,nV=P.filter(k=>k.res==='v').length;
   if(mdlTab==='v'&&!nV)mdlTab='res';
@@ -1482,13 +1491,16 @@ function drawModel(){
   const gs=[...new Set(D.map(k=>grp(k.mk)))];
   const B=(k,r,t)=>`<button class="btn s ${k.res===r?'on':''}" onclick="setPick('${k.id}','${r}')">${t}</button>`;
   const item=k=>`<details class="model-pick ${k.res==='w'?'is-win':k.res==='l'?'is-loss':k.res==='v'?'is-void':'is-pending'}"><summary class="model-pick-summary"><div class="model-pick-main"><b>${esc(k.m)}</b><span>${esc(k.mk)} · ${new Date(k.ko).toLocaleDateString('es',{day:'numeric',month:'short'})}</span></div><div class="model-pick-side"><span class="st ${k.res||'p'}">${{w:'Acertó',l:'Falló',v:'Nulo'}[k.res]||'Pendiente'}</span><b class="model-pick-arrow">＋</b></div></summary><div class="model-pick-body"><div class="model-pick-metrics"><span><small>Modelo</small><b>${Math.round(k.p*100)}%</b></span>${k.q?`<span><small>Cuota</small><b>${k.q}${k.qr?' · tuya':' · casa'}</b></span>`:''}${Number.isFinite(+k.stake)?`<span><small>Stake</small><b>${k.stake}/9</b></span>`:''}${k.sc?`<span><small>Marcador</small><b>${k.sc}</b></span>`:''}</div><small class="model-pick-note">${k.experimental?'Experimental · fuera de calibración · ':''}${k.nv?'Sin ventaja con tu cuota · ':''}${k.man?'Resultado manual · ':''}${k.qr?'Cuota introducida por ti':k.q?'Cuota obtenida de la casa':'No se guardó cuota'}${k.res==='w'||k.res==='l'?' · Resultado resuelto':''}</small><div class="model-pick-actions">${B(k,'w','✓ Acertó')}${B(k,'l','✕ Falló')}${B(k,'v','Nulo')}<button class="btn s" onclick="setPick('${k.id}',null)">↺ Pendiente</button><button class="btn s" onclick="delPick('${k.id}')">Borrar</button></div></div></details>`;
-  const tabs=[['res','Resumen',''],['all','Todos',P.length],['p','Pendientes',pend],['w','Acertados',nW],['l','Fallados',nL],['s','Stake',''],['nba','NBA','']];if(nV)tabs.push(['v','Nulos',nV]);
-  const menu=`<div class="seg m" role="tablist" aria-label="Secciones del modelo">${tabs.map(([k,t,n])=>`<button type="button" role="tab" aria-selected="${mdlTab===k}" class="${mdlTab===k?'on':''}" onclick="setMdlTab('${k}')"><span>${t}</span>${n!==''?`<b class="${k==='w'?'ok':k==='l'?'bad':''}">${n}</b>`:''}</button>`).join('')}</div>`;
+  const tabs=[['back','‹ Módulos',''],['res','Resumen',''],['all','Todos',P.length],['p','Pendientes',pend],['w','Acertados',nW],['l','Fallados',nL],['s','Stake','']];if(nV)tabs.push(['v','Nulos',nV]);
+  const menu=`<div class="model-section-head"><button class="btn s model-back" type="button" onclick="modelHub()">‹ Módulos</button><div><h2>${mdlTab==='nba'?'Modelo NBA':mdlTab==='combi'?'Modelo Combi':'Modelo Fútbol'}</h2><small>Estadísticas y picks de este módulo</small></div></div>${mdlTab==='nba'||mdlTab==='combi'?'':`<div class="seg m model-filter-bar" role="tablist" aria-label="Secciones del modelo">${tabs.filter(([k])=>k!=='back').map(([k,t,n])=>`<button type="button" role="tab" aria-selected="${mdlTab===k}" class="${mdlTab===k?'on':''}" onclick="setMdlTab('${k}')"><span>${t}</span>${n!==''?`<b class="${k==='w'?'ok':k==='l'?'bad':k==='p'?'pending':''}">${n}</b>`:''}</button>`).join('')}</div>`}`;
   let body='';
   const stakePicks=P.filter(k=>Number.isFinite(+k.stake)&&+k.stake>=1&&+k.stake<=9&&!k.experimental);
   const stakeSummary=`<div class="card stake-summary"><h2>Resultados por Stake</h2><p class="mut">Solo cuenta picks cuyo stake quedó guardado desde esta versión. Los picks antiguos sin stake no se inventan ni se clasifican.</p>${stakePicks.length?[1,2,3,4,5,6,7,8,9].map(st=>{const a=stakePicks.filter(k=>+k.stake===st),done=a.filter(k=>k.res==='w'||k.res==='l'),w=done.filter(k=>k.res==='w').length,l=done.length-w,pend=a.filter(k=>!k.res).length,markets=[...new Set(a.map(k=>k.mk))];if(!a.length)return '';const rate=done.length?Math.round(100*w/done.length):null;return `<div class="stake-row"><div class="stake-head"><b>Stake ${st}/9</b><span>${done.length?`${w} de ${done.length} aciertos · ${rate}%`:'Sin resultados resueltos'}</span></div><div class="stake-track"><i style="width:${rate==null?0:rate}%"></i></div><small>${l} fallos · ${pend} pendientes</small><div class="stake-markets">${markets.map(m=>`<span>${esc(m)} <b>${a.filter(k=>k.mk===m&&k.res==='w').length}✓ / ${a.filter(k=>k.mk===m&&k.res==='l').length}✕</b></span>`).join('')}</div></div>`}).join(''):'<p class="mut">Todavía no hay picks nuevos con stake guardado. Al usar «Registrar en Modelo» se empezará a medir.</p>'}</div>`;
   if(mdlTab==='nba'){
-    body='<div class="card"><h2>Rendimiento NBA</h2><p class="mut">Estadísticas y gráficas de los picks NBA, separadas del seguimiento de Fútbol.</p><button class="btn s" type="button" onclick="nbAutoRes(true)">Actualizar resultados NBA</button><div id="nbamodel"></div></div>'; 
+    $('#mdl').innerHTML=menu+'<div class="card"><p class="mut">Estadísticas y gráficas de los picks NBA, separadas de Fútbol y Combi.</p><button class="btn s" type="button" onclick="nbAutoRes(true)">Actualizar resultados NBA</button><div id="nbamodel-stats"></div></div><div id="nbamodel-picks"></div>';
+    if(typeof nbPicks==='function'){nbPicks('#nbamodel-stats',true);nbPicks('#nbamodel-picks',false)}return;
+  }else if(mdlTab==='combi'){
+    $('#mdl').innerHTML=menu+'<div id="model-combi-content"></div>';drawCombiModel('#model-combi-content');return;
   }else if(mdlTab==='res'){
     const gap=hit(D)-pr(D);
     const V=D.length<10?{t:'Aún sin conclusiones',d:`Faltan ${Math.max(0,30-D.length)} picks resueltos para sacar conclusiones. Mientras tanto no cambies reglas por rachas.`}
@@ -1528,8 +1540,8 @@ function drawModel(){
     ${shown.map(item).join('')||`<p class="mut">${T[1]}</p>`}
     ${sel.length>30&&!mdlAll?`<button class="btn s" style="width:100%" onclick="mdlAll=true;drawModel()">Mostrar los ${sel.length}</button>`:''}</div>`;
   }
-  $('#mdl').innerHTML=menu+(mdlTab==='nba'?'':`<button class="btn" id="mrf">Actualizar resultados</button>`)+body;
-  if(mdlTab==='nba'){if(typeof nbPicks==='function')nbPicks('#nbamodel',true)}else $('#mrf').onclick=refreshModel;
+  $('#mdl').innerHTML=menu+`<button class="btn" id="mrf">Actualizar resultados</button>`+body;
+  const mr=$('#mrf');if(mr)mr.onclick=refreshModel;
 }
 async function refreshModel(){
   drawModel();const b=$('#mrf');if(b){b.disabled=true;b.textContent='Buscando resultados…'}
