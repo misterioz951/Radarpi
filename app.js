@@ -20,9 +20,9 @@ function applyTheme(name){
   if(theme==='auto')document.documentElement.removeAttribute('data-theme');
   else document.documentElement.setAttribute('data-theme',theme);
   const meta=document.querySelector('meta[name="theme-color"]');
-  if(meta){const colors={light:'#E6EEEC',dark:'#051C20',blue:'#071A33',neon:'#071B13',purple:'#1A1230',red:'#241014'};meta.setAttribute('content',colors[theme]||'#E6EEEC');}
+  if(meta){const colors={light:'#E6EEEC',dark:'#151922',blue:'#102536',neon:'#102720',purple:'#241B33',red:'#2B2020'};meta.setAttribute('content',colors[theme]||'#E6EEEC');}
   const status=document.querySelector('#theme-status');
-  if(status)status.textContent=({auto:'El tema sigue la apariencia del celular.',light:'Tema claro activo.',dark:'Tema oscuro activo.',blue:'Azul tecnológico activo.',neon:'Verde neón activo.',purple:'Morado activo.',red:'Rojo oscuro activo.'})[theme];
+  if(status)status.textContent=({auto:'El tema sigue la apariencia del celular.',light:'Tema claro activo.',dark:'Grafito elegante activo.',blue:'Océano profundo activo.',neon:'Esmeralda activa.',purple:'Violeta suave activo.',red:'Cobre nocturno activo.'})[theme];
 }
 applyTheme(cfg.theme||'auto');
 let openRes=false,autoRun=false,hunt=false,mdlTab='res',mdlAll=false;
@@ -46,7 +46,7 @@ function switchRadarTab(tab){
 }
 function openSettings(){switchRadarTab('a');}
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>switchRadarTab(b.dataset.t));
-document.querySelectorAll('[data-home-go]').forEach(b=>b.addEventListener('click',()=>switchRadarTab(b.dataset.homeGo)));
+document.querySelectorAll('[data-home-go]').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.homeFilter&&b.dataset.homeGo==='m')setMdlTab(b.dataset.homeFilter);switchRadarTab(b.dataset.homeGo)}));
 function renderHomeDashboard(){
   const football=LS('picks',[]), combi=LS('combipicks',[]), nba=LS('nbapicks',[]);
   const settled=a=>a.filter(x=>x&&(x.res==='w'||x.res==='l'));
@@ -61,6 +61,11 @@ function renderHomeDashboard(){
   set('home-combi-meta',`${combi.length} combinadas · ${wins(combi)} ganadas · ${losses(combi)} perdidas · ${pending(combi)} pendientes`);
   set('home-nba-meta',`${nba.length} picks · ${wins(nba)} acertados · ${losses(nba)} fallados · ${pending(nba)} pendientes`);
   set('home-football-rate',rate(football));set('home-combi-rate',rate(combi));set('home-nba-rate',rate(nba));
+  const all=[football,combi,nba];
+  const done=all.reduce((n,a)=>n+settled(a).length,0),won=all.reduce((n,a)=>n+a.filter(x=>x&&x.res==='w').length,0),overall=done?Math.round(won/done*100):null;
+  set('home-overall-rate',overall===null?'—':overall+'%');set('home-settled-meta',done?`${won} aciertos de ${done} resultados resueltos`:'Registra y resuelve picks para ver tu efectividad');
+  const bar=(id,v)=>{const e=$('#'+id);if(e)e.style.width=(v===null?0:v)+'%'};bar('home-overall-bar',overall);
+  [['football',football],['combi',combi],['nba',nba]].forEach(([key,a])=>{const d=settled(a),w=d.filter(x=>x.res==='w').length,v=d.length?Math.round(w/d.length*100):null;set('home-'+key+'-perf',v===null?'—':v+'%');set('home-'+key+'-sample',`${d.length} resueltos · ${w} aciertos`);bar('home-'+key+'-bar',v)});
 }
 
 // ligas
@@ -1473,7 +1478,7 @@ function drawModel(){
   const gs=[...new Set(D.map(k=>grp(k.mk)))];
   const B=(k,r,t)=>`<button class="btn s ${k.res===r?'on':''}" onclick="setPick('${k.id}','${r}')">${t}</button>`;
   const item=k=>`<details class="model-pick ${k.res==='w'?'is-win':k.res==='l'?'is-loss':k.res==='v'?'is-void':'is-pending'}"><summary class="model-pick-summary"><div class="model-pick-main"><b>${esc(k.m)}</b><span>${esc(k.mk)} · ${new Date(k.ko).toLocaleDateString('es',{day:'numeric',month:'short'})}</span></div><div class="model-pick-side"><span class="st ${k.res||'p'}">${{w:'Acertó',l:'Falló',v:'Nulo'}[k.res]||'Pendiente'}</span><b class="model-pick-arrow">＋</b></div></summary><div class="model-pick-body"><div class="model-pick-metrics"><span><small>Modelo</small><b>${Math.round(k.p*100)}%</b></span>${k.q?`<span><small>Cuota</small><b>${k.q}${k.qr?' · tuya':' · casa'}</b></span>`:''}${Number.isFinite(+k.stake)?`<span><small>Stake</small><b>${k.stake}/9</b></span>`:''}${k.sc?`<span><small>Marcador</small><b>${k.sc}</b></span>`:''}</div><small class="model-pick-note">${k.experimental?'Experimental · fuera de calibración · ':''}${k.nv?'Sin ventaja con tu cuota · ':''}${k.man?'Resultado manual · ':''}${k.qr?'Cuota introducida por ti':k.q?'Cuota obtenida de la casa':'No se guardó cuota'}${k.res==='w'||k.res==='l'?' · Resultado resuelto':''}</small><div class="model-pick-actions">${B(k,'w','✓ Acertó')}${B(k,'l','✕ Falló')}${B(k,'v','Nulo')}<button class="btn s" onclick="setPick('${k.id}',null)">↺ Pendiente</button><button class="btn s" onclick="delPick('${k.id}')">Borrar</button></div></div></details>`;
-  const tabs=[['res','Resumen',''],['s','Stake',''],['w','Acertó',nW],['l','Falló',nL],['p','Pendientes',pend]];if(nV)tabs.push(['v','Nulos',nV]);
+  const tabs=[['res','Resumen',''],['all','Todos',P.length],['p','Pendientes',pend],['w','Acertados',nW],['l','Fallados',nL],['s','Stake','']];if(nV)tabs.push(['v','Nulos',nV]);
   const menu=`<div class="seg m" role="tablist" aria-label="Secciones del modelo">${tabs.map(([k,t,n])=>`<button type="button" role="tab" aria-selected="${mdlTab===k}" class="${mdlTab===k?'on':''}" onclick="setMdlTab('${k}')"><span>${t}</span>${n!==''?`<b class="${k==='w'?'ok':k==='l'?'bad':''}">${n}</b>`:''}</button>`).join('')}</div>`;
   let body='';
   const stakePicks=P.filter(k=>Number.isFinite(+k.stake)&&+k.stake>=1&&+k.stake<=9&&!k.experimental);
@@ -1506,13 +1511,13 @@ function drawModel(){
     <div class="card"><h2>ROI por liga (apuestas reales registradas)</h2>${[...new Set(betsR.map(k=>k.liga||'Liga no guardada'))].map(g=>{const a=betsR.filter(k=>(k.liga||'Liga no guardada')===g),st=a.reduce((t,k)=>t+(k.s||1),0),prf=a.reduce((t,k)=>t+(k.res==='w'?(k.s||1)*(k.q-1):-(k.s||1)),0);return `<div class="cal"><div class="cal-t"><span>${esc(g)}</span><span class="${prf>=0?'ok':'bad'}">${st?(100*prf/st).toFixed(1):'0.0'}% ROI · ${a.length} picks</span></div></div>`}).join('')||'<p class="mut">Todavía no hay apuestas reales resueltas.</p>'}</div>
     <div class="card"><h2>Por nivel (A, B, C)</h2>${['A','B','C'].map(t=>row('Nivel '+t,D.filter(k=>k.t===t))).join('')}<small>Si el nivel A no acierta más que el C, el contraste con Pinnacle no está aportando.</small></div>`:`<p class="status">Aún no hay picks resueltos. Usa “Registrar en Modelo” desde cualquier partido para medir pronósticos sin apostar dinero, o registra apuestas reales por separado.</p>`}`;
   }else if(mdlTab==='s'){body=stakeTab(P)}else{
-    const sel=mdlTab==='p'?P.filter(k=>!k.res):mdlTab==='v'?P.filter(k=>k.res==='v'):P.filter(k=>k.res===mdlTab);
+    const sel=mdlTab==='all'?P:mdlTab==='p'?P.filter(k=>!k.res):mdlTab==='v'?P.filter(k=>k.res==='v'):P.filter(k=>k.res===mdlTab);
     sel.sort((a,b)=>new Date(b.ko)-new Date(a.ko));
     const shown=mdlAll?sel:sel.slice(0,30);
-    const T={w:['Picks que acertó','No hay picks acertados todavía.'],l:['Picks que falló','No hay picks fallados todavía.'],p:['Pendientes','No hay picks pendientes.'],v:['Picks nulos','No hay picks nulos.']}[mdlTab];
+    const T={all:['Todos los picks','No hay picks registrados todavía.'],w:['Picks acertados','No hay picks acertados todavía.'],l:['Picks fallados','No hay picks fallados todavía.'],p:['Pendientes','No hay picks pendientes.'],v:['Picks nulos','No hay picks nulos.']}[mdlTab];
     const gc={};sel.forEach(k=>{const g=grp(k.mk);gc[g]=(gc[g]||0)+1});
     body=`<div class="card"><h2>${T[0]} <small>(${sel.length})</small></h2>
-    ${mdlTab==='p'?'<small>Se resuelven solos unas 3 horas después del partido. Los córners y tarjetas pueden quedar pendientes si ESPN no publica esas estadísticas: márcalos tú si ya sabes el resultado. ↺ devuelve a automático.</small>':'<small>Si algún resultado está mal, corrígelo con los botones de cada pick.</small>'}
+    ${mdlTab==='p'?'<small>Se resuelven solos unas 3 horas después del partido. Los córners y tarjetas pueden quedar pendientes si ESPN no publica esas estadísticas: márcalos tú si ya sabes el resultado. ↺ devuelve a automático.</small>':'<small>Abre cualquier pick para ver sus datos y corregir el resultado.</small>'}
     ${sel.length&&mdlTab!=='p'?`<div class="mchips">${Object.entries(gc).sort((a,b)=>b[1]-a[1]).map(([g,n])=>`<span>${g} <b>${n}</b></span>`).join('')}</div>`:''}
     ${shown.map(item).join('')||`<p class="mut">${T[1]}</p>`}
     ${sel.length>30&&!mdlAll?`<button class="btn s" style="width:100%" onclick="mdlAll=true;drawModel()">Mostrar los ${sel.length}</button>`:''}</div>`;

@@ -3,7 +3,7 @@
 <title>RadarPi</title>
 <meta name="theme-color" content="#E6EEEC" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#051C20" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261023home1"><link rel="stylesheet" href="nba.css?v=20261023home1"></head><body>
+<link rel="stylesheet" href="styles.css?v=20261023v2full"><link rel="stylesheet" href="nba.css?v=20261023v2full"></head><body>
 <header><div class="logo" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="13" stroke="#3CC9C3" stroke-opacity=".55" stroke-width="1.5"/><circle cx="16" cy="16" r="8" stroke="#3CC9C3" stroke-opacity=".55" stroke-width="1.5"/><path d="M16 16L26.5 9.5A12.3 12.3 0 0 0 16 3.7z" fill="#FFB21E" fill-opacity=".9"/><circle cx="16" cy="16" r="2.2" fill="#FFB21E"/></svg></div>
 <div class="brand-title"><h1>RadarPi</h1><small>Fútbol, NBA y combinadas</small></div><button class="header-settings" type="button" aria-label="Abrir ajustes generales" title="Ajustes" onclick="openSettings()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1-1.7 2.9-.1-.1a1.7 1.7 0 0 0-1.8.6l-.1.1h-3.4l-.1-.1a1.7 1.7 0 0 0-1.4-1.1l-.1-.1-2.4-2.4.1-.1a1.7 1.7 0 0 0-.4-1.8l-.1-.1v-3.4l.1-.1a1.7 1.7 0 0 0 1.1-1.4l.1-.1 2.4-2.4.1.1a1.7 1.7 0 0 0 1.8-.4l.1-.1h3.4l.1.1a1.7 1.7 0 0 0 1.4 1.1l.1.1 2.4 2.4-.1.1a1.7 1.7 0 0 0 .4 1.8l.1.1v3.4z"/></svg></button></header>
 
@@ -11,16 +11,27 @@
   <div class="home-welcome"><div><span class="home-eyebrow">CENTRO DE CONTROL</span><h2>Tu RadarPi</h2><p>Resumen de tus picks y rendimiento.</p></div><div class="home-orb">⌁</div></div>
   <div class="home-section-head"><h3>Resumen general</h3><span id="home-updated">Datos guardados</span></div>
   <div class="home-metrics">
-    <button class="home-metric" type="button" data-home-go="m"><span>Registrados</span><b id="home-total">0</b><small>Todos los módulos</small></button>
-    <button class="home-metric" type="button" data-home-go="m"><span>Pendientes</span><b id="home-pending">0</b><small>Por resolver</small></button>
-    <button class="home-metric" type="button" data-home-go="m"><span>Acertados</span><b id="home-wins">0</b><small>Resultados registrados</small></button>
-    <button class="home-metric" type="button" data-home-go="m"><span>Fallados</span><b id="home-losses">0</b><small>Resultados registrados</small></button>
+    <button class="home-metric" type="button" data-home-go="m" data-home-filter="all"><span>Registrados</span><b id="home-total">0</b><small>Todos los módulos</small></button>
+    <button class="home-metric" type="button" data-home-go="m" data-home-filter="p"><span>Pendientes</span><b id="home-pending">0</b><small>Por resolver</small></button>
+    <button class="home-metric" type="button" data-home-go="m" data-home-filter="w"><span>Acertados</span><b id="home-wins">0</b><small>Resultados registrados</small></button>
+    <button class="home-metric" type="button" data-home-go="m" data-home-filter="l"><span>Fallados</span><b id="home-losses">0</b><small>Resultados registrados</small></button>
   </div>
   <div class="home-section-head"><h3>Rendimiento por módulo</h3><span>Separado por deporte</span></div>
   <div class="home-module-list">
     <button class="home-module" type="button" data-home-go="f"><span class="home-module-icon football-icon">⚽</span><span class="home-module-copy"><b>Fútbol</b><small id="home-football-meta">Sin picks registrados</small></span><span class="home-module-stat" id="home-football-rate">—</span><span class="home-chevron">›</span></button>
     <button class="home-module" type="button" data-home-go="c"><span class="home-module-icon combi-icon">✦</span><span class="home-module-copy"><b>Combi</b><small id="home-combi-meta">Sin combinadas registradas</small></span><span class="home-module-stat" id="home-combi-rate">—</span><span class="home-chevron">›</span></button>
     <button class="home-module" type="button" data-home-go="n"><span class="home-module-icon nba-icon">🏀</span><span class="home-module-copy"><b>NBA</b><small id="home-nba-meta">Sin picks registrados</small></span><span class="home-module-stat" id="home-nba-rate">—</span><span class="home-chevron">›</span></button>
+  </div>
+  <div class="home-section-head"><h3>Panel de rendimiento</h3><span>Solo resultados resueltos</span></div>
+  <div class="home-performance card">
+    <div class="performance-top"><div><b>Efectividad general</b><small id="home-settled-meta">Todavía no hay resultados suficientes</small></div><strong id="home-overall-rate">—</strong></div>
+    <div class="performance-track"><i id="home-overall-bar" style="width:0%"></i></div>
+    <div class="performance-breakdown">
+      <div><span>⚽ Fútbol</span><b id="home-football-perf">—</b><small id="home-football-sample">0 resueltos</small><div class="performance-track"><i id="home-football-bar" style="width:0%"></i></div></div>
+      <div><span>✦ Combi</span><b id="home-combi-perf">—</b><small id="home-combi-sample">0 resueltos</small><div class="performance-track"><i id="home-combi-bar" style="width:0%"></i></div></div>
+      <div><span>🏀 NBA</span><b id="home-nba-perf">—</b><small id="home-nba-sample">0 resueltos</small><div class="performance-track"><i id="home-nba-bar" style="width:0%"></i></div></div>
+    </div>
+    <p class="performance-footnote">La efectividad es aciertos ÷ (aciertos + fallos). No equivale a rentabilidad ni garantiza resultados futuros.</p>
   </div>
   <div class="home-note"><b>Importante</b><span>Las estadísticas se calculan con los resultados guardados en este navegador. Los pendientes no cuentan como aciertos ni fallos.</span></div>
 </section>
@@ -58,13 +69,13 @@
 <p>Elige un tema para toda la aplicación. Los textos, títulos, tarjetas, campos y botones adaptan sus colores para conservar el contraste.</p>
 <label for="c-theme">Tema de RadarPi</label>
 <select id="c-theme">
-<option value="auto">Automático (según el celular)</option>
+<option value="auto">Automático del sistema</option>
 <option value="light">Claro</option>
-<option value="dark">Oscuro</option>
-<option value="blue">Azul tecnológico</option>
-<option value="neon">Verde neón</option>
-<option value="purple">Morado</option>
-<option value="red">Rojo oscuro</option>
+<option value="dark">Grafito elegante</option>
+<option value="blue">Océano profundo</option>
+<option value="neon">Esmeralda</option>
+<option value="purple">Violeta suave</option>
+<option value="red">Cobre nocturno</option>
 </select>
 <div class="theme-preview" aria-label="Vista previa de los colores"><span class="theme-swatch sw-bg">Fondo</span><span class="theme-swatch sw-card">Tarjeta</span><span class="theme-swatch sw-accent">Acción</span><span class="theme-swatch sw-text">Texto</span></div>
 <p class="status" id="theme-status" aria-live="polite">El tema se aplica inmediatamente y se guarda en este navegador.</p>
@@ -121,4 +132,4 @@
 </nav>
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script src="app.js?v=20261023home1"></script><script src="nba.js?v=20261023home1"></script></body></html>
+<script src="app.js?v=20261023v2full"></script><script src="nba.js?v=20261023v2full"></script></body></html>
