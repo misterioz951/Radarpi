@@ -16,17 +16,25 @@ const LG={
 let cfg=Object.assign({fd:'',gq:'',or:'',br:'',g:3,b:70,m:12,u:2,qm:1.5,cq:1.5,af:'',dd:1,sm:5,hm:false,r:75,co:5,ta:5,ex:true,au:false,aa:false,iv:60,ok:'',bm:'',pn:true,lg:['col.1','eng.1','esp.1'],theme:'auto'},LS('cfg',{}));
 cfg.lg=cfg.lg.filter(x=>Object.values(LG).includes(x));if(!cfg.lg.length)cfg.lg=['col.1','eng.1','esp.1'];
 // Temas visuales: solo modifican variables CSS; no alteran el motor de predicciones.
-const THEMES=['auto','light','dark','black','blue','neon','purple','red','cyan'];
+const THEMES=['auto','light','dark','black','blue','neon','purple','red','cyan','sand','mint','sky','rose','sunset','midnight','gold','forest'];
+const THEME_META=[['auto','Automático','#E6EEEC','#FCFEFD','#FFB21E'],['light','Claro','#E6EEEC','#FCFEFD','#FFB21E'],['dark','Grafito','#151922','#252D3B','#F4C56A'],['black','Negro total','#000000','#0A0A0A','#FFD166'],['blue','Océano','#102536','#1D3C50','#72D7E8'],['neon','Esmeralda','#102720','#21483A','#B9E879'],['purple','Violeta','#241B33','#3B3051','#E5B8F8'],['red','Cobre','#2B2020','#473333','#F0B18D'],['cyan','Cian','#06161B','#10313A','#4DE1E8'],['sand','Arena','#F1E9DC','#FFFCF6','#D9822B'],['mint','Menta','#E3F3EC','#FBFFFD','#3DDC97'],['sky','Cielo','#E4EEF9','#FDFEFF','#2872DC'],['rose','Rosa','#F8E9EE','#FFFBFC','#D23A70'],['sunset','Atardecer','#24131C','#3B2030','#FF9A5C'],['midnight','Medianoche','#0E1230','#1B2150','#8AA2FF'],['gold','Oro','#0B0905','#1B160C','#F5C542'],['forest','Bosque','#0D1F16','#1B3326','#E0B84A']];
 function applyTheme(name){
   const theme=THEMES.includes(name)?name:'auto';
   if(theme==='auto')document.documentElement.removeAttribute('data-theme');
   else document.documentElement.setAttribute('data-theme',theme);
-  const meta=document.querySelector('meta[name="theme-color"]');
-  if(meta){const colors={light:'#E6EEEC',dark:'#151922',blue:'#102536',neon:'#102720',purple:'#241B33',red:'#2B2020'};meta.setAttribute('content',colors[theme]||'#E6EEEC');}
+  const tm=THEME_META.find(t=>t[0]===theme);
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m=>{if(tm&&theme!=='auto'){m.removeAttribute('media');m.setAttribute('content',tm[2])}});
+  try{markThemeGrid(theme)}catch{}
   const status=document.querySelector('#theme-status');
-  if(status)status.textContent=({auto:'El tema sigue la apariencia del celular.',light:'Tema claro activo.',dark:'Grafito elegante activo.',black:'Negro total activo.',blue:'Océano profundo activo.',neon:'Esmeralda activa.',purple:'Violeta suave activo.',red:'Cobre nocturno activo.',cyan:'Cian tecnológico activo.'})[theme];
+  if(status)status.textContent=({auto:'El tema sigue la apariencia del celular.',light:'Tema claro activo.',dark:'Grafito elegante activo.',black:'Negro total activo.',blue:'Océano profundo activo.',neon:'Esmeralda activa.',purple:'Violeta suave activo.',red:'Cobre nocturno activo.',cyan:'Cian tecnológico activo.'})[theme]||(((THEME_META.find(t=>t[0]===theme)||[])[1]||'Tema')+' activo.');
 }
+function markThemeGrid(cur){document.querySelectorAll('#theme-grid .th-card').forEach(b=>{const on=b.dataset.th===cur;b.classList.toggle('on',on);b.setAttribute('aria-checked',on)})}
+function drawThemeGrid(){const g=document.querySelector('#theme-grid');if(!g)return;
+  g.innerHTML=THEME_META.map(([id,l,bg,cd,ac])=>`<button type="button" class="th-card" role="radio" data-th="${id}" aria-checked="false"><span class="th-dots" style="background:${bg}"><i style="background:${cd}"></i><i style="background:${ac}"></i></span><b>${l}</b></button>`).join('');
+  g.querySelectorAll('.th-card').forEach(b=>b.onclick=()=>{const s=document.querySelector('#c-theme');if(s){s.value=b.dataset.th;if(s.onchange)s.onchange()}});
+  markThemeGrid(cfg.theme||'auto')}
 applyTheme(cfg.theme||'auto');
+try{drawThemeGrid()}catch{}
 let openRes=false,autoRun=false,hunt=false,mdlTab='hub',mdlAll=false;
 let COMBI_CURRENT=[],combiTab='buscar';
 let MODEL='openai/gpt-oss-120b';

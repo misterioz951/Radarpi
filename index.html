@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>RadarPi</title>
-<meta name="theme-color" content="#E6EEEC" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#051C20" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="RadarPi"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="theme-color" content="#E6EEEC" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#051C20" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css?v=20261023modelhub"><link rel="stylesheet" href="nba.css?v=20261023modelhub"></head><body>
 <header><div class="logo" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="13" stroke="#3CC9C3" stroke-opacity=".55" stroke-width="1.5"/><circle cx="16" cy="16" r="8" stroke="#3CC9C3" stroke-opacity=".55" stroke-width="1.5"/><path d="M16 16L26.5 9.5A12.3 12.3 0 0 0 16 3.7z" fill="#FFB21E" fill-opacity=".9"/><circle cx="16" cy="16" r="2.2" fill="#FFB21E"/></svg></div>
@@ -70,7 +70,16 @@
 <option value="purple">Violeta suave</option>
 <option value="red">Cobre nocturno</option>
 <option value="cyan">Cian tecnológico</option>
+<option value="sand">Arena</option>
+<option value="mint">Menta</option>
+<option value="sky">Cielo</option>
+<option value="rose">Rosa</option>
+<option value="sunset">Atardecer</option>
+<option value="midnight">Medianoche</option>
+<option value="gold">Oro</option>
+<option value="forest">Bosque</option>
 </select>
+<div class="theme-grid" id="theme-grid" role="radiogroup" aria-label="Temas de color"></div>
 <div class="theme-preview" aria-label="Vista previa de los colores"><span class="theme-swatch sw-bg">Fondo</span><span class="theme-swatch sw-card">Tarjeta</span><span class="theme-swatch sw-accent">Acción</span><span class="theme-swatch sw-text">Texto</span></div>
 <p class="status" id="theme-status" aria-live="polite">El tema se aplica inmediatamente y se guarda en este navegador.</p>
 </details>
@@ -128,4 +137,8 @@
 </nav>
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script src="app.js?v=20261025combi"></script><script src="nba.js?v=20261023v3model"></script></body></html>
+<script src="app.js?v=20261026pwa"></script><script src="nba.js?v=20261023v3model"></script><script>
+// PWA: registra el service worker (requiere https o localhost) y avisa cuando hay versión nueva
+if('serviceWorker' in navigator){addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').then(reg=>{reg.addEventListener('updatefound',()=>{const w=reg.installing;if(w)w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller&&typeof toast==='function')toast('Hay una versión nueva de RadarPi: recarga la página para usarla.')})})}).catch(()=>{})})}
+</script>
+</body></html>

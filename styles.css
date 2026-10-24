@@ -622,18 +622,31 @@ nav button{font-size:10px}
 .perf-roi{display:flex;flex-direction:column;align-items:flex-end;font:800 15px/1.1 var(--f-b);white-space:nowrap}.perf-roi small{font:500 10px/1.2 var(--f-b);color:var(--mut)}
 .perf-roi.pos{color:var(--ok)}.perf-roi.neg{color:var(--bad)}
 
-/* ===== v: colores nuevos y tarjetas de combinadas ===== */
-:root{--mint:#1FB89A;--gold:#D9A400;--rose:#E0568A;--sky:#3AA0E8}
-.cl{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--ln);--fc:var(--blue)}
+/* ===== tarjetas de combinadas (sobrias, un solo acento) ===== */
+.cl{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--ln)}
 .cl>div{flex:1;min-width:0}.cl b{display:block;font-size:14px;line-height:1.3}.cl b span{color:var(--mut);font-weight:500}.cl small{display:block;font-size:12px;color:var(--mut);margin-top:2px}
-.cl-n{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font:700 12px var(--f-b);color:#fff;background:var(--fc)}
-.cl-q{flex:none;font:800 13px var(--f-b);padding:5px 9px;border-radius:99px;color:var(--fc);background:color-mix(in srgb,var(--fc) 13%,transparent);border:1px solid color-mix(in srgb,var(--fc) 35%,transparent)}
-.fam-res{--fc:var(--blue)}.fam-goles{--fc:var(--ember)}.fam-ambos{--fc:var(--vio)}.fam-cor{--fc:var(--lag)}.fam-tar{--fc:var(--gold)}.fam-dc{--fc:var(--mint)}.fam-rose{--fc:var(--rose)}.fam-nba{--fc:var(--sky)}
-.combo-record{border-left:5px solid var(--ln)}.combo-record.is-win{border-left-color:var(--ok)}.combo-record.is-loss{border-left-color:var(--bad)}.combo-record.is-pending{border-left-color:var(--gold)}.combo-record.is-void{border-left-color:var(--mut)}
+.cl-n{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font:700 12px var(--f-b);color:var(--mut);background:var(--s2);border:1px solid var(--ln)}
+.cl-q{flex:none;font:800 13px var(--f-b);padding:5px 9px;border-radius:99px;color:var(--ink);background:var(--s2);border:1px solid var(--ln)}
 .combo-record-summary{display:flex;align-items:center;gap:12px}.cr-main{flex:1;min-width:0}.cr-main b{display:block;font-size:14px}.cr-main small{display:block;font-size:12px;color:var(--mut);margin-top:2px}
-.cr-odds{flex:none;font:800 17px var(--f-b);padding:8px 11px;border-radius:14px;color:var(--vio);background:color-mix(in srgb,var(--vio) 12%,transparent)}
-.combo-record.is-win .cr-odds{color:var(--ok);background:color-mix(in srgb,var(--ok) 13%,transparent)}.combo-record.is-loss .cr-odds{color:var(--bad);background:color-mix(in srgb,var(--bad) 13%,transparent)}.combo-record.is-pending .cr-odds{color:var(--gold);background:color-mix(in srgb,var(--gold) 15%,transparent)}
-.combo-record-status{flex:none;font-size:12px;font-weight:700}.combo-record-status.pending{color:var(--gold)}
-.combo-title{flex-wrap:wrap}.ci-tag{font:700 12.5px var(--f-b);padding:4px 10px;border-radius:99px;color:var(--vio);background:color-mix(in srgb,var(--vio) 12%,transparent)}
+.cr-odds{flex:none;font:800 17px var(--f-b);padding:8px 11px;border-radius:14px;color:var(--sx);background:color-mix(in srgb,var(--sx) 12%,transparent)}
+.combo-record-status{flex:none;font-size:12px;font-weight:700}
+.combo-title{flex-wrap:wrap}.ci-tag{font:700 12.5px var(--f-b);padding:4px 10px;border-radius:99px;color:var(--sx);background:color-mix(in srgb,var(--sx) 12%,transparent)}
 .ci-sub{flex-basis:100%;font-size:12.5px;color:var(--mut);margin-top:2px}.ci-sub b.ok{color:var(--ok)}.ci-sub b.bad{color:var(--bad)}
-.combo-item{border-left:5px solid var(--vio)}
+
+/* ===== Temas nuevos ===== */
+html[data-theme="sand"]{color-scheme:light;--bg:#F1E9DC;--s2:#F7F1E6;--card:#FFFCF6;--ink:#2E2416;--mut:#6B5E4C;--ln:#DDD0BA;--acc:#D9822B;--onacc:#2B1600;--ok:#2E7D4F;--bad:#B3412C;--blue:#2B63A8;--vio:#6A4FBF;--lag:#1F7A73;--ember:#B8531A;--deep:#3A2B16;--onsx:#FFFFFF;--tick:#FBEBD2;--sh:0 1px 2px rgba(58,43,22,.08),0 12px 28px -16px rgba(90,60,20,.3)}
+html[data-theme="mint"]{color-scheme:light;--bg:#E3F3EC;--s2:#EDF8F3;--card:#FBFFFD;--ink:#0C3B2E;--mut:#4F7366;--ln:#C6E2D6;--acc:#3DDC97;--onacc:#052A1B;--ok:#0A7F54;--bad:#C23B3B;--blue:#2A6CC4;--vio:#6150CF;--lag:#0C8F7A;--ember:#C2531A;--deep:#0C3B2E;--onsx:#FFFFFF;--tick:#D9F7E8;--sh:0 1px 2px rgba(12,59,46,.08),0 12px 28px -16px rgba(12,90,60,.3)}
+html[data-theme="sky"]{color-scheme:light;--bg:#E4EEF9;--s2:#EDF4FC;--card:#FDFEFF;--ink:#10294A;--mut:#55698A;--ln:#CBDAEE;--acc:#2872DC;--onacc:#FFFFFF;--ok:#12805A;--bad:#C4402F;--blue:#2872DC;--vio:#6B55D6;--lag:#0E78A8;--ember:#C4531C;--deep:#10294A;--onsx:#FFFFFF;--tick:#DCEBFF;--sh:0 1px 2px rgba(16,41,74,.08),0 12px 28px -16px rgba(30,80,160,.3)}
+html[data-theme="rose"]{color-scheme:light;--bg:#F8E9EE;--s2:#FCF1F4;--card:#FFFBFC;--ink:#3A1626;--mut:#7B5566;--ln:#EBCDD6;--acc:#D23A70;--onacc:#FFFFFF;--ok:#267A4F;--bad:#B8343F;--blue:#2E69B8;--vio:#7A4FD0;--lag:#B53A72;--ember:#C9531E;--deep:#4A1A31;--onsx:#FFFFFF;--tick:#FFE1EB;--sh:0 1px 2px rgba(58,22,38,.08),0 12px 28px -16px rgba(150,40,90,.28)}
+html[data-theme="sunset"]{color-scheme:dark;--bg:#24131C;--s2:#321A27;--card:#3B2030;--ink:#FFF4F0;--mut:#DDBFC0;--ln:#62394C;--acc:#FF9A5C;--onacc:#3A1604;--ok:#8FDDB4;--bad:#FF9AA8;--blue:#A9CDFF;--vio:#D8B9FF;--lag:#FFB07A;--ember:#FF8A5C;--deep:#190C13;--onsx:#2B1209;--tick:#4A2A38;--sh:0 1px 2px rgba(0,0,0,.45),0 14px 30px -16px rgba(0,0,0,.8)}
+html[data-theme="midnight"]{color-scheme:dark;--bg:#0E1230;--s2:#151A40;--card:#1B2150;--ink:#EEF0FF;--mut:#AEB6E0;--ln:#343C78;--acc:#8AA2FF;--onacc:#0A1030;--ok:#7BE0B5;--bad:#FF9AA6;--blue:#9CC0FF;--vio:#BFA9FF;--lag:#7FD6E6;--ember:#FFB48A;--deep:#080B20;--onsx:#0A1030;--tick:#252C63;--sh:0 1px 2px rgba(0,0,0,.45),0 14px 30px -16px rgba(0,0,0,.8)}
+html[data-theme="gold"]{color-scheme:dark;--bg:#0B0905;--s2:#14110A;--card:#1B160C;--ink:#FFF8E6;--mut:#CDBE98;--ln:#3F3418;--acc:#F5C542;--onacc:#2A1E00;--ok:#8BDFAA;--bad:#FF8C84;--blue:#A9CCFF;--vio:#D3BDFF;--lag:#E6C77A;--ember:#FFA860;--deep:#060503;--onsx:#241A00;--tick:#2A2210;--sh:0 1px 2px rgba(0,0,0,.5),0 14px 30px -16px rgba(0,0,0,.85)}
+html[data-theme="forest"]{color-scheme:dark;--bg:#0D1F16;--s2:#15291F;--card:#1B3326;--ink:#EFFBF2;--mut:#A9CDB6;--ln:#2F5642;--acc:#E0B84A;--onacc:#2A1F00;--ok:#8BE0AE;--bad:#FF9D9A;--blue:#A7D1FF;--vio:#CDB9F5;--lag:#8FD8A8;--ember:#F2B987;--deep:#08140E;--onsx:#0A1C12;--tick:#26412F;--sh:0 1px 2px rgba(0,0,0,.45),0 14px 30px -16px rgba(0,0,0,.8)}
+html[data-theme="sand"] .acts2 .btn:first-child,html[data-theme="sand"] .mc .acts .btn:first-child,html[data-theme="sand"] #comboScanBtn,html[data-theme="mint"] .acts2 .btn:first-child,html[data-theme="mint"] .mc .acts .btn:first-child,html[data-theme="mint"] #comboScanBtn,html[data-theme="sky"] .acts2 .btn:first-child,html[data-theme="sky"] .mc .acts .btn:first-child,html[data-theme="sky"] #comboScanBtn,html[data-theme="rose"] .acts2 .btn:first-child,html[data-theme="rose"] .mc .acts .btn:first-child,html[data-theme="rose"] #comboScanBtn{color:#FFFFFF}
+/* Selector visual de temas */
+.theme-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0 4px}
+.th-card{display:flex;flex-direction:column;gap:7px;align-items:flex-start;padding:9px;border:2px solid var(--ln);border-radius:14px;background:var(--card);color:var(--ink);text-align:left}
+.th-card b{font:650 12.5px var(--f-b)}
+.th-dots{display:flex;align-items:center;gap:5px;width:100%;padding:7px;border-radius:9px;border:1px solid rgba(128,128,128,.3)}
+.th-dots i{display:block;width:16px;height:16px;border-radius:50%;border:1px solid rgba(128,128,128,.35)}
+.th-card.on{border-color:var(--acc);box-shadow:0 0 0 2px color-mix(in srgb,var(--acc) 30%,transparent)}
