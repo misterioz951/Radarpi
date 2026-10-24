@@ -329,7 +329,7 @@ async function nbAutoRes(manual){
   if(n){SV('nbapicks',NB.picks);nbPicks()}
   if(manual)toast(n?n+' picks resueltos':'Aún no terminan los partidos de tus picks pendientes');
 }
-function nbPicks(target='#nbpk',statsOnly=false,noMenu=false){nbK();
+function nbPicks(target='#nbpk',statsOnly=false,noMenu=false){if(arguments.length===0&&typeof mdlTab!=='undefined'&&mdlTab==='nba'&&document.querySelector('#nbamodel-body'))setTimeout(drawModel,0);nbK();
   const P=NB.picks,D=P.filter(x=>x.res==='w'||x.res==='l'),pend=P.filter(x=>!x.res).length,nW=D.filter(x=>x.res==='w').length,nL=D.length-nW,nV=P.filter(x=>x.res==='v').length,tab=statsOnly?'res':(NB.tab||'all');
   const pr=a=>a.length?Math.round(100*a.reduce((t,x)=>t+x.p,0)/a.length):0,hit=a=>a.length?Math.round(100*a.filter(x=>x.res==='w').length/a.length):0;
   const row=(t,a)=>a.length?rwRow(t,a.filter(x=>x.res==='w').length,a.length,pr(a)):'';
@@ -406,6 +406,13 @@ window.nbCombiSource=async say=>{if(!NC.keys.trim())throw new Error('necesita ll
     gameCands(g).forEach(c=>put(g.a.ab+'@'+g.h.ab+': '+c.n,c.p,c.q,c.fair));
     [g.h,g.a].forEach(s=>s.pl.forEach(p=>Object.keys(STX).forEach(st=>{const o=nbPropOpts(g,p,st);if(!o||!o.real)return;const a=o.ov.q,b=o.un.q,pf=a&&b?[(1/a)/(1/a+1/b),(1/b)/(1/a+1/b)]:[null,null];[o.ov,o.un].forEach((x,i)=>put(p.n+' '+x.name+' '+o.L+' '+STX[st][0],x.pr,x.q,pf[i]))})));
     return{nba:true,ev:g.id,slug:'nba',liga:'NBA',h:g.h.ab,w:g.a.ab,m:g.a.ab+' @ '+g.h.ab,hora:new Date(g.date).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}),ko:g.date,hid:g.h.id,wid:g.a.id,casa:'The Odds API (EE. UU.)',p:[],A:{n:12},B:{n:12},mod:{m,fc},q}})};
+// El escaneo de NBA que hace Combi es silencioso: guarda los datos pero no pinta nada en la pestaña NBA
+const _nbCS=window.nbCombiSource;
+window.nbCombiSource=async say=>{
+  const had=!!(NB.g.length&&NB.od),ids=['#nbres','#nbmsg','#nbpk'],hold=ids.map(s=>{const e=$(s);return e?e.innerHTML:null});
+  try{return await _nbCS(say)}
+  finally{if(!had)ids.forEach((s,i)=>{const e=$(s);if(e&&hold[i]!==null){e.innerHTML=hold[i]}})}
+};
 function nbInit(){$('#nba-root').innerHTML=`<div class="combo-page-head"><div class="combo-page-icon">🏀</div><div><h2>NBA</h2><p>Props de jugadores y partidos con fuentes gratis.</p></div></div>
 <div class="card"><div class="seg m" id="nbday"><button class="${NC.day?'':'on'}" onclick="NC.day=0;nbSet()">Hoy</button><button class="${NC.day?'on':''}" onclick="NC.day=1;nbSet()">Mañana</button></div>
 <div class="tools"><button class="btn" id="nbgo" onclick="nbScan(false)">Escanear NBA</button><button class="btn s" onclick="nbTest()">Probar fuentes</button></div><button class="btn s" id="nbhunt" type="button" style="width:100%;min-height:46px;margin:10px 0 0" onclick="nbScan(true)">Buscar el mejor pick NBA</button><p class="status" id="nbmsg" role="status"></p></div>

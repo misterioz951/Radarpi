@@ -115,9 +115,9 @@ drawDd();
 
 // ajustes
 $('#c-theme').value=THEMES.includes(cfg.theme)?cfg.theme:'auto';$('#c-theme').onchange=()=>{cfg.theme=$('#c-theme').value;applyTheme(cfg.theme);SV('cfg',cfg)};
-$('#k-gq').value=cfg.gq;$('#k-gm').value=cfg.gk||'';$('#k-or').value=cfg.or||'';$('#k-br').value=cfg.br||'';$('#c-g').value=cfg.g;$('#c-b').value=cfg.b;$('#c-m').value=cfg.m;$('#c-qm').value=cfg.qm;$('#c-cq').value=cfg.cq||1.5;$('#c-af').value=cfg.af||'';$('#c-sm').value=cfg.sm;$('#c-hm').checked=cfg.hm;$('#c-afa').checked=!!cfg.afa;$('#c-fm').value=cfg.fm||'b';$('#c-afn').value=cfg.afn||8;$('#c-u').value=cfg.u;$('#c-r').value=cfg.r;$('#c-k').value=cfg.bk||'';$('#c-co').value=cfg.co;$('#c-ta').value=cfg.ta;$('#c-x').checked=cfg.ex;$('#c-au').checked=cfg.au;$('#c-aa').checked=cfg.aa;$('#c-iv').value=cfg.iv;$('#c-pn').checked=cfg.pn;$('#c-ok').value=cfg.ok;$('#c-ok2').value=cfg.ok2||'';$('#c-bm').value=cfg.bm;
+$('#k-gq').value=cfg.gq;$('#k-gm').value=cfg.gk||'';$('#k-or').value=cfg.or||'';$('#k-br').value=cfg.br||'';$('#c-g').value=cfg.g;$('#c-b').value=cfg.b;$('#c-m').value=cfg.m;$('#c-qm').value=cfg.qm;$('#c-cq').value=cfg.cq||1.5;$('#c-af').value=cfg.af||'';$('#c-sm').value=cfg.sm;$('#c-hm').checked=cfg.hm;$('#c-afa').checked=!!cfg.afa;$('#c-kp').checked=!!cfg.kp;$('#c-fm').value=cfg.fm||'b';$('#c-afn').value=cfg.afn||8;$('#c-u').value=cfg.u;$('#c-r').value=cfg.r;$('#c-k').value=cfg.bk||'';$('#c-co').value=cfg.co;$('#c-ta').value=cfg.ta;$('#c-x').checked=cfg.ex;$('#c-au').checked=cfg.au;$('#c-aa').checked=cfg.aa;$('#c-iv').value=cfg.iv;$('#c-pn').checked=cfg.pn;$('#c-ok').value=cfg.ok;$('#c-ok2').value=cfg.ok2||'';$('#c-bm').value=cfg.bm;
 $('#save').onclick=()=>{cfg.theme=$('#c-theme').value;applyTheme(cfg.theme);cfg.gq=$('#k-gq').value.trim();cfg.gk=$('#k-gm').value.trim();cfg.or=$('#k-or').value.trim();cfg.br=$('#k-br').value.trim();
-  cfg.g=+$('#c-g').value||3;cfg.b=+$('#c-b').value||70;cfg.m=+$('#c-m').value||8;cfg.qm=+$('#c-qm').value||1.5;cfg.cq=Math.max(1.01,+$('#c-cq').value||1.5);cfg.af=$('#c-af').value.trim();cfg.sm=+$('#c-sm').value||5;cfg.hm=$('#c-hm').checked;cfg.afa=$('#c-afa').checked;cfg.fm=$('#c-fm').value;cfg.afn=Math.max(1,+$('#c-afn').value||8);cfg.u=+$('#c-u').value||2;cfg.r=+$('#c-r').value||75;cfg.bk=+$('#c-k').value||0;cfg.co=+$('#c-co').value||5;cfg.ta=+$('#c-ta').value||5;cfg.ex=$('#c-x').checked;cfg.au=$('#c-au').checked;cfg.aa=$('#c-aa').checked;cfg.iv=Math.max(15,+$('#c-iv').value||60);cfg.pn=$('#c-pn').checked;cfg.ok=$('#c-ok').value.trim();cfg.ok2=($('#c-ok2')||{value:cfg.ok2||''}).value.trim();op.i=0;cfg.bm=$('#c-bm').value.trim();SV('cfg',cfg);$('#save').textContent='Guardado'};
+  cfg.g=+$('#c-g').value||3;cfg.b=+$('#c-b').value||70;cfg.m=+$('#c-m').value||8;cfg.qm=+$('#c-qm').value||1.5;cfg.cq=Math.max(1.01,+$('#c-cq').value||1.5);cfg.af=$('#c-af').value.trim();cfg.sm=+$('#c-sm').value||5;cfg.hm=$('#c-hm').checked;cfg.afa=$('#c-afa').checked;cfg.kp=$('#c-kp').checked;cfg.fm=$('#c-fm').value;cfg.afn=Math.max(1,+$('#c-afn').value||8);cfg.u=+$('#c-u').value||2;cfg.r=+$('#c-r').value||75;cfg.bk=+$('#c-k').value||0;cfg.co=+$('#c-co').value||5;cfg.ta=+$('#c-ta').value||5;cfg.ex=$('#c-x').checked;cfg.au=$('#c-au').checked;cfg.aa=$('#c-aa').checked;cfg.iv=Math.max(15,+$('#c-iv').value||60);cfg.pn=$('#c-pn').checked;cfg.ok=$('#c-ok').value.trim();cfg.ok2=($('#c-ok2')||{value:cfg.ok2||''}).value.trim();op.i=0;cfg.bm=$('#c-bm').value.trim();SV('cfg',cfg);$('#save').textContent='Guardado'};
 
 // ESPN puede bloquear o fallar desde algunas redes/navegadores. Se intenta directo y luego dos proxies públicos solo para ESPN.
 async function fetchESPN(url,options){
@@ -616,10 +616,11 @@ $('#go').onclick=async()=>{
     // Se etiquetan como anteriores porque sus cuotas deben volver a verificarse antes de apostar.
     if(!hunt){
       const prev=LS('scan',null),fresh=R.slice();
-      if(prev&&prev.d===today()&&Array.isArray(prev.R)){
+      if(cfg.kp&&prev&&prev.d===today()&&Array.isArray(prev.R)){
         const eventKey=r=>String(r.ev||r.slug+'|'+r.h+'|'+r.w+'|'+r.ko),pickKey=r=>{const b=bestOf(r);return b?String(b.n):''};
         const present=new Set(R.map(r=>eventKey(r)+'|'+pickKey(r)));
-        for(const old of prev.R.filter(x=>bestOf(x)&&x.ko&&new Date(x.ko).getTime()>Date.now()).slice(0,30)){
+        const regEv=new Set(LS('picks',[]).map(k=>String(k.ev)));
+        for(const old of prev.R.filter(x=>bestOf(x)&&x.ko&&new Date(x.ko).getTime()>Date.now()&&(cfg.lg||[]).includes(x.slug)&&!regEv.has(String(x.ev))).slice(0,30)){
           const id=eventKey(old)+'|'+pickKey(old);
           // Conserva cada pick distinto del mismo partido; no duplica el mismo mercado/pick.
           if(present.has(id))continue;
