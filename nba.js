@@ -231,12 +231,15 @@ function nbAll(g){const C=[];
   [g.h,g.a].forEach(s=>s.pl.forEach(p=>Object.keys(STX).forEach(st=>{const o=nbPropOpts(g,p,st);if(!o)return;const a=o.ov.q,b=o.un.q,pf=a&&b?[(1/a)/(1/a+1/b),(1/b)/(1/a+1/b)]:[null,null];
     [o.ov,o.un].forEach((x,i)=>C.push({k:'T'+o.key+x.name,kind:STX[st][0],n:p.n+' '+STX[st][0]+' '+x.name+' '+o.L,full:p.n+' '+STX[st][0]+' '+x.name+' '+o.L,p:x.pr,q:x.q,fair:pf[i],real:o.real,cur:o.P.cur,na:o.P.a.length,bs:o.P.bs,cx:o.P.cx,arr:o.P.a.slice(0,10),L:o.L,side:x.name,meta:{t:'pr',pid:p.id,stat:st,side:x.name,line:o.L}}))})));
   return C}
+// Si un tipo de pick lleva 10+ resueltos y acierta 8+ puntos menos de lo que prometía, solo se propone con más exigencia
+function nbGate(kind){const D=NB.picks.filter(x=>x.res&&x.st===kind);if(D.length<10)return null;const w=D.filter(x=>x.res==='w').length,pr=D.reduce((t,x)=>t+x.p,0)/D.length;return w/D.length<pr-.08?{p:.66,e:.04}:null}
 function nbCands(g){const out=[],veto=[];
   for(const c of nbAll(g)){
     if(!c.real||c.q==null||c.q<1.01)continue;
     if(c.fair!=null&&c.p-c.fair>.12){veto.push({n:c.n,p:c.p,ref:c.fair});continue}
-    const F=FM(),pr=c.fair!=null?.5*c.p+.5*c.fair:c.p,e=pr*c.q-1,pmin={s:.56,b:.54,w:.5}[cfg.fm||'b']||.54;
-    if(c.q<F.qa||c.q>F.qb||pr<pmin||e<Math.max(F.ea,.01)||e>F.eb)continue;
+    const F=FM(),pr=c.fair!=null?.5*c.p+.5*c.fair:c.p,e=pr*c.q-1,pmin={r:.56,s:.56,b:.54,w:.5}[cfg.fm||'r']||.56;
+    const GT=nbGate(c.kind);
+    if(c.q<Math.max(F.qa,1.2)||c.q>Math.min(F.qb,2.6)||pr<pmin||e<Math.max(F.ea,.01)||e>.25||(GT&&(pr<GT.p||e<GT.e)))continue;
     const sc=pr*.6+Math.min(e,.12)*1.5+(c.kind==='Partido'?.01:0)-(c.cur!=null&&c.cur<5?.03:0)-(c.fair==null?.02:0);
     out.push(Object.assign({},c,{p:pr,pm:c.p,e,sc}))}
   return{out:out.sort((a,b)=>b.sc-a.sc),veto}}

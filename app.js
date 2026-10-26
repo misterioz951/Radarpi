@@ -738,6 +738,7 @@ function safeLine(r){if(r.A.n<5||r.B.n<5||!r.q)return '';
   return L?`<div class="tk safe"><small class="tkl">LÍNEA SEGURA · SIN VALOR CLARO</small><div class="tk1"><b class="n">${esc(L.n)}</b></div><div class="tk2"><span><b>${Math.round(L.pc*100)}%</b> prob.</span><span>cuota <b>@${L.q}</b></span><span>valor <b>${L.e>=0?'+':''}${Math.round(L.e*100)}%</b></span><span>stake sugerido <b>1/9</b></span></div><p class="status">Riesgo bajo, sin ventaja: pata de combinada o stake mínimo.</p></div>`:''}
 function reasons(r){if(r.A.n<5||r.B.n<5||!r.q)return '';const F=FM(),c={q:0,rng:0,pc:0,val:0,veto:0};
   for(const [n,p] of r.mod.m){if(isHalfMarket(n)||!(p>=.35&&p<=.9))continue;const q=r.q[n];if(!q||q<1.01)continue;c.q++;const pc=calP(r,n,p),e=pc*q-1,rf=refOf(r,n);
+    if(F.r){const mk=rf!=null?rf:Math.min(.97,.95/q);if(q<F.qa||q>F.qb)c.rng++;else if(p<F.pmin)c.pc++;else if(p-mk>F.gap||(/^Ambos/.test(n)&&(p<.75||p-mk>.10)))c.veto++;else if(p*q<1)c.val++;continue}
     if(q<F.qa||q>F.qb)c.rng++;else if(pc<F.pc)c.pc++;else if(rf!=null&&p-rf>.10)c.veto++;else if(e<F.ea)c.val++;else if(e>F.eb)c.veto++}
   return c.q?`<p class="status">Mercados con cuota: ${c.q}. Descartados: cuota fuera de rango ${c.rng}, probabilidad baja ${c.pc}, sin valor ${c.val}, modelo demasiado optimista frente al mercado ${c.veto}.</p>`:''}
 const shortWhy=r=>{const t=String(diagnose(r)).replace(/<[^>]+>/g,'').trim(),i=t.indexOf('. ');return esc(i>0&&i<130?t.slice(0,i+1):t.slice(0,120)+(t.length>120?'…':''))};
@@ -1102,8 +1103,9 @@ function calibStats(){
   calibStats.c={all:f(D),by};calibStats.t=now;return calibStats.c;
 }
 // Probabilidad ajustada: recorte por historial (global y por tipo de mercado) + ancla a la cuota del mercado + contraste API-Football 1X2
-const FMODES={s:{qa:1.3,qb:2.3,pc:.5,ea:.015,eb:.18},b:{qa:1.2,qb:2.6,pc:.46,ea:0,eb:.22},w:{qa:1.15,qb:3.2,pc:.4,ea:0,eb:.3}};
-const FM=()=>FMODES[cfg.fm]||FMODES.b;
+const FMODES={r:{r:1,qa:1.25,qb:1.9,pmin:.65,gap:.15,pc:.5,ea:0,eb:9},s:{qa:1.3,qb:2.3,pc:.5,ea:.015,eb:.18},b:{qa:1.2,qb:2.6,pc:.46,ea:0,eb:.22},w:{qa:1.15,qb:3.2,pc:.4,ea:0,eb:.3}};
+if(cfg.fmv!==2){cfg.fm='r';cfg.fmv=2;SV('cfg',cfg)}   // migración: el modo «Fiable» pasa a ser el predeterminado
+const FM=()=>FMODES[cfg.fm]||FMODES.r;
 function calP(r,n,p){if(r&&r.nba)return p;
   const C=calibStats(),g=C.by[mgrp(n)]||{n:0,w:0,e:0},ra=(C.all.w+6)/(C.all.e+6),rg=(g.w+4)/(g.e+4),b=g.n/(g.n+8);
   const kf=Math.min(1.05,Math.max(.7,b*rg+(1-b)*ra)),ref=(r.mod.f&&r.mod.f[n]!=null)?r.mod.f[n]:(r.mod.fc&&r.mod.fc[n]!=null?r.mod.fc[n]:null);
@@ -1195,14 +1197,17 @@ function candScan(r){
     // Sin cuota real no existe valor esperado comprobable: solo se puede mostrar como mercado a vigilar.
     if(!conC||!q||q<1.01)continue;
     const pc=calP(r,n,p),e=pc*q-1;
-    const F=FM();if(q<F.qa||q>F.qb||pc<F.pc||e<F.ea||e>F.eb)continue;
+    const F=FM(),ref0=(r.mod.f&&r.mod.f[n]!=null)?r.mod.f[n]:(r.mod.fc&&r.mod.fc[n]!=null?r.mod.fc[n]:null),mkp=ref0!=null?ref0:Math.min(.97,.95/q),gap=p-mkp;
+    if(F.r){   // Fiable: probabilidad alta + cuota baja + el modelo no se aleja demasiado del mercado (en tu historial, ahí es donde acierta lo prometido)
+      if(q<F.qa||q>F.qb||p<F.pmin||p*q<1||gap>F.gap||(/^Ambos/.test(n)&&(p<.75||gap>.10))){if(gap>F.gap&&p>=F.pmin&&q>=F.qa&&q<=F.qb)veto.push({n,p,ref:mkp});continue}
+    }else if(q<F.qa||q>F.qb||pc<F.pc||e<F.ea||e>F.eb)continue;
     // Sanidad frente al mercado: si el modelo supera a Pinnacle (o a la casa sin margen) por más de 10 puntos, casi seguro es error del modelo.
     const ref=(r.mod.f&&r.mod.f[n]!=null)?r.mod.f[n]:(r.mod.fc&&r.mod.fc[n]!=null?r.mod.fc[n]:null);
     if(ref!=null&&p-ref>0.10){veto.push({n,p,ref});continue}
     const afc=afConflict(r,n,p);
     if(afc&&afc.level==='strong'){veto.push({n,p,ref:afc.api,source:'API-Football',reason:'Contradicción fuerte con API-Football'});continue}
-    const dr=afDir(r,n),sc=pc*.6+Math.min(e,.12)*1.5+({A:.035,B:.015,C:-.025}[t]||0)+(sp?.01:0)-(afc&&afc.level==='moderate'?.04:0)+(dr>0?.015:dr<0?-.04:0);
-    out.push({n,p:pc,pm:p,q,e,sc,t});
+    const dr=afDir(r,n),sc=(F.r?p*.6-Math.max(0,gap-.05):pc*.6+Math.min(e,.12)*1.5)+({A:.035,B:.015,C:-.025}[t]||0)+(sp?.01:0)-(afc&&afc.level==='moderate'?.04:0)+(dr>0?.015:dr<0?-.04:0);
+    out.push({n,p:F.r?p:pc,pm:p,q,e:F.r?p*q-1:e,sc,t});
   }
   return {out:out.sort((a,b)=>b.sc-a.sc),veto};
 }
@@ -1231,8 +1236,16 @@ function regModel(i){
 function baseStake(r,n,price){
   const m=r.mod.m.find(x=>x[0]===n);if(!m)return 1;
   if(!price||price<=1)return 1;
+  const F=FM();
+  if(F.r){   // stake según la probabilidad (no según la «ventaja»: las ventajas grandes fueron errores del modelo en tu historial); tope 5 hasta validar más
+    const p=m[1];if(price<F.qa||price>F.qb||p<F.pmin||p*price<1)return 1;
+    let b=p>=.8?5:p>=.75?4:p>=.7?3:2;
+    if(r.A.n<8||r.B.n<8)b=Math.min(b,3);
+    if(conflictOf(r,n))b-=1;
+    return Math.max(1,Math.min(5,b));
+  }
   const pc=calP(r,n,m[1]),e=pc*price-1;
-  const F=FM();if(e<F.ea||e>F.eb||pc<F.pc||price<F.qa||price>F.qb)return 1;
+  if(e<F.ea||e>F.eb||pc<F.pc||price<F.qa||price>F.qb)return 1;
   let b=techo(r,m);
   const ref=!!(r.mod.f&&r.mod.f[n]!=null)||!!(r.afq&&r.afq[n]);
   const tier=tierOf(r,n),sup=!!supports(r,n),conf=!!conflictOf(r,n);
@@ -1246,7 +1259,7 @@ function baseStake(r,n,price){
 function topHtml(){
   const t3=R.map((r,i)=>{const b=bestOf(r);return b?{r,b,s:baseStake(r,b.n,b.q)}:null}).filter(Boolean).sort((a,b)=>b.b.sc-a.b.sc).slice(0,3);
   if(!t3.length)return '';
-  return `<div class="card"><h2>Mejores picks</h2><small>Solo aparecen con cuota real emparejada y ventaja estimada entre 5% y 25%. La ventaja es una estimación, no garantía; confirma contexto y alineaciones con la IA.</small>`+
+  return `<div class="card"><h2>Mejores picks</h2><small>Solo con cuota real emparejada y probabilidad alta según el filtro elegido en Ajustes. Son estimaciones, no garantías; confirma contexto y alineaciones con la IA.</small>`+
     t3.map(t=>`<div class="bet"><div class="bet-h"><b>${esc(t.r.h)} vs ${esc(t.r.w)}</b><span class="st w">${t.s}/10</span></div><small>${esc(t.b.n)} · ${Math.round(t.b.p*100)}%${t.b.q?' · @'+t.b.q+' · valor '+Math.round(t.b.e*100)+'%':' · cuota mín. '+(1.05/t.b.p).toFixed(2)}${t.b.t?' · nivel '+t.b.t:''}</small></div>`).join('')+'</div>';
 }
 
