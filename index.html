@@ -138,7 +138,7 @@
 </nav>
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script src="app.js?v=20261027motor"></script><script src="nba.js?v=20261023v3model"></script><script>
+<script src="app.js?v=20261027combi"></script><script src="nba.js?v=20261023v3model"></script><script>
 // PWA: registra el service worker (requiere https o localhost) y avisa cuando hay versión nueva
 if('serviceWorker' in navigator){addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').then(reg=>{reg.addEventListener('updatefound',()=>{const w=reg.installing;if(w)w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller&&typeof toast==='function')toast('Hay una versión nueva de RadarPi: recarga la página para usarla.')})})}).catch(()=>{})})}
 </script>

@@ -930,19 +930,23 @@ function comboHtml(source){
   }
   walk(0,[],1,1);combos.sort((a,b)=>b.score-a.score);
   combos.sort((a,b)=>b.p-a.p||b.e-a.e);
-  const unique=[],seen=new Set();
-  for(const c of combos){
-    const k=c.legs.map(x=>x.event+':'+x.b.n).sort().join('|');if(seen.has(k))continue;seen.add(k);
-    // Evita publicar a la vez una combinada larga y sus subconjuntos casi idénticos.
-    const evs=new Set(c.legs.map(x=>x.event));
-    if(unique.some(u=>{const ue=new Set(u.legs.map(x=>x.event));return [...evs].filter(e=>ue.has(e)).length===Math.min(evs.size,ue.size)}))continue;
-    unique.push(c);if(unique.length>=6)break;
-  }
+  // Sin repetir líneas: cada partido aparece en una sola combinada. Solo si así salen menos de 3, se permite repetirlo hasta 2 veces.
+  const choose=maxUse=>{const used=new Map(),out=[],seen=new Set();
+    for(const c of combos){
+      const k=c.legs.map(x=>x.event+':'+x.b.n).sort().join('|');if(seen.has(k))continue;
+      if(c.legs.some(x=>(used.get(x.event)||0)>=maxUse))continue;
+      const evs=new Set(c.legs.map(x=>x.event));
+      if(maxUse>1&&out.some(u=>{const ue=new Set(u.legs.map(x=>x.event));return [...evs].filter(e=>ue.has(e)).length===Math.min(evs.size,ue.size)}))continue;
+      seen.add(k);out.push(c);c.legs.forEach(x=>used.set(x.event,(used.get(x.event)||0)+1));
+      if(out.length>=6)break;
+    }return out};
+  let unique=choose(1),reuse=false;
+  const few=unique.length<3;   // nunca se repite un partido entre combinadas: si salen pocas, se avisa en vez de encadenarlas
   COMBI_CURRENT=unique.map(c=>({...c,stakeFinal:comboFinalStake(c)}));
   const best=COMBI_CURRENT.length?COMBI_CURRENT.reduce((a,b)=>b.p>a.p?b:a):null;
   const bestHtml=best?`<div class="combo-best"><b>★ Combinada de mayor confianza estimada</b><p>${best.legs.map(l=>esc(l.r.h)+' vs '+esc(l.r.w)).join(' · ')} · ${best.legs.length} líneas</p><div class="combo-stats"><div><small>Probabilidad conjunta aprox.</small><b>${Math.round(best.p*100)}%</b></div><div><small>Cuota combinada</small><b>@${best.q.toFixed(2)}</b></div><div><small>Valor estimado</small><b>${best.e>=0?'+':''}${Math.round(best.e*100)}%</b></div></div><p><b>Stake combinado: ${best.stakeFinal}/9</b> · menor que el de cada línea porque combinar reduce la probabilidad conjunta.</p></div>`:'';
   const content=COMBI_CURRENT.length?COMBI_CURRENT.map((c,i)=>`<details class="combo-item"><summary class="combo-title"><span class="ci-tag">${best===c?'★ Mayor confianza':'Combinada '+(i+1)}</span><strong class="combo-odds">@${c.q.toFixed(2)}</strong><span class="ci-sub">${c.legs.length} líneas · ${Math.round(c.p*100)}% prob. · <b class="${c.e>0?'ok':'bad'}">valor ${c.e>=0?'+':''}${Math.round(c.e*100)}%</b> · stake ${c.stakeFinal}/9</span></summary><div class="combo-item-body">${c.legs.map((l,j)=>`<div class="cl ${famCls(l.b.n)}"><span class="cl-n">${j+1}</span><div><b>${esc(l.r.h)} <span>vs</span> ${esc(l.r.w)}</b><small>${esc(l.b.n)} · prob. ${Math.round(l.b.p*100)}%</small></div><span class="cl-q">@${l.b.q.toFixed(2)}</span></div>`).join('')}<div class="combo-register"><label>Cuota final en tu casa<input id="comboRealQ${i}" type="number" min="1.01" step="0.01" value="${c.q.toFixed(2)}"></label><button class="btn s" type="button" onclick="registerCombo(${i})">＋ Registrar</button></div></div></details>`).join(''):`<div class="combo-empty"><div class="combo-empty-icon">✦</div><b>No hay combinadas que pasen los filtros</b><p>Combi necesita al menos dos encuentros con líneas de stake 5 o superior, probabilidad alta, cuota real y valor positivo. Líneas que pasaron el filtro: ${legs.length} en ${byGame.size} partido(s) de ${(source||[]).length} revisados. Filtro actual «${({s:'estricto',b:'equilibrado',w:'amplio'})[cfg.fm||'b']}» (Ajustes → Filtros de picks). Prueba el filtro «amplio», más ligas o «Hoy y mañana».</p></div>`;
-  return `<div class="combo-wrap"><div class="combo-hero"><div class="combo-eyebrow">BÚSQUEDA INDEPENDIENTE</div><h2>Combinadas RadarPi</h2><p>Ordenadas por probabilidad conjunta. Cada registro queda separado de los picks sencillos.</p><div class="combo-pills"><span>2–4 partidos</span><span>Stake por línea 5–9</span><span>Objetivo @${target.toFixed(2)}+</span></div></div>${bestHtml}<div class="combo-results-head"><b>${COMBI_CURRENT.length?`${COMBI_CURRENT.length} combinada${COMBI_CURRENT.length===1?'':'s'} candidata${COMBI_CURRENT.length===1?'':'s'}`:'Sin combinadas válidas'}</b><span>Máximo 6 resultados</span></div>${content}<p class="combo-disclaimer">Probabilidades conjuntas aproximadas: los partidos no son del todo independientes. Una cuota alta no garantiza rentabilidad.</p></div>`;
+  return `<div class="combo-wrap"><div class="combo-hero"><div class="combo-eyebrow">BÚSQUEDA INDEPENDIENTE</div><h2>Combinadas RadarPi</h2><p>Ordenadas por probabilidad conjunta. Cada registro queda separado de los picks sencillos.</p><div class="combo-pills"><span>2–4 partidos</span><span>Sin repetir líneas</span><span>Stake por línea 5–9</span><span>Objetivo @${target.toFixed(2)}+</span></div></div>${bestHtml}${few&&COMBI_CURRENT.length?'<p class="status">Solo hay '+COMBI_CURRENT.length+' combinada'+(COMBI_CURRENT.length===1?'':'s')+' sin repetir partidos. Para ver más, amplía las ligas o los días.</p>':''}<div class="combo-results-head"><b>${COMBI_CURRENT.length?`${COMBI_CURRENT.length} combinada${COMBI_CURRENT.length===1?'':'s'} candidata${COMBI_CURRENT.length===1?'':'s'}`:'Sin combinadas válidas'}</b><span>Máximo 6 resultados</span></div>${content}<p class="combo-disclaimer">Probabilidades conjuntas aproximadas: los partidos no son del todo independientes. Una cuota alta no garantiza rentabilidad.</p></div>`;
 }
 function comboFinalStake(c){
   // Stake combinado separado de los stakes de cada selección; escala conservadora 1–3/9.
