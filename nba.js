@@ -3,7 +3,7 @@
 /* ===== NBA · Radar de patrones (ESPN temporada actual + The Odds API) ===== */
 const NE='https://site.api.espn.com/apis/site/v2/sports/basketball/nba/',NW='https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/',NO='https://api.the-odds-api.com/v4/sports/basketball_nba/';
 async function nbFetchESPN(url,options){let err='';try{const r=await fetch(url,options);if(r.ok)return r;err='HTTP '+r.status}catch(e){err=e&&e.message||'fallo de red'}for(const make of [u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),u=>'https://corsproxy.io/?url='+encodeURIComponent(u)]){try{const r=await fetch(make(url),options);if(r.ok)return r;err+='; proxy HTTP '+r.status}catch(e){err+='; proxy '+(e&&e.message||'fallo de red')}}throw new Error('ESPN no respondió ('+err+').')}
-const NC=Object.assign({keys:'',games:3,per:8,day:0,news:'',sgo:'',bdl:'',apisports:''},LS('nbcfg',{}));
+const NC=Object.assign({alt:false,lp:false,keys:'',games:3,per:8,day:0,news:'',sgo:'',bdl:'',apisports:''},LS('nbcfg',{}));
 const NB={g:[],od:null,sel:{},ln:{},reg:{},picks:LS('nbapicks',[]),ki:0,tab:'all'};
 const nz=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\b(jr|sr|ii|iii|iv)\b/g,'').replace(/[^a-z ]/g,'').replace(/\s+/g,' ').trim();
 const Phi=x=>{const t=1/(1+.2316419*Math.abs(x)),p=.3989423*Math.exp(-x*x/2)*t*(.3193815+t*(-.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return x>0?1-p:p};
@@ -129,11 +129,11 @@ async function nbo(path,params){const ks=NC.keys.split(/[\s,]+/).filter(Boolean)
     if(!r.ok){if([401,429].includes(r.status)&&NB.ki<ks.length-1){NB.ki++;toast('Llave agotada: usando la siguiente');continue}throw new Error('The Odds API '+r.status)}return r.json()}}
 function bestOf(rows){const g={};for(const x of rows)(g[x.k]=g[x.k]||[]).push(x);const o={};
   for(const k in g){const c={};g[k].forEach(x=>c[x.p]=(c[x.p]||0)+1);const p=Object.keys(c).sort((a,b)=>c[b]-c[a])[0];o[k]={p:p==='undefined'?null:+p,q:Math.max(...g[k].filter(x=>String(x.p)===p).map(x=>x.q))}}return o}
-const rowsOf=ev=>{const R=[];for(const b of ev.bookmakers||[])for(const m of b.markets||[])for(const o of m.outcomes||[])R.push({k:m.key+'|'+nz(o.description||o.name)+'|'+(o.description?o.name:''),p:o.point,q:o.price});return R};
+const rowsOf=ev=>{const R=[];for(const b of ev.bookmakers||[])for(const m of b.markets||[])for(const o of m.outcomes||[])R.push({k:m.key+'|'+nz(o.description||o.name)+'|'+(o.description?o.name:'')+(/_alternate$/.test(m.key)?'@'+o.point:''),p:o.point,q:o.price});return R};
 async function nbOdds(games){
   const ev=await nbo('odds',{regions:'us',markets:'h2h,spreads,totals'}),out={};
   const lt=s=>nz(s).split(' ').pop();for(const e of ev){const g=games.find(x=>lt(x.h.n)===lt(e.home_team)&&lt(x.a.n)===lt(e.away_team));if(g)out[g.id]={eid:e.id,o:bestOf(rowsOf(e))}}
-  NB.perr=[];NB.pn=0;await pool(games.filter(g=>out[g.id]),2,async g=>{try{const j=await nbo('events/'+out[g.id].eid+'/odds',{regions:'us',markets:'player_points,player_rebounds,player_assists,player_threes,player_points_rebounds_assists'}),o=bestOf(rowsOf(j));if(Object.keys(o).length){NB.pn++;Object.assign(out[g.id].o,o)}else NB.perr.push(g.a.ab+'@'+g.h.ab+': sin props publicados todavía')}catch(e){NB.perr.push(g.a.ab+'@'+g.h.ab+': '+e.message)}});
+  NB.perr=[];NB.pn=0;await pool(games.filter(g=>out[g.id]),2,async g=>{try{const j=await nbo('events/'+out[g.id].eid+'/odds',{regions:'us',markets:'player_points,player_rebounds,player_assists,player_threes,player_points_rebounds_assists'+(NC.alt?',player_points_alternate,player_rebounds_alternate,player_assists_alternate,player_threes_alternate':'')}),o=bestOf(rowsOf(j));if(Object.keys(o).length){NB.pn++;Object.assign(out[g.id].o,o)}else NB.perr.push(g.a.ab+'@'+g.h.ab+': sin props publicados todavía')}catch(e){NB.perr.push(g.a.ab+'@'+g.h.ab+': '+e.message)}});
   return out}
 
 // ---- Modelo de partido (ritmo/anotación de los últimos juegos) ----
@@ -230,6 +230,11 @@ function nbAll(g){const C=[];
   gameCands(g).forEach((c,i)=>C.push({k:'TG'+g.id+i,kind:'Partido',n:c.n,full:g.a.ab+'@'+g.h.ab+' · '+c.n,p:c.p,q:c.q,fair:c.fair==null?null:c.fair,real:true,meta:c.meta||null}));
   [g.h,g.a].forEach(s=>s.pl.forEach(p=>Object.keys(STX).forEach(st=>{const o=nbPropOpts(g,p,st);if(!o)return;const a=o.ov.q,b=o.un.q,pf=a&&b?[(1/a)/(1/a+1/b),(1/b)/(1/a+1/b)]:[null,null];
     [o.ov,o.un].forEach((x,i)=>C.push({k:'T'+o.key+x.name,kind:STX[st][0],n:p.n+' '+STX[st][0]+' '+x.name+' '+o.L,full:p.n+' '+STX[st][0]+' '+x.name+' '+o.L,p:x.pr,q:x.q,fair:pf[i],real:o.real,cur:o.P.cur,na:o.P.a.length,bs:o.P.bs,cx:o.P.cx,arr:o.P.a.slice(0,10),L:o.L,side:x.name,meta:{t:'pr',pid:p.id,stat:st,side:x.name,line:o.L}}))})));
+  // Líneas alternativas con cuota real (opcional): permiten líneas conservadoras que sí existen en la casa
+  if(NC.alt){const od=NB.od&&NB.od[g.id]&&NB.od[g.id].o;if(od){const AM={pts:'player_points_alternate',reb:'player_rebounds_alternate',ast:'player_assists_alternate',tp:'player_threes_alternate'};
+    [g.h,g.a].forEach(s=>s.pl.forEach(p=>Object.keys(AM).forEach(st=>{const pre=AM[st]+'|'+nz(p.n)+'|Over@',ks=Object.keys(od).filter(k=>k.startsWith(pre));if(!ks.length)return;const o=nbPropOpts(g,p,st);if(!o)return;
+      ks.forEach(k=>{const a=od[k],L=a.p;if(L==null||a.q==null)return;const u=od[AM[st]+'|'+nz(p.n)+'|Under@'+L],fair=u&&u.q?(1/a.q)/(1/a.q+1/u.q):null,tx=p.n+' '+STX[st][0]+' Más '+L+' (alt.)';
+        C.push({k:'TA'+g.id+p.id+st+L,kind:STX[st][0],n:tx,full:tx,p:pOver(o.P,L),q:a.q,fair,real:true,cur:o.P.cur,na:o.P.a.length,bs:o.P.bs,cx:o.P.cx,arr:o.P.a.slice(0,10),L,side:'Más',meta:{t:'pr',pid:p.id,stat:st,side:'Más',line:L}})})})))}}
   return C}
 // Si un tipo de pick lleva 10+ resueltos y acierta 8+ puntos menos de lo que prometía, solo se propone con más exigencia
 function nbGate(kind){const D=NB.picks.filter(x=>x.res&&x.st===kind);if(D.length<10)return null;const w=D.filter(x=>x.res==='w').length,pr=D.reduce((t,x)=>t+x.p,0)/D.length;return w/D.length<pr-.08?{p:.66,e:.04}:null}
@@ -274,6 +279,15 @@ function nbWhy(g,veto){
   if(!NB.od)return 'Partido parejo para el modelo (ninguna lectura llega a 55%) y no hay cuotas reales (falta la llave de The Odds API o no se emparejó).'+dg;
   if(veto&&veto.length){const v=veto.sort((a,b)=>(b.p-b.ref)-(a.p-a.ref))[0];return 'El modelo está mucho más optimista que el mercado en '+esc(v.n)+' (modelo '+Math.round(v.p*100)+'% contra '+Math.round(v.ref*100)+'% del mercado). Se descarta: suele ser error del modelo.'}
   {const F=FM();return 'Ningún mercado cumple a la vez cuota de '+F.qa+' a '+F.qb+', probabilidad suficiente y valor de '+Math.round(Math.max(F.ea,.01)*100)+'% a '+Math.round(F.eb*100)+'% (filtro «'+({s:'estricto',b:'equilibrado',w:'amplio'}[cfg.fm||'b'])+'» de Ajustes).'+dg}}
+// Mensaje según el motivo real por el que un pick no tiene cuota (antes siempre pedía la llave, aunque ya estuviera conectada)
+function nbNoOddsNote(g,c){
+  const key=NC.keys&&NC.keys.trim(),od=NB.od&&NB.od[g.id]&&NB.od[g.id].o;
+  if(!key)return 'Sin cuota real no hay valor comprobable. Solo úsalo si tu casa paga al menos la cuota mínima. Con una llave gratis de The Odds API la app verifica el valor.';
+  if(!od)return 'The Odds API está conectada, pero aún no devuelve cuotas de este partido (las casas suelen publicarlas pocas horas antes). Vuelve a escanear más tarde; mientras, usa este pick solo si tu casa paga al menos la cuota mínima.';
+  const props=Object.keys(od).some(k=>k.startsWith('player_'));
+  if(c&&c.kind!=='Partido'&&!props)return 'Hay cuotas del partido, pero The Odds API aún no publica props de jugadores para él. Vuelve a escanear más tarde.';
+  return (c&&c.kind!=='Partido'?'Las casas de EE. UU. no ofrecen esa línea para este jugador.':'No hay cuota para este mercado de partido.')+' Confirma en tu casa que paga al menos la cuota mínima.';
+}
 function nbTicket(g,c,lean,veto,label){
   if(!c)return '<div class="nopick2"><b>Sin pick con ventaja clara</b><p>'+nbWhy(g,veto)+'</p></div>';
   const st=nbStake(c);
@@ -281,11 +295,11 @@ function nbTicket(g,c,lean,veto,label){
   return `<div class="tk ${lean?'':'A'}"><small class="tkl">${label||(lean?'LECTURA DEL MODELO · SIN CUOTA REAL':'PICK DE LA APP · SEGÚN REGLAS')}</small><div class="tk1"><b class="n">${esc(c.n)}</b></div>
 <div class="tk2"><span><b>${Math.round(c.p*100)}%</b> prob.</span>${c.q?`<span>cuota <b>@${c.q}</b></span><span>valor <b>${c.e>=0?'+':''}${Math.round(c.e*100)}%</b></span>`:`<span>cuota mínima <b>@${(1.05/c.p).toFixed(2)}</b></span>`}<span>stake base <b>${st}/9</b></span></div>
 <div class="meter${st>=5?' hi':''}" role="img" aria-label="Stake ${st} de 9">${Array.from({length:9},(_,k)=>`<i class="${k<st?'f':''}"></i>`).join('')}</div>
-${nbBars(c)}${nbCtxNote(c)}${c.hits?'<div class="mr-s" style="margin-top:6px">Superó esa línea en <b>'+c.hits+'</b> de sus últimos partidos. Verifica que tu casa tenga esa línea (o más baja) y confirma que juega.</div>':''}${lean?'<div class="tkw">Sin cuota real no hay valor comprobable. Solo úsalo si tu casa paga al menos la cuota mínima. Con una llave gratis de The Odds API la app verifica el valor.</div>':''}
+${nbBars(c)}${nbCtxNote(c)}${c.hits?'<div class="mr-s" style="margin-top:6px">Superó esa línea en <b>'+c.hits+'</b> de sus últimos partidos. Verifica que tu casa tenga esa línea (o más baja) y confirma que juega.</div>':''}${lean?'<div class="tkw">'+nbNoOddsNote(g,c)+'</div>':''}
 <div class="acts2" style="margin-top:8px"><button class="btn s" onclick="nbLog('${c.k}')">＋ Registrar pick</button></div></div>`}
 const nbPlayers=g=>[g.h,g.a].flatMap(s=>s.pl).sort((a,b)=>b.mn-a.mn).map(p=>{const s=NB.sel[p.id]||'pts';return `<div class="nb-p"><div class="nb-ph"><b>${esc(p.n)}</b><small>${p.tm} · ${p.pos} · ${Math.round(p.mn)} min${p.st?' · <i class="bad">'+({doubt:'Duda fuerte',q:'Duda'}[p.st]||p.st)+'</i>':''}</small></div><div class="nb-ch">${Object.keys(STX).map(k=>`<button class="${k===s?'on':''}" onclick="NB.sel['${p.id}']='${k}';nbDraw()">${STX[k][0]}</button>`).join('')}</div>${propBlk(g,p,s)}</div>`}).join('');
 function nbCard(g){
-  const R0=nbCands(g),best=R0.out[0]||null,lean=best?null:nbLean(g),pr=R0.out.find(c=>c.kind!=='Partido'&&(!best||c.k!==best.k)),pl=pr||((best&&best.kind!=='Partido')?null:nbLeanProp(g)),pcard=pl?nbTicket(g,pl,!pr,null,pr?'PICK DE JUGADOR · SEGÚN REGLAS':'PICK DE JUGADOR · SIN CUOTA REAL'):'<div class="nopick2"><b>Sin pick de jugador</b><p>Ningún jugador cumple la línea en 8 de 10 partidos con 20+ minutos y sin duda de lesión. Jugadores leídos: '+[g.h,g.a].reduce((t,x)=>t+x.pl.length,0)+(NB.g.length&&![g.h,g.a].some(x=>x.pl.length)?'. ESPN no devolvió estadísticas de jugadores para este partido: usa «Probar fuentes».':'. Con la temporada recién empezada se usan juegos de la temporada pasada y el filtro es más estricto.')+'</p></div>',tm=new Date(g.date).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  const R0=nbCands(g),best=R0.out[0]||null,lean=best?null:nbLean(g),pr=R0.out.find(c=>c.kind!=='Partido'&&(!best||c.k!==best.k)),pl=pr||((best&&best.kind!=='Partido')?null:(NC.lp?nbLeanProp(g):null)),pcard=pl?nbTicket(g,pl,!pr,null,pr?'PICK DE JUGADOR · SEGÚN REGLAS':'PICK DE JUGADOR · SIN CUOTA REAL'):'<div class="nopick2"><b>Sin pick de jugador</b><p>Ningún jugador cumple la línea en 8 de 10 partidos con 20+ minutos y sin duda de lesión. Jugadores leídos: '+[g.h,g.a].reduce((t,x)=>t+x.pl.length,0)+(NB.g.length&&![g.h,g.a].some(x=>x.pl.length)?'. ESPN no devolvió estadísticas de jugadores para este partido: usa «Probar fuentes».':'. Con la temporada recién empezada se usan juegos de la temporada pasada y el filtro es más estricto.')+'</p></div>',tm=new Date(g.date).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   const top=best||lean||pr||pl;
   const player=pr||pl;
   const topTxt=top?esc(top.n)+' · '+Math.round(top.p*100)+'%':'Sin pick destacado';
@@ -299,7 +313,7 @@ function nbDraw(){nbK();const box=$('#nbres');if(!NB.g.length){box.innerHTML='';
   let head='';
   if(NB.hunt){
     const real=NB.g.map(g=>({g,c:nbCands(g).out[0]})).filter(x=>x.c).sort((a,b)=>b.c.sc-a.c.sc).slice(0,3);
-    const lean=real.length?[]:NB.g.flatMap(g=>[{g,c:nbLean(g)},{g,c:nbLeanProp(g)}]).filter(x=>x.c).sort((a,b)=>b.c.p-a.c.p).slice(0,3);
+    const lean=real.length?[]:NB.g.flatMap(g=>[{g,c:nbLean(g)},{g,c:(NC.lp?nbLeanProp(g):null)}]).filter(x=>x.c).sort((a,b)=>b.c.p-a.c.p).slice(0,3);
     const L=real.length?real:lean,isLean=!real.length;
     head=`<div class="card"><h2>Mejor pick NBA</h2><small>${L.length?(isLean?'Ningún mercado tiene cuota real con valor (o falta la llave de cuotas). Estas son las lecturas más fuertes del modelo, sin cuota verificada.':'Los '+L.length+' picks con mejor puntaje de '+NB.g.length+' partidos revisados. Cuota real, valor estimado entre 2% y 22% y sin contradecir al mercado.'):'De '+NB.g.length+' partidos revisados, ninguno tiene un pick que pase los filtros. Es normal: casi nunca hay.'}</small>${L.map(x=>`<div class="mt" style="margin-top:12px"><b>${esc(x.g.a.n)}</b><em>@</em><b>${esc(x.g.h.n)}</b></div>${nbTicket(x.g,x.c,isLean)}`).join('')}</div>`}
   box.innerHTML=head+NB.g.map(nbCard).join('');nbPicks()}
@@ -392,7 +406,7 @@ async function llm(messages){let err='';
   throw new Error(err||'configura Groq u OpenRouter en Ajustes')}
 async function nbAI(id){const g=NB.g.find(x=>x.id==id),box=$('#nbai'+id);box.hidden=false;box.style.whiteSpace='normal';box.innerHTML='<p class="mr-s">Analizando…</p>';
   const m=gameModel(g),R0=nbCands(g),best=R0.out[0]||null,lean=best?null:nbLean(g),pr=R0.out.find(c=>c.kind!=='Partido'&&(!best||c.k!==best.k)),
-    A=best||lean,B=pr||((best&&best.kind!=='Partido')?null:nbLeanProp(g));
+    A=best||lean,B=pr||((best&&best.kind!=='Partido')?null:(NC.lp?nbLeanProp(g):null));
   const sum=(c,l)=>c?{id:l,pick:c.n,prob_pct:Math.round(c.p*100),cuota:c.q,valor_pct:c.e!=null?Math.round(c.e*100):null,cuota_real:!!c.q,ultimos10:c.arr||null,stake:nbStake(c)}:null;
   const data={partido:g.a.n+' @ '+g.h.n,proyeccion:m?{[g.a.ab]:Math.round(m.ap),[g.h.ab]:Math.round(m.hp),total:+m.tot.toFixed(1)}:null,picks:[sum(A,'A'),sum(B,'B')].filter(Boolean),bajas:{[g.h.ab]:g.h.out||[],[g.a.ab]:g.a.out||[]},contexto:m?{descanso:{[g.h.ab]:m.rest.h.b2b?'back-to-back':(m.rest.h.n4>=2?'3 juegos en 4 noches':'normal'),[g.a.ab]:m.rest.a.b2b?'back-to-back':(m.rest.a.n4>=2?'3 juegos en 4 noches':'normal')},ratings_temporada:m.rt}:null,bajas_pegadas_por_usuario:String(NC.news||'').slice(0,1200)};
   if(!data.picks.length){box.innerHTML='<p class="mr-s">Este partido no tiene pick que analizar.</p>';return}
@@ -423,6 +437,7 @@ function nbInit(){$('#nba-root').innerHTML=`<div class="combo-page-head"><div cl
 function nbInitGeneralSettings(){
   const fields={ 'nba-keys-general': 'keys', 'nba-sgo-general':'sgo', 'nba-apisports-general':'apisports', 'nba-bdl-general':'bdl', 'nba-games-general':'games', 'nba-per-general':'per' };
   Object.entries(fields).forEach(([id,key])=>{const e=document.getElementById(id);if(!e)return;e.value=NC[key]??'';e.addEventListener('change',()=>{if(key==='games')NC[key]=Math.max(1,Math.min(10,+e.value||3));else if(key==='per')NC[key]=Math.max(3,Math.min(12,+e.value||8));else NC[key]=e.value;nbSet();});});
+  [['nba-alt-general','alt'],['nba-lp-general','lp']].forEach(([id,k])=>{const e=document.getElementById(id);if(!e)return;e.checked=!!NC[k];e.addEventListener('change',()=>{NC[k]=e.checked;nbSet();if(k==='lp')nbDraw()})});
   const save=document.getElementById('nba-settings-save');if(save)save.onclick=()=>{nbSet();const status=document.getElementById('nba-settings-status');if(status)status.textContent='Ajustes NBA guardados en este navegador.';};
 }
 function nbSet(){SV('nbcfg',NC);document.querySelectorAll('#nbday button').forEach((b,i)=>b.classList.toggle('on',i===NC.day))}
