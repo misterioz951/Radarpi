@@ -11,7 +11,8 @@ const LG={
   "Colombia":"col.1","Premier League":"eng.1","Championship":"eng.2","La Liga":"esp.1","Serie A":"ita.1","Bundesliga":"ger.1","Ligue 1":"fra.1","Liga MX":"mex.1","Argentina":"arg.1","Brasileirão":"bra.1","Eredivisie":"ned.1","Primeira Liga":"por.1",
   "Champions League":"uefa.champions","Europa League":"uefa.europa","Conference League":"uefa.europa.conf","Libertadores":"conmebol.libertadores","Sudamericana":"conmebol.sudamericana","MLS":"usa.1",
   "Bélgica":"bel.1","Turquía":"tur.1","Escocia":"sco.1","Grecia":"gre.1","Austria":"aut.1","Suiza":"sui.1","Dinamarca":"den.1","Noruega":"nor.1","Suecia":"swe.1",
-  "Chile":"chi.1","Uruguay":"uru.1","Paraguay":"par.1","Perú":"per.1","Ecuador":"ecu.1"
+  "Chile":"chi.1","Uruguay":"uru.1","Paraguay":"par.1","Perú":"per.1","Ecuador":"ecu.1",
+  "FA Cup":"eng.fa","Copa de la Liga (EFL)":"eng.league_cup","Copa del Rey":"esp.copa_del_rey","DFB-Pokal":"ger.dfb_pokal","Coppa Italia":"ita.coppa_italia","Coupe de France":"fra.coupe_de_france","KNVB Beker":"ned.cup","Taça de Portugal":"por.taca.portugal","Copa Argentina":"arg.copa","Copa do Brasil":"bra.copa_do_brazil"
 };
 let cfg=Object.assign({fd:'',gq:'',or:'',br:'',g:3,b:70,m:12,u:2,qm:1.5,cq:1.5,af:'',dd:1,sm:5,hm:false,r:75,co:5,ta:5,ex:true,au:false,aa:false,iv:60,ok:'',bm:'',pn:true,lg:['col.1','eng.1','esp.1'],theme:'auto'},LS('cfg',{}));
 cfg.lg=cfg.lg.filter(x=>Object.values(LG).includes(x));if(!cfg.lg.length)cfg.lg=['col.1','eng.1','esp.1'];
@@ -136,8 +137,8 @@ async function espn(path){
 const sc=x=>+(x.score&&x.score.value!=null?x.score.value:x.score);
 // En Champions, Libertadores y Sudamericana el calendario de la competición es muy corto:
 // se completa con la liga local de cada equipo (se descubre una vez y se guarda 30 días)
-const CONT=['uefa.champions','uefa.europa','uefa.europa.conf','conmebol.libertadores','conmebol.sudamericana'];
-const DOM=['eng.1','esp.1','ita.1','ger.1','fra.1','por.1','ned.1','bel.1','tur.1','sco.1','gre.1','aut.1','sui.1','cze.1','den.1','nor.1','swe.1','pol.1','ukr.1','cro.1','srb.1','cyp.1','isr.1','rou.1','bul.1','hun.1','svk.1','svn.1','fin.1','aze.1','geo.1','kaz.1','irl.1','wal.1','nir.1','isl.1','lva.1','est.1','ltu.1','mlt.1','blr.1','arm.1','mda.1','alb.1','bih.1','mkd.1','mne.1','arg.1','bra.1','col.1','chi.1','uru.1','par.1','per.1','ecu.1','bol.1','ven.1','mex.1','usa.1'];
+const CONT=['uefa.champions','uefa.europa','uefa.europa.conf','conmebol.libertadores','conmebol.sudamericana','eng.fa','eng.league_cup','esp.copa_del_rey','ger.dfb_pokal','ita.coppa_italia','fra.coupe_de_france','ned.cup','por.taca.portugal','arg.copa','bra.copa_do_brazil'];   // torneos donde se completa el historial con la liga local del equipo
+const DOM=['eng.1','esp.1','ita.1','ger.1','fra.1','por.1','ned.1','bel.1','tur.1','sco.1','gre.1','aut.1','sui.1','cze.1','den.1','nor.1','swe.1','pol.1','ukr.1','cro.1','srb.1','cyp.1','isr.1','rou.1','bul.1','hun.1','svk.1','svn.1','fin.1','aze.1','geo.1','kaz.1','irl.1','wal.1','nir.1','isl.1','lva.1','est.1','ltu.1','mlt.1','blr.1','arm.1','mda.1','alb.1','bih.1','mkd.1','mne.1','arg.1','bra.1','col.1','chi.1','uru.1','par.1','per.1','ecu.1','bol.1','ven.1','mex.1','usa.1','eng.2','eng.3','ger.2','esp.2','ita.2','fra.2'];   // las últimas son segundas divisiones: en las copas juegan equipos de ese nivel
 async function domMap(){
   // Usa el mapa aprendido en escaneos anteriores; no fuerza una búsqueda global al iniciar.
   const c=LS('DOM5',null);return c&&Date.now()-c.t<14*864e5&&c.v?c.v:{};
@@ -353,10 +354,14 @@ const TL={'col.1':[/colombia/i,/primera a|betplay|liga/i],'eng.1':[/england/i,/^
   'swe.1':[/sweden/i,/allsvenskan/i],'chi.1':[/chile/i,/primera division|liga de primera/i],
   'uru.1':[/uruguay/i,/primera division/i],'par.1':[/paraguay/i,/primera division/i],
   'per.1':[/peru/i,/liga 1|primera division/i],'ecu.1':[/ecuador/i,/liga pro|serie a/i],
-  'conmebol.libertadores':[/./,/libertadores/i],'conmebol.sudamericana':[/./,/sudamericana/i],'usa.1':[/usa|united states/i,/mls|major league soccer/i]};
+  'conmebol.libertadores':[/./,/libertadores/i],'conmebol.sudamericana':[/./,/sudamericana/i],'usa.1':[/usa|united states/i,/mls|major league soccer/i],
+  'eng.fa':[/england/i,/\bfa cup\b/i],'eng.league_cup':[/england/i,/efl cup|league cup|carabao/i],'esp.copa_del_rey':[/spain/i,/copa del rey/i],
+  'ger.dfb_pokal':[/germany/i,/dfb.?pokal/i],'ita.coppa_italia':[/italy/i,/coppa italia/i],'fra.coupe_de_france':[/france/i,/coupe de france/i],
+  'ned.cup':[/netherlands/i,/knvb|beker/i],'por.taca.portugal':[/portugal/i,/ta[cç]a de portugal|portugal cup/i],
+  'arg.copa':[/argentina/i,/copa argentina/i],'bra.copa_do_brazil':[/brazil/i,/copa do bra[sz]il/i]};
 const BADT=/women|femenin|u-?\d\d|youth|reserve|qualif|serie [bcd]|primera b|segunda|\b2\./i;
 async function tourIds(){
-  return cached('optour_v4',7,async()=>{
+  return cached('optour_v5',7,async()=>{
     const all=await op('tournaments',{sportId:10}),out={};
     for(const [slug,[c,n]] of Object.entries(TL)){
       const f=all.filter(t=>c.test(t.categoryName||'')&&n.test(t.tournamentName||'')&&!BADT.test(t.tournamentName||''));
