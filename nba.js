@@ -126,7 +126,13 @@ const pOver=(P,L)=>shr(1-nbCdf(Math.floor(L),P.m,P.v),P.cur);
 // ---- Cuotas (The Odds API, gratis 500 créditos/mes; varias llaves con relevo) ----
 async function nbo(path,params){const ks=NC.keys.split(/[\s,]+/).filter(Boolean);if(!ks.length)throw new Error('sin llave');
   for(;;){const r=await fetch(NO+path+'?'+new URLSearchParams({...params,apiKey:ks[NB.ki]||ks[0],oddsFormat:'decimal'}));
-    if(!r.ok){if([401,429].includes(r.status)&&NB.ki<ks.length-1){NB.ki++;toast('Llave agotada: usando la siguiente');continue}throw new Error('The Odds API '+r.status)}return r.json()}}
+    const rem=r.headers&&r.headers.get?r.headers.get('x-requests-remaining'):null;if(rem!==null&&rem!==''&&!isNaN(+rem))NB.cred=+rem;   // créditos que le quedan a la llave en uso (si el navegador deja leer el dato)
+    if(!r.ok){
+      let code='',msg='';try{const j=await r.json();code=j.error_code||'';msg=j.message||''}catch{}
+      if([401,429].includes(r.status)&&NB.ki<ks.length-1){NB.ki++;toast('Esa llave no sirvió ('+(code||r.status)+'): usando la siguiente');continue}
+      const why=code==='OUT_OF_USAGE_CREDITS'?'se acabaron los créditos de esta llave: espera a que renueve el mes, o agrega otra llave en Ajustes NBA':code==='INVALID_KEY'?'la llave no es válida: revisa que esté completa y sin espacios':code==='EXCEEDED_FREQ_LIMIT'||r.status===429?'demasiadas peticiones seguidas: espera un minuto y vuelve a escanear':(msg||'error sin detalle');
+      throw new Error('The Odds API '+r.status+' ('+why+')')}
+    return r.json()}}
 function bestOf(rows){const g={};for(const x of rows)(g[x.k]=g[x.k]||[]).push(x);const o={};
   for(const k in g){const c={};g[k].forEach(x=>c[x.p]=(c[x.p]||0)+1);const p=Object.keys(c).sort((a,b)=>c[b]-c[a])[0];o[k]={p:p==='undefined'?null:+p,q:Math.max(...g[k].filter(x=>String(x.p)===p).map(x=>x.q))}}return o}
 const rowsOf=ev=>{const R=[];for(const b of ev.bookmakers||[])for(const m of b.markets||[])for(const o of m.outcomes||[])R.push({k:m.key+'|'+nz(o.description||o.name)+'|'+(o.description?o.name:'')+(/_alternate$/.test(m.key)?'@'+o.point:''),p:o.point,q:o.price});return R};
@@ -383,7 +389,7 @@ async function nbTest(){const o=$('#nbmsg');const R=[];const t=async(n,f)=>{try{
   await t('Estadísticas por jugador',async()=>{const j=await nbj(NW+'athletes/'+pid+'/gamelog'),g=parseGL(j);if(!g.length)throw new Error('0 partidos; etiquetas: '+JSON.stringify((j.labels||j.names||[]).slice(0,8))+'; seasonTypes: '+(j.seasonTypes||[]).length);return g.length+' partidos leídos'});
   await t('Ratings de equipos (ESPN standings)',async()=>{const v=await nbRatings(true);if(!v)throw new Error('sin datos de standings');return Object.keys(v.t).length+' equipos · promedio de liga '+v.L.toFixed(1)+' pts'});
   await t('Líneas ESPN (gratis)',async()=>{const j=await nbj(NE+'scoreboard');let n=0;for(const e of j.events||[]){const c=e.competitions[0],tm=x=>c.competitors.find(y=>y.homeAway===x).team;if(espnLn(c,{ab:tm('home').abbreviation},{ab:tm('away').abbreviation}))n++}return n+' partidos con línea'});
-  if(NC.keys.trim())await t('The Odds API',async()=>{const j=await nbo('events',{});return j.length+' partidos con cuotas'});
+  if(NC.keys.trim())await t('The Odds API',async()=>{const j=await nbo('events',{});return j.length+' partidos con cuotas'+(NB.cred!=null?' · créditos restantes: '+NB.cred:'')});
   if(NC.sgo)await t('Sports Game Odds',async()=>{const r=await fetch('https://api.sportsgameodds.com/v2/events?leagueID=NBA&limit=1&apiKey='+encodeURIComponent(NC.sgo));if(!r.ok)throw new Error(r.status);return 'responde'});
   if(NC.bdl)await t('balldontlie',async()=>{const r=await fetch('https://api.balldontlie.io/v1/teams',{headers:{Authorization:NC.bdl}});if(!r.ok)throw new Error(r.status);return 'responde'});
   if(NC.apisports)R.push('⚠ API-NBA: omitida de los pronósticos; tu plan solo permite temporadas históricas. No se usarán datos de 2024');
