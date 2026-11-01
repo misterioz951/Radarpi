@@ -49,7 +49,7 @@ function switchRadarTab(tab){
   SV('activeTab',tab);
   document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x.dataset.t===tab));
   if(tab==='f'){const fb=document.querySelector('nav button[data-t="f"]');if(fb)fb.classList.remove('dot');document.title='Radar de patrones'}
-  ['h','f','c','n','r','m','a'].forEach(t=>{const el=$('#s-'+t);if(el)el.hidden=t!==tab});
+  ['h','f','c','p','n','r','m','a'].forEach(t=>{const el=$('#s-'+t);if(el)el.hidden=t!==tab});
   if(tab==='h')renderHomeDashboard();
   if(tab==='r')drawBets();
   if(tab==='m')refreshModel();
@@ -1814,7 +1814,7 @@ try{if(!LS('purge2',0)){Object.keys(localStorage).filter(k=>k==='DOM3'||k==='DOM
 // Restaurar la pestaña donde estaba el usuario tras recargar o actualizar la página.
 (function restoreActiveTab(){
   const saved=LS('activeTab','h');
-  const target=document.querySelector(`nav button[data-t="${['h','f','c','n','r','m'].includes(saved)?saved:'h'}"]`);
+  const target=document.querySelector(`nav button[data-t="${['h','f','c','p','n','r','m'].includes(saved)?saved:'h'}"]`);
   if(saved==='a')openSettings();else if(target)target.click();
   if(saved==='c'){const sub=LS('activeCombiTab','buscar');if(sub==='modelo')showCombiTab('modelo');}
 })();

@@ -1,8 +1,8 @@
 /* RadarPi · service worker
    - Archivos propios: primero red (siempre la versión más nueva) y, sin conexión, la última copia guardada.
    - APIs externas (ESPN, OddsPapi, API-Football, The Odds API, Groq…): NUNCA se interceptan ni se guardan. */
-const V='radarpi-v1';
-const SHELL=['./','index.html','styles.css','nba.css','app.js','nba.js','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png'];
+const V='radarpi-v2-corners';
+const SHELL=['./','index.html','styles.css','nba.css','app.js','corners.js','nba.js','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png'];
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(V).then(c=>Promise.all(SHELL.map(u=>c.add(new Request(u,{cache:'reload'})).catch(()=>{})))).then(()=>self.skipWaiting()));
 });
