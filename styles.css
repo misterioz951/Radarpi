@@ -650,3 +650,7 @@ html[data-theme="sand"] .acts2 .btn:first-child,html[data-theme="sand"] .mc .act
 .th-dots{display:flex;align-items:center;gap:5px;width:100%;padding:7px;border-radius:9px;border:1px solid rgba(128,128,128,.3)}
 .th-dots i{display:block;width:16px;height:16px;border-radius:50%;border:1px solid rgba(128,128,128,.35)}
 .th-card.on{border-color:var(--acc);box-shadow:0 0 0 2px color-mix(in srgb,var(--acc) 30%,transparent)}
+
+/* Identidad visual de Modelo de Córners */
+.model-category.corners .model-category-icon{background:color-mix(in srgb,#D99B35 18%,var(--card));color:#D99B35}
+.model-category.corners{border-color:color-mix(in srgb,#D99B35 38%,var(--ln))}
