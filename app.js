@@ -1660,7 +1660,7 @@ function drawBets(){
 // ===== Copia de seguridad de RadarPi: exporta todas las claves locales =====
 const SECRETS=['gq','gk','or','br','ok','ok2','af'];
 const NB_SECRETS=['keys','sgo','bdl','apisports'];   // llaves dentro de los ajustes NBA (nbcfg)
-const BACKUP_KEYS=['picks','bets','cfg','seen','scan','nbapicks','combipicks','nbcfg'];
+const BACKUP_KEYS=['picks','bets','cfg','seen','scan','nbapicks','combipicks','nbcfg','radarpi_corners_picks_v1','radarpi_corners_analyses_v1'];
 function exportRadarBackup(){
   const msg=$('#backupMsg');
   try{
@@ -1831,7 +1831,7 @@ try{if(!LS('purge2',0)){Object.keys(localStorage).filter(k=>k==='DOM3'||k==='DOM
 
 // ===== Almacenamiento: limpieza de cachés (nunca toca picks, apuestas ni ajustes) =====
 function cleanCaches(force){
-  const keep=new Set(['picks','bets','cfg','seen','scan','nbapicks','combipicks','nbcfg','afUsed','purge2','radarpi_backup_last_export']),now=Date.now(),max=(force?.04:14)*864e5;let n=0,bytes=0;
+  const keep=new Set(['radarpi_corners_picks_v1','radarpi_corners_analyses_v1','radarpi_corners_afkey','radarpi_corners_oddsapi_key','radarpi_corners_af_usage','picks','bets','cfg','seen','scan','nbapicks','combipicks','nbcfg','afUsed','purge2','radarpi_backup_last_export']),now=Date.now(),max=(force?.04:14)*864e5;let n=0,bytes=0;
   for(const k of Object.keys(localStorage)){
     if(keep.has(k)||k.startsWith('radarpi_'))continue;
     let o;try{o=JSON.parse(localStorage.getItem(k))}catch{continue}
