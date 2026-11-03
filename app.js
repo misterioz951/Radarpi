@@ -1040,10 +1040,22 @@ async function scanCombi(){
 }
 $('#comboScanBtn').onclick=scanCombi;
 // ===== API-Football opcional: se consulta solo a petición y los resultados se cachean =====
+// Plan gratis de API-Football: 10 solicitudes/minuto. Ventana deslizante: deja pasar 9 y espera si hace falta.
+const afWin=[];
+async function afThrottle(){for(;;){const n=Date.now();while(afWin.length&&n-afWin[0]>60000)afWin.shift();if(afWin.length<9){afWin.push(n);return}await new Promise(r=>setTimeout(r,60000-(n-afWin[0])+200))}}
 async function afGet(path,params={}){
   if(!cfg.af)throw new Error('Añade primero tu llave API-Football en Ajustes.');
+  if(/[^\x21-\x7E]/.test(cfg.af))throw new Error('La llave tiene espacios o caracteres no válidos: vuelve a pegarla.');
+  await afThrottle();
   const url='https://v3.football.api-sports.io/'+path+'?'+new URLSearchParams(params);
-  const res=await fetch(url,{headers:{'x-apisports-key':cfg.af}});
+  let res;
+  try{res=await fetch(url,{headers:{'x-apisports-key':cfg.af},signal:AbortSignal.timeout?AbortSignal.timeout(15000):undefined})}
+  catch(e){
+    if(e&&e.name==='TimeoutError')throw new Error('API-Football tardó más de 15 s. Reintenta.');
+    if(navigator.onLine===false)throw new Error('Sin conexión a internet.');
+    throw new Error('sin respuesta de API-Football (bloqueo/CORS, red o límite por minuto)');
+  }
+  if(res.status===429)throw new Error('API-Football: límite por minuto (plan gratis: 10/min). Espera 1 min.');
   let j;try{j=await res.json()}catch{throw new Error('Respuesta no válida del proveedor.');}
   if(!res.ok||j.errors&&Object.keys(j.errors).length)throw new Error(JSON.stringify(j.errors||('HTTP '+res.status)).slice(0,220));
   return j;
@@ -1053,7 +1065,7 @@ $('#af-test').onclick=async()=>{
   if(!cfg.af){out.textContent='Pega la llave API-Football y pulsa Guardar ajustes.';return}
   out.textContent='Probando conexión…';
   try{const j=await afGet('status');const a=j.response&&j.response.account||{},q=j.response&&j.response.requests||{};SV('cfg',cfg);out.textContent=`Conexión correcta${a.firstname?' · '+a.firstname:''}. Solicitudes hoy: ${q.current??'?'} / ${q.limit_day??'límite no informado'}.`}
-  catch(e){out.textContent='No se pudo conectar: '+e.message;}
+  catch(e){out.textContent='No se pudo conectar: '+e.message+(/sin respuesta/.test(e.message)?' · «Probar conexión» usa /status, que no gasta cuota: si falla aquí, es red, bloqueador de anuncios/DNS privado (api-sports.io) o CORS, no tu límite diario.':'');}
 };
 async function afMore(i){
   const r=R[i],box=$('#afp'+i);box.hidden=false;box.innerHTML='<p class="status">Consultando API-Football… puede gastar hasta 3 solicitudes la primera vez. Se reutilizan los datos en caché durante 12–24 horas.</p>';
