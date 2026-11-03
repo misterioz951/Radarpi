@@ -55,9 +55,20 @@ async function af(path,params={},opts={}){
   return j?(j.response==null?[]:j.response):[]}
 async function afStatus(){return af('status',{},{free:true})}
 
-// ---------- caché (finalizados no cambian; el resto expira) ----------
-async function cached(k,ttl,fn){const c=read(CACHE,{}),h=c[k];if(h&&Date.now()-h.t<ttl)return h.v;const v=await fn();const c2=read(CACHE,{});c2[k]={t:Date.now(),v};const ks=Object.keys(c2);if(ks.length>500)ks.sort((a,b)=>c2[a].t-c2[b].t).slice(0,ks.length-400).forEach(x=>delete c2[x]);write(CACHE,c2);return v}
-const hasCache=(k,ttl)=>{const h=read(CACHE,{})[k];return !!(h&&Date.now()-h.t<ttl)};
+// ---------- caché en IndexedDB (no consume el límite pequeño de localStorage) ----------
+// Picks, análisis y llaves siguen en localStorage. Aquí solo van datos temporales de API.
+const CACHE_DB='radarpi-corners-cache',CACHE_STORE='entries';
+let cacheMem={},cacheDb=null;
+function openCacheDB(){return new Promise((resolve,reject)=>{if(!('indexedDB' in window))return reject(Error('IndexedDB no disponible'));const req=indexedDB.open(CACHE_DB,1);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(CACHE_STORE))req.result.createObjectStore(CACHE_STORE)};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error||Error('No se pudo abrir IndexedDB'))})}
+function dbGet(db,key){return new Promise((resolve,reject)=>{const r=db.transaction(CACHE_STORE,'readonly').objectStore(CACHE_STORE).get(key);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+function dbPut(db,key,val){return new Promise((resolve,reject)=>{const tx=db.transaction(CACHE_STORE,'readwrite');tx.objectStore(CACHE_STORE).put(val,key);tx.oncomplete=()=>resolve(true);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('Transacción cancelada'))})}
+const cacheReady=(async()=>{try{cacheDb=await openCacheDB();cacheMem=await dbGet(cacheDb,'all')||{};const legacy=read(CACHE,null);if(legacy&&typeof legacy==='object'){cacheMem={...legacy,...cacheMem};await dbPut(cacheDb,'all',cacheMem);localStorage.removeItem(CACHE)}return true}catch(e){cacheDb=null;cacheMem=read(CACHE,{});return false}})();
+function trimCache(){const now=Date.now(),entries=Object.entries(cacheMem).filter(([k,v])=>v&&typeof v.t==='number'&&now-v.t<45*864e5).sort((a,b)=>b[1].t-a[1].t).slice(0,260);cacheMem=Object.fromEntries(entries)}
+async function persistCache(){trimCache();if(cacheDb){try{await dbPut(cacheDb,'all',cacheMem);return true}catch(e){cacheDb=null}}// Respaldo compatible para navegadores sin IndexedDB; limitado para no llenar 5 MB.
+  const small=Object.fromEntries(Object.entries(cacheMem).sort((a,b)=>(b[1]?.t||0)-(a[1]?.t||0)).slice(0,100));return write(CACHE,small)}
+async function cached(k,ttl,fn){await cacheReady;const h=cacheMem[k];if(h&&Date.now()-h.t<ttl)return h.v;const v=await fn();cacheMem[k]={t:Date.now(),v};await persistCache();return v}
+const hasCache=(k,ttl)=>{const h=cacheMem[k];return !!(h&&Date.now()-h.t<ttl)};
+window.clearRadarCornersCache=async()=>{await cacheReady;cacheMem={};if(cacheDb){try{await dbPut(cacheDb,'all',{});return true}catch{}}localStorage.removeItem(CACHE);return true};
 
 // ---------- córners de un partido y de un equipo ----------
 async function cornersOf(fid,ttl){return cached('fs_'+fid,ttl,async()=>{const r=await af('fixtures/statistics',{fixture:fid}),o={};for(const t of r){const s=(t.statistics||[]).find(z=>/corner kicks/i.test(z.type||''));if(s&&s.value!=null&&!isNaN(+s.value))o[t.team.id]=+s.value}return o})}
@@ -196,7 +207,7 @@ function diagHTML(){const c=counter(),by={};diag.issues.forEach(i=>by[i.kind]=(b
   ${src.map(s=>`<div>${s}</div>`).join('')}
   ${kinds.map(k=>`<div class="cn-iss"><b>${ICON[k]||'⚠'} ${by[k]} × ${esc(k)}</b><small>${esc(HINT[k]||'')}</small></div>`).join('')}
   ${diag.issues.length?`<details class="more"><summary>Detalle por partido (${diag.issues.length})</summary>${diag.issues.slice(0,25).map(i=>`<div class="cn-line"><b>${ICON[i.kind]||'⚠'} ${esc(i.match)}</b><small>${esc(i.stage)} · ${esc(i.msg)}</small></div>`).join('')}</details>`:''}</div></details>`}
-async function scan(){if(busy)return;busy=true;diag={reqs:0,issues:[]};lastResults=[];const btn=$('#corner-run'),out=$('#corner-results');btn.disabled=true;out.innerHTML='<p class="status">Buscando partidos…</p>';
+async function scan(){if(busy)return;await cacheReady;busy=true;diag={reqs:0,issues:[]};lastResults=[];const btn=$('#corner-run'),out=$('#corner-results');btn.disabled=true;out.innerHTML='<p class="status">Buscando partidos…</p>';
   try{const fixtures=await getFixtures();diag.fixtureCount=fixtures.length;
     if(!fixtures.length){out.innerHTML=`<div class="corner-empty"><b>No encontré partidos para este modo.</b><p>${mode==='live'?'No hay partidos en vivo entre los minutos 20 y 85 en las fuentes consultadas.':'ESPN y API-Football no devolvieron partidos para hoy y mañana.'}</p></div>${diagHTML()}`;return}
     const api=fixtures.filter(f=>!String(f.fixture.id).startsWith('espn_')),chosen=spreadByLeague(api.length?api:fixtures,mode==='pre'?10:12).sort((a,b)=>coldness(a)-coldness(b));
@@ -293,7 +304,7 @@ function mount(){const root=$('#corners-root');if(!root)return;if(root.dataset.m
   $('#corner-af-test').onclick=()=>{const v=ak.value.trim();if(v&&v!==ownKey())localStorage.setItem(K.af,v);testAF()};
   $('#corner-save-key').onclick=()=>{localStorage.setItem(ODKEY,ok.value.trim());$('#corner-odds-state').textContent='Llave guardada.'};$('#corner-odds-test').onclick=()=>{if(ok.value.trim()!==getOddsKey())localStorage.setItem(ODKEY,ok.value.trim());testOdds()};
   root.querySelectorAll('[data-corner-mode]').forEach(b=>b.onclick=()=>setMode(b.dataset.cornerMode));$('#corner-run').onclick=scan;setMode('pre');renderModel($('#corner-model-host'))}
-window.initRadarCorners=()=>{try{mount()}catch(e){const root=$('#corners-root');if(root){root.dataset.mounted='';root.innerHTML=`<div class="corner-empty"><b>Error al cargar Picks Especiales</b><p>${esc(e&&e.message||e)}</p></div>`}console.error('RadarPi corners:',e)}};
+window.initRadarCorners=()=>{try{cacheReady.then(()=>mount())}catch(e){const root=$('#corners-root');if(root){root.dataset.mounted='';root.innerHTML=`<div class="corner-empty"><b>Error al cargar Picks Especiales</b><p>${esc(e&&e.message||e)}</p></div>`}console.error('RadarPi corners:',e)}};
 window.renderRadarCornersModel=renderModel;
 window.RadarCorners={sideProbs,settle,lambdas,liveLambdas,nbCdf,pOver,parseOddsRows,groupMarkets,evaluate,decide,wavg,shrink,marketName,csvText,analyze,savePick,_set:(m)=>{mode=m}};
 })();

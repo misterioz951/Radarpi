@@ -1833,6 +1833,8 @@ try{if(!LS('purge2',0)){Object.keys(localStorage).filter(k=>k==='DOM3'||k==='DOM
 function cleanCaches(force){
   const keep=new Set(['radarpi_corners_picks_v1','radarpi_corners_analyses_v1','radarpi_corners_afkey','radarpi_corners_oddsapi_key','radarpi_corners_af_usage','picks','bets','cfg','seen','scan','nbapicks','combipicks','nbcfg','afUsed','purge2','radarpi_backup_last_export']),now=Date.now(),max=(force?.04:14)*864e5;let n=0,bytes=0;
   for(const k of Object.keys(localStorage)){
+    // La caché antigua de Córners es temporal: se elimina al limpiar, nunca los picks/análisis.
+    if(k==='radarpi_corners_cache_v3'){if(force){bytes+=(localStorage.getItem(k)||'').length;localStorage.removeItem(k);n++}continue}
     if(keep.has(k)||k.startsWith('radarpi_'))continue;
     let o;try{o=JSON.parse(localStorage.getItem(k))}catch{continue}
     if(!o||typeof o!=='object'||Array.isArray(o))continue;
@@ -1846,8 +1848,8 @@ function cleanCaches(force){
 }
 function storKB(){let b=0;for(const k of Object.keys(localStorage))b+=(k.length+(localStorage.getItem(k)||'').length)*2;return Math.round(b/1024)}
 function drawStor(txt){const el=$('#storMsg');if(!el)return;const kb=storKB(),pc=Math.min(100,Math.round(kb/5120*100));
-  el.textContent=(txt?txt+' ':'')+'Almacenamiento usado: '+(kb/1024).toFixed(1)+' MB de ~5 MB ('+pc+'%).'+(pc>=80?' ⚠ Casi lleno: limpia cachés y exporta una copia.':' Tus picks y ajustes no se tocan al limpiar.');
+  el.textContent=(txt?txt+' ':'')+'LocalStorage usado: '+(kb/1024).toFixed(1)+' MB de ~5 MB ('+pc+'%). La caché de Córners se guarda aparte en IndexedDB.'+(pc>=80?' ⚠ Poco espacio: limpia cachés y exporta una copia.':' Picks, historial y ajustes se conservan al limpiar.');
   el.style.color=pc>=80?'var(--bad)':''}
 try{cleanCaches(false)}catch{}
-if($('#storClean'))$('#storClean').addEventListener('click',()=>{const r=cleanCaches(true);drawStor('Se liberaron ~'+r.kb+' KB ('+r.n+' cachés).')});
+if($('#storClean'))$('#storClean').addEventListener('click',async()=>{const r=cleanCaches(true);let extra='';try{if(window.clearRadarCornersCache){await window.clearRadarCornersCache();extra=' También se limpió la caché de Córners.'}}catch{}drawStor('Se liberaron ~'+r.kb+' KB ('+r.n+' cachés).'+extra)});
 drawStor();
