@@ -77,6 +77,13 @@ function lambdas(hh,aa){const nH=hh.length,nA=aa.length,
   lh=clamp(BASE.h+(hF-BASE.per)*.8+(aA-BASE.per)*.8,2,9.5),la=clamp(BASE.a+(aF-BASE.per)*.8+(hA-BASE.per)*.8,1.5,8.5);
   return {lh,la,lt:lh+la,hF,hA,aF,aA,nH,nA}}
 function nbCdf(k,m,phi){if(k<0)return 0;if(m<=0)return 1;if(phi<=1.001){let t=Math.exp(-m),s=t;for(let i=1;i<=k;i++){t*=m/i;s+=t}return Math.min(1,s)}const r=m/(phi-1),p=r/(r+m);let t=Math.pow(p,r),s=t;for(let i=1;i<=k;i++){t*=(i-1+r)/i*(1-p);s+=t}return Math.min(1,s)}
+// Líneas: x.5 (sin reembolso) · enteras (si el total sale exacto se devuelve la apuesta) · de cuarto x.25/x.75 (mitad en cada línea vecina)
+const isHalf=l=>Math.abs(l*2-Math.round(l*2))<1e-9;
+const lineComps=l=>isHalf(l)?[[l,1]]:[[Math.floor(l*2)/2,.5],[Math.ceil(l*2)/2,.5]];
+function sideProbs(mean,phi,cur,line,side){let w=0,l=0,p=0;
+  for(const [c,k] of lineComps(line)){const r=c-cur,over=r<0?1:1-nbCdf(Math.floor(r),mean,phi),under=r<=0?0:nbCdf(Math.ceil(r)-1,mean,phi),push=Math.max(0,1-over-under);
+    if(side==='over'){w+=k*over;l+=k*under}else{w+=k*under;l+=k*over}p+=k*push}
+  return {w,l,push:p}}
 const pOver=(mean,line,phi,cur=0)=>1-nbCdf(Math.floor(line)-cur,mean,phi);    // cur = córners que ya ocurrieron (en vivo)
 function liveLambdas(pre,elapsed,cH,cA){const rem=Math.max(1,90-elapsed+2)/90,w=Math.min(.6,elapsed/(elapsed+60)),
   lh=(1-w)*pre.lh*rem+w*(cH/elapsed*90*rem),la=(1-w)*pre.la*rem+w*(cA/elapsed*90*rem);return {lh,la,lt:lh+la}}
@@ -104,13 +111,13 @@ function groupMarkets(odds){const g=new Map();for(const o of odds){const k=o.kin
 // ---------- decisión ----------
 function evaluate(lam,markets,cur){const res=[];
   for(const m of markets){const mean=m.kind==='total'?lam.lt:m.kind==='home'?lam.lh:lam.la,phi=m.kind==='total'?PHI.total:PHI.team,c=cur?(m.kind==='total'?cur.h+cur.a:m.kind==='home'?cur.h:cur.a):0,pO=pOver(mean,m.line,phi,c);
-    for(const side of ['over','under']){const q=m[side];if(!q)continue;const pm=side==='over'?pO:1-pO,fair=m.fairOver!=null?(side==='over'?m.fairOver:1-m.fairOver):(1/q.odd)/1.06,gap=pm-fair,pf=fair+W*gap,edge=pf*q.odd-1;
-      res.push({kind:m.kind,line:m.line,side,odd:q.odd,book:q.book,source:q.source||'API-Football',pm,fair,pf,gap,edge,twoSided:m.twoSided,mean})}}return res}
+    for(const side of ['over','under']){const q=m[side];if(!q)continue;const sp=sideProbs(mean,phi,c,m.line,side),pm=sp.w+sp.l>0?sp.w/(sp.w+sp.l):.5,fair=m.fairOver!=null?(side==='over'?m.fairOver:1-m.fairOver):(1/q.odd)/1.06,gap=pm-fair,pf=fair+W*gap,edge=pf*q.odd-1;
+      res.push({kind:m.kind,line:m.line,side,odd:q.odd,book:q.book,source:q.source||'API-Football',pm,fair,pf,gap,edge,twoSided:m.twoSided,mean,push:sp.push})}}return res}
 function decide(res,nMin){const ok=[],rej={odd:0,gap:0,p:0,edge:0};
   for(const r of res){if(r.odd<MINODD||r.odd>MAXODD){rej.odd++;continue}if(Math.abs(r.gap)>MAXGAP){rej.gap++;continue}if(r.pf<MINP){rej.p++;continue}if(r.edge<MINEDGE){rej.edge++;continue}
     let s=r.pf>=.7?4:r.pf>=.65?3:r.pf>=.6?2:1;if(r.edge>=.08&&Math.abs(r.gap)<=.08)s++;if(nMin<5)s--;ok.push({...r,stake:clamp(s,1,5),score:r.pf*.6+Math.min(r.edge,.12)*1.5-Math.max(0,Math.abs(r.gap)-.08)})}
   ok.sort((a,b)=>b.score-a.score);return {ok,rej}}
-const marketName=b=>(b.side==='over'?'Más de ':'Menos de ')+b.line+' '+KIND[b.kind];
+const marketName=b=>(b.side==='over'?'Más de ':'Menos de ')+b.line+' '+KIND[b.kind]+(Number.isInteger(b.line)?' (se devuelve si sale '+b.line+')':isHalf(b.line)?'':' (línea de cuarto)');
 const why=(rej)=>{const t=[];if(rej.odd)t.push(rej.odd+' fuera de cuota '+MINODD.toFixed(2)+'–'+MAXODD.toFixed(2));if(rej.gap)t.push(rej.gap+' donde el modelo se aleja más de '+pct(MAXGAP)+' pts del mercado');if(rej.p)t.push(rej.p+' con probabilidad menor a '+pct(MINP)+'%');if(rej.edge)t.push(rej.edge+' sin valor suficiente (menos de '+pct(MINEDGE)+'%)');return t.join(' · ')||'sin mercados evaluables'};
 
 // ---------- partidos ----------
@@ -178,7 +185,7 @@ function pickCard(x,i){const b=x.best,st=b.stake,H=x.hist,L=x.lam;
   ${x.cands.length>1?`<details class="more"><summary>Otras líneas con valor (${x.cands.length-1})</summary><div class="alts">${x.cands.slice(1).map(c=>`<span><b>${esc(marketName(c))}</b> ${pct(c.pf)}% @${c.odd.toFixed(2)}</span>`).join('')}</div></details>`:''}
   <details class="more"><summary>Datos del cálculo</summary><div class="cn-data">${data.map(([k,v])=>`<div><small>${esc(k)}</small><b>${esc(v)}</b></div>`).join('')}</div></details>
   ${x.intel?`<details class="more"><summary>Investigación web e IA · ${esc(x.intel.source)}</summary><p class="status">${esc(x.intel.text)}</p>${(x.intel.links||[]).map(l=>`<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title||l.url)}</a>`).join('<br>')}</details>`:''}
-  <p class="status">Cuota de ${esc(b.book)}: confírmala en tu casa antes de apostar.</p><button class="btn" data-save="${i}" type="button">＋ Registrar pick</button></article>`}
+  ${b.push>.003?`<p class="status">${Number.isInteger(b.line)?'Línea entera: si el total termina justo en '+b.line+' te devuelven la apuesta':'Línea de cuarto: la apuesta se reparte entre dos líneas vecinas'} (≈${pct(b.push)}% de probabilidad). La probabilidad mostrada no cuenta ese caso.</p>`:''}<p class="status">Cuota de ${esc(b.book)}: confírmala en tu casa antes de apostar.</p><button class="btn" data-save="${i}" type="button">＋ Registrar pick</button></article>`}
 function noPickCard(x){const kindTxt={nostats:'Sin estadísticas',noodds:'Sin cuotas',novalue:'Sin valor',auth:'Sin llave'}[x.kind]||'Solo análisis';
   return `<article class="cn-card muted"><div class="cn-head"><span>${esc((x.f.league&&x.f.league.name)||'Competición')}</span><span>${esc(kindTxt)}</span></div><b class="cn-match">${esc(x.match)}</b><div class="nopick2"><b>${x.kind==='novalue'?'Sin pick con ventaja clara':'No se pudo evaluar'}</b><small>${esc(x.reason)}</small></div>
   ${x.lam&&x.hist&&x.hist.hF!=null?`<small class="status">Córners esperados: ${x.lam.lh.toFixed(1)} + ${x.lam.la.toFixed(1)} = ${x.lam.lt.toFixed(1)} (muestra ${x.hist.hN}/${x.hist.aN})</small>`:''}</article>`}
@@ -213,6 +220,7 @@ function savePick(i){const x=lastResults[i];if(!x||!x.best)return;const b=x.best
   if(savePicks(A)){if(typeof toast==='function')toast('Pick guardado en el Modelo de Córners.');renderModel(modelHost)}else if(typeof toast==='function')toast('⚠ No se pudo guardar: almacenamiento lleno.')}
 
 // ---------- resolver automáticamente ----------
+function settle(x,val){let u=0,w=0,l=0;for(const [c,k] of lineComps(x.line)){if(val===c)continue;const win=x.side==='over'?val>c:val<c;if(win){u+=k*(x.odd-1);w+=k}else{u-=k;l+=k}}return {res:w+l===0?'v':(w>=l?'w':'l'),units:u}}
 async function resolvePending(){const msg=$('#cn-resmsg'),say=t=>{if(msg)msg.textContent=t};
   const P=picks(),todo=P.filter(x=>!x.res&&x.fid&&!String(x.fid).startsWith('espn_')&&Date.now()-new Date(x.ko||x.date).getTime()>110*60e3);
   if(!todo.length){say('No hay picks pendientes de partidos que ya hayan terminado.');return}
@@ -220,7 +228,7 @@ async function resolvePending(){const msg=$('#cn-resmsg'),say=t=>{if(msg)msg.tex
   for(const x of todo.slice(0,8)){try{const fx=await af('fixtures',{id:x.fid}),st=fx[0]&&fx[0].fixture&&fx[0].fixture.status&&fx[0].fixture.status.short;
       if(!['FT','AET','PEN'].includes(st)){wait++;continue}
       const m=await cornersOf(x.fid,0),hv=m[x.hid],av=m[x.aid];if(hv==null||av==null){fail++;continue}
-      const val=x.kind==='total'?hv+av:x.kind==='home'?hv:av;x.res=(x.side==='over'?val>x.line:val<x.line)?'w':'l';x.actual={h:hv,a:av,t:hv+av};x.result=hv+'-'+av+' ('+(hv+av)+' córners)';ok++}
+      const val=x.kind==='total'?hv+av:x.kind==='home'?hv:av,sr=settle(x,val);x.res=sr.res;x.units=sr.units;x.actual={h:hv,a:av,t:hv+av};x.result=hv+'-'+av+' ('+(hv+av)+' córners)';ok++}
     catch(e){fail++;if(['limit','auth','scancap','rate'].includes(e.kind)){say('⏸ '+e.message);break}}}
   savePicks(P);const txt=`Resueltos: ${ok} · aún sin terminar: ${wait} · sin dato: ${fail}. Cada pick usa 2 solicitudes.`;renderModel(modelHost);const m2=$('#cn-resmsg');if(m2)m2.textContent=txt}
 
@@ -243,7 +251,7 @@ function analysisItem(a){const b=a.best;return `<details class="model-pick ${b?'
   <div class="model-pick-body"><div class="model-pick-metrics">${a.lam?`<span><small>Esperado</small><b>${a.lam.t}</b></span>`:''}<span><small>Cuotas</small><b>${a.nOdds}</b></span>${a.hN!=null?`<span><small>Muestra</small><b>${a.hN}-${a.aN}</b></span>`:''}${b?`<span><small>Pick</small><b>${esc(b.market)} @${b.odd}</b></span>`:''}</div>
   <small class="model-pick-note">${a.hF!=null?`Promedios local ${a.hF.toFixed(1)}/${a.hA.toFixed(1)} · visitante ${a.aF.toFixed(1)}/${a.aA.toFixed(1)} (a favor/en contra). `:''}${b?`Modelo ${pct(b.pModel)}% · mercado ${pct(b.pMarket)}% · final ${pct(b.pFinal)}% · ${esc(b.book)}. `:''}${esc(a.reason||'')}${a.books&&a.books.length?' Casas: '+esc(a.books.join(', '))+'.':''}</small></div></details>`}
 function renderModel(target){const host=typeof target==='string'?document.querySelector(target):target;if(!host)return;modelHost=host;
-  const P=picks(),A=analyses(),D=P.filter(x=>x.res==='w'||x.res==='l'),W_=D.filter(x=>x.res==='w').length,pend=P.filter(x=>!x.res).length,units=D.reduce((t,x)=>t+(x.res==='w'?x.odd-1:-1),0);
+  const P=picks(),A=analyses(),D=P.filter(x=>x.res==='w'||x.res==='l'),W_=D.filter(x=>x.res==='w').length,pend=P.filter(x=>!x.res).length,units=D.reduce((t,x)=>t+(x.units!=null?x.units:(x.res==='w'?x.odd-1:-1)),0);
   const tabs=[['res','Resumen',''],['all','Todos',P.length],['p','Pendientes',pend],['w','Acertados',W_],['l','Fallados',D.length-W_],['an','Análisis',A.length]];if(!tabs.some(t=>t[0]===mtab))mtab='res';
   const grp=(f,lab)=>{const ks=[...new Set(D.map(f))].sort();return ks.length?`<div class="sec">${lab}</div>`+ks.map(k=>{const a=D.filter(x=>f(x)===k);return rwRow(k,a.filter(x=>x.res==='w').length,a.length,pct(a.reduce((t,x)=>t+x.prob,0)/a.length))}).join(''):''};
   let body='';
@@ -287,5 +295,5 @@ function mount(){const root=$('#corners-root');if(!root)return;if(root.dataset.m
   root.querySelectorAll('[data-corner-mode]').forEach(b=>b.onclick=()=>setMode(b.dataset.cornerMode));$('#corner-run').onclick=scan;setMode('pre');renderModel($('#corner-model-host'))}
 window.initRadarCorners=()=>{try{mount()}catch(e){const root=$('#corners-root');if(root){root.dataset.mounted='';root.innerHTML=`<div class="corner-empty"><b>Error al cargar Picks Especiales</b><p>${esc(e&&e.message||e)}</p></div>`}console.error('RadarPi corners:',e)}};
 window.renderRadarCornersModel=renderModel;
-window.RadarCorners={lambdas,liveLambdas,nbCdf,pOver,parseOddsRows,groupMarkets,evaluate,decide,wavg,shrink,marketName,csvText,analyze,savePick,_set:(m)=>{mode=m}};
+window.RadarCorners={sideProbs,settle,lambdas,liveLambdas,nbCdf,pOver,parseOddsRows,groupMarkets,evaluate,decide,wavg,shrink,marketName,csvText,analyze,savePick,_set:(m)=>{mode=m}};
 })();
