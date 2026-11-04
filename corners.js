@@ -72,6 +72,9 @@ window.clearRadarCornersCache=async()=>{await cacheReady;cacheMem={};if(cacheDb)
 
 // ---------- córners de un partido y de un equipo ----------
 async function cornersOf(fid,ttl){return cached('fs_'+fid,ttl,async()=>{const r=await af('fixtures/statistics',{fixture:fid}),o={};for(const t of r){const s=(t.statistics||[]).find(z=>/corner kicks/i.test(z.type||''));if(s&&s.value!=null&&!isNaN(+s.value))o[t.team.id]=+s.value}return o})}
+async function histOf(f,t,isE){if(!isE)return teamHistory(t.id);const lg=f.league.id;let r=await RadarSrc.history(lg,t.id,HN);
+  if(r.rows.length<4){const g=await RadarSrc.fduHistory(lg,t.name,HN).catch(()=>null);if(g&&g.rows.length>r.rows.length)r=g}
+  diag.src=diag.src||{};diag.src[r.src]=(diag.src[r.src]||0)+1;return r}
 async function teamHistory(tid){return cached('th_'+tid,20*3600e3,async()=>{
   const fx=(await af('fixtures',{team:tid,last:HN,status:'FT'})).slice().sort((a,b)=>new Date(b.fixture.date)-new Date(a.fixture.date)),rows=[];let miss=0;
   for(const f of fx){if(rows.length>=HN)break;const fid=f.fixture&&f.fixture.id;if(!fid)continue;let m;
@@ -135,7 +138,7 @@ const why=(rej)=>{const t=[];if(rej.odd)t.push(rej.odd+' fuera de cuota '+MINODD
 function parseEspnEvent(e,league){const c=e.competitions?.[0],home=c?.competitors?.find(x=>x.homeAway==='home'),away=c?.competitors?.find(x=>x.homeAway==='away');if(!home||!away)return null;return {fixture:{id:'espn_'+e.id,date:e.date,status:{short:e.status?.type?.state==='in'?'LIVE':'NS',elapsed:e.status?.displayClock?parseInt(e.status.displayClock,10):null}},league:{id:league,name:e.season?.name||league,country:''},teams:{home:{id:home.team?.id,name:home.team?.displayName},away:{id:away.team?.id,name:away.team?.displayName}},_source:'ESPN',_espn:e.id}}
 async function espnFixtures(isLive){const leagues=['col.1','eng.1','eng.2','esp.1','ita.1','ger.1','fra.1','mex.1','arg.1','bra.1','ned.1','por.1','uefa.champions','uefa.europa','uefa.europa.conf','conmebol.libertadores','conmebol.sudamericana','usa.1','bel.1','tur.1','sco.1','gre.1','aut.1','sui.1','den.1','nor.1','swe.1','chi.1','uru.1','par.1','per.1','ecu.1','eng.fa','eng.league_cup','esp.copa_del_rey','ger.dfb_pokal','ita.coppa_italia','fra.coupe_de_france','ned.cup','por.taca.portugal','arg.copa','bra.copa_do_brazil'];const dates=isLive?[dateKey(Date.now())]:[dateKey(Date.now()),dateKey(Date.now()+864e5)];const out=[];let failures=0;for(let i=0;i<leagues.length;i+=8){const batch=leagues.slice(i,i+8);const got=await Promise.all(batch.flatMap(l=>dates.map(async d=>{try{const u=`https://site.api.espn.com/apis/site/v2/sports/soccer/${l}/scoreboard?dates=${d.replace(/-/g,'')}`;const {data}=await fetchJSON(u,{},'ESPN');return (data.events||[]).map(e=>parseEspnEvent(e,l)).filter(Boolean)}catch{failures++;return []}})));got.forEach(a=>out.push(...a))}diag.espnFailures=failures;return out.filter(f=>isLive?f.fixture.status.short==='LIVE':new Date(f.fixture.date).getTime()>Date.now()-15*60e3)}
 async function getFixtures(){let primary=[],espn=[];
-  if(getAF()){
+  if(getAF()&&localStorage.getItem('radarpi_af_off')!=='1'){
     if(mode==='pre'){for(const d of [0,1]){const day=dateKey(Date.now()+d*864e5);try{const r=await cached('af_fx_'+day,3*60e3,()=>af('fixtures',{date:day,timezone:'America/Bogota'}));primary.push(...r.filter(f=>['NS','TBD'].includes(f.fixture&&f.fixture.status&&f.fixture.status.short)))}catch(e){diag.afError=e.message;diag.afKind=e.kind}}}
     else{try{const r=await cached('af_live',45e3,()=>af('fixtures',{live:'all'}));primary=r.filter(f=>f.fixture&&f.fixture.status&&f.fixture.status.elapsed!=null&&f.fixture.status.elapsed>=20&&f.fixture.status.elapsed<=85&&['1H','2H'].includes(f.fixture.status.short))}catch(e){diag.afError=e.message;diag.afKind=e.kind}}}
   if(primary.length)diag.afFixtures=primary.length;
@@ -149,24 +152,26 @@ async function research(match,league){const c=cfgRead();if(!c.br||!c.or)return {
 // ---------- análisis de un partido ----------
 async function analyze(f,oaEvents){
   const h=f.teams.home,a=f.teams.away,id=f.fixture.id,match=h.name+' vs '+a.name,X={f,h,a,match,mode,id,lam:null,hist:null,odds:[],cands:[],best:null,rej:null,reason:'',live:null,books:[]};
-  if(String(id).startsWith('espn_')){X.reason='Partido encontrado solo por ESPN: sin ID de API-Football no hay estadísticas de córners.';X.kind='nostats';return X}
-  if(!getAF()){X.reason='Falta la llave de API-Football.';X.kind='auth';return X}
+  const isE=String(id).startsWith('espn_');
+  if(isE&&!window.RadarSrc){X.reason='Módulo de fuentes gratuitas no cargado.';X.kind='nostats';return X}
+  if(!isE&&!getAF()){X.reason='Falta la llave de API-Football.';X.kind='auth';return X}
   const lid=f.league&&f.league.id;
   if(mode==='pre'&&lid&&hasCache('nl_'+lid,7*864e5)){X.kind='nostats';X.reason='La liga «'+((f.league&&f.league.name)||lid)+'» no publicó estadísticas de córners en la última comprobación (se vuelve a revisar en 7 días).';return X}
   let hh=null,aa=null;
-  if(mode==='pre'||(hasCache('th_'+h.id,20*3600e3)&&hasCache('th_'+a.id,20*3600e3))){hh=await teamHistory(h.id);aa=await teamHistory(a.id)}
+  if(mode==='pre'||isE||(hasCache('th_'+h.id,20*3600e3)&&hasCache('th_'+a.id,20*3600e3))){hh=await histOf(f,h,isE);aa=await histOf(f,a,isE)}
   let pre=null;
   if(hh&&aa){X.hist={hN:hh.rows.length,aN:aa.rows.length,miss:hh.miss+aa.miss};
     if(lid&&hh.rows.length===0&&aa.rows.length===0&&hh.miss>=2&&aa.miss>=2)await cached('nl_'+lid,7*864e5,async()=>1);
     if(hh.rows.length<4||aa.rows.length<4){X.kind='nostats';X.reason='Muestra insuficiente de córners (local '+hh.rows.length+', visitante '+aa.rows.length+' partidos con dato; '+(hh.miss+aa.miss)+' partidos sin estadística). Esa liga o competición probablemente no publica córners.';if(mode==='pre')return X}
     else{pre=lambdas(hh.rows,aa.rows);Object.assign(X.hist,{hF:pre.hF,hA:pre.hA,aF:pre.aF,aA:pre.aA})}}
   let lam=pre,cur=null;
-  if(mode==='live'){const el=Number(f.fixture.status.elapsed)||0,cs=await cornersOf(id,45e3),cH=cs[h.id],cA=cs[a.id];
-    if(cH==null||cA==null){X.kind='nostats';X.reason='API-Football no devuelve córners en vivo para este partido.';return X}
+  if(mode==='live'){const el=Number(f.fixture.status.elapsed)||0,cs=isE?await RadarSrc.liveCorners(f.league.id,String(id).slice(5)):await cornersOf(id,45e3),cH=cs[h.id],cA=cs[a.id];
+    if(cH==null||cA==null){X.kind='nostats';X.reason=(isE?'ESPN':'API-Football')+' no devuelve córners en vivo para este partido.';return X}
     const base=pre||{lh:BASE.h,la:BASE.a};lam=liveLambdas(base,el,cH,cA);cur={h:cH,a:cA};X.live={elapsed:el,cH,cA,preSource:pre?'historial del equipo':'promedios de liga',goals:(f.goals&&f.goals.home!=null)?f.goals.home+'-'+f.goals.away:null}}
   X.lam=lam;
+  try{if(isE&&RadarSrc.hasFdorg())X.table=await RadarSrc.tablePos(f.league.id,h.name,a.name)}catch{}
   let odds=[];
-  try{const r=await cached('afo_'+(mode==='live'?'l':'p')+id,mode==='live'?45e3:8*60e3,()=>af(mode==='live'?'odds/live':'odds',{fixture:id}));const r0=r[0]||{},rows=r0.bookmakers||(r0.odds?[{name:'API-Football en vivo',bets:r0.odds}]:[]);odds.push(...parseOddsRows(rows,mode==='live'))}
+  if(!isE)try{const r=await cached('afo_'+(mode==='live'?'l':'p')+id,mode==='live'?45e3:8*60e3,()=>af(mode==='live'?'odds/live':'odds',{fixture:id}));const r0=r[0]||{},rows=r0.bookmakers||(r0.odds?[{name:'API-Football en vivo',bets:r0.odds}]:[]);odds.push(...parseOddsRows(rows,mode==='live'))}
   catch(e){issue(match,'cuotas AF',e);if(['limit','auth','scancap'].includes(e.kind))throw e}
   const oe=matchOddsEvent(f,oaEvents||[]);
   if(oe){try{const rows=await oddsApiCorners(oe);for(const o of rows){const kind=o.scope==='team'?(similar(o.team,h.name)?'home':similar(o.team,a.name)?'away':null):'total';if(kind)odds.push({...o,kind})}}catch(e){diag.oddsApiErr=e.message;issue(match,'The Odds API',e)}}
@@ -189,7 +194,7 @@ function saveAnalyses(list){const all=analyses(),day=todayK();
 const statusName=s=>s==='w'?'Acertado':s==='l'?'Fallado':s==='v'?'Nulo':'Pendiente';
 const when=f=>{const d=new Date(f.fixture.date);return f.fixture.status&&f.fixture.status.elapsed!=null&&mode==='live'?(f.fixture.status.elapsed+"'"):d.toLocaleString('es',{weekday:'short',hour:'2-digit',minute:'2-digit'})};
 function pickCard(x,i){const b=x.best,st=b.stake,H=x.hist,L=x.lam;
-  const data=[['Promedios del local (a favor / en contra)',H&&H.hF!=null?H.hF.toFixed(1)+' / '+H.hA.toFixed(1):'—'],['Promedios del visitante (a favor / en contra)',H&&H.aF!=null?H.aF.toFixed(1)+' / '+H.aA.toFixed(1):'—'],['Muestra (partidos con dato)',H?H.hN+' y '+H.aN:'—'],
+  const data=[...(x.table?[['Posición en la tabla (local / visitante)',x.table.h+'º / '+x.table.a+'º']]:[]),['Promedios del local (a favor / en contra)',H&&H.hF!=null?H.hF.toFixed(1)+' / '+H.hA.toFixed(1):'—'],['Promedios del visitante (a favor / en contra)',H&&H.aF!=null?H.aF.toFixed(1)+' / '+H.aA.toFixed(1):'—'],['Muestra (partidos con dato)',H?H.hN+' y '+H.aN:'—'],
     [mode==='live'?'Córners que faltan (local / visitante / total)':'Córners esperados (local / visitante / total)',L.lh.toFixed(1)+' / '+L.la.toFixed(1)+' / '+L.lt.toFixed(1)],['Probabilidad del modelo',pct(b.pm)+'%'],['Probabilidad del mercado (sin margen)',pct(b.fair)+'%'+(b.twoSided?'':' (aprox.)')],['Probabilidad final (mezcla)',pct(b.pf)+'%'],['Casa y fuente',b.book+' · '+b.source],['Modalidad',mode==='live'?'En vivo · minuto '+x.live.elapsed+' · córners '+x.live.cH+'-'+x.live.cA:'Prepartido']];
   return `<article class="cn-card"><div class="cn-head"><span>${esc((x.f.league&&x.f.league.name)||'Liga')}${x.f.league&&x.f.league.country?' · '+esc(x.f.league.country):''}</span><span>${esc(when(x.f))}</span></div><b class="cn-match">${esc(x.match)}</b>
   <div class="tk"><small class="tkl">PICK DE CÓRNERS · SEGÚN REGLAS</small><div class="tk1"><b class="n">${esc(marketName(b))}</b></div><div class="tk2"><span><b>${pct(b.pf)}%</b> prob.</span><span>cuota <b>@${b.odd.toFixed(2)}</b></span><span>valor <b>${b.edge>=0?'+':''}${pct(b.edge)}%</b></span><span>stake <b>${st}/9</b></span></div><div class="meter${st>=5?' hi':''}" role="img" aria-label="Stake ${st} de 9">${Array.from({length:9},(_,k)=>`<i class="${k<st?'f':''}"></i>`).join('')}</div></div>
@@ -201,7 +206,7 @@ function noPickCard(x){const kindTxt={nostats:'Sin estadísticas',noodds:'Sin cu
   return `<article class="cn-card muted"><div class="cn-head"><span>${esc((x.f.league&&x.f.league.name)||'Competición')}</span><span>${esc(kindTxt)}</span></div><b class="cn-match">${esc(x.match)}</b><div class="nopick2"><b>${x.kind==='novalue'?'Sin pick con ventaja clara':'No se pudo evaluar'}</b><small>${esc(x.reason)}</small></div>
   ${x.lam&&x.hist&&x.hist.hF!=null?`<small class="status">Córners esperados: ${x.lam.lh.toFixed(1)} + ${x.lam.la.toFixed(1)} = ${x.lam.lt.toFixed(1)} (muestra ${x.hist.hN}/${x.hist.aN})</small>`:''}</article>`}
 function diagHTML(){const c=counter(),by={};diag.issues.forEach(i=>by[i.kind]=(by[i.kind]||0)+1);
-  const kinds=Object.keys(by),src=[`ESPN: ${diag.espnFixtures??'—'} partidos · fallos ${diag.espnFailures??0}`,`API-Football: ${diag.afFixtures??0} partidos${diag.afError?' · '+esc(diag.afError):''}`,`The Odds API: ${getOddsKey()?'llave guardada':'sin llave'}${diag.oddsRemaining!=null?' · créditos restantes: '+diag.oddsRemaining:''}${diag.oddsApiErr?' · '+esc(diag.oddsApiErr):''}`,`IA: ${cfgRead().br&&cfgRead().or?'Brave + OpenRouter configurados':'sin Brave/OpenRouter en Ajustes'}`];
+  const kinds=Object.keys(by),src=[`Historial: ${diag.src?Object.entries(diag.src).map(([k,v])=>k+' ×'+v).join(' · '):'—'}`,`ESPN: ${diag.espnFixtures??'—'} partidos · fallos ${diag.espnFailures??0}`,`API-Football: ${diag.afFixtures??0} partidos${diag.afError?' · '+esc(diag.afError):''}`,`The Odds API: ${getOddsKey()?'llave guardada':'sin llave'}${diag.oddsRemaining!=null?' · créditos restantes: '+diag.oddsRemaining:''}${diag.oddsApiErr?' · '+esc(diag.oddsApiErr):''}`,`IA: ${cfgRead().br&&cfgRead().or?'Brave + OpenRouter configurados':'sin Brave/OpenRouter en Ajustes'}`];
   return `<details class="corner-diagnostics" ${kinds.length||diag.afError?'open':''}><summary>Diagnóstico${kinds.length?' · '+kinds.length+' tipo(s) de problema':''}</summary>
   <div class="cn-diag"><div><b>Llave en uso:</b> ${ownKey()?'exclusiva de córners':getAF()?'general de Ajustes':'ninguna'} · <b>Solicitudes:</b> ${diag.reqs||0} en este escaneo · ${c.u.n}/${dailyCap()} hoy${diag.afRemaining!=null?' · restantes según API-Football: '+diag.afRemaining+(diag.afLimitDay?' de '+diag.afLimitDay:''):''}</div>
   ${src.map(s=>`<div>${s}</div>`).join('')}
@@ -225,7 +230,7 @@ async function scan(){if(busy)return;await cacheReady;busy=true;diag={reqs:0,iss
   finally{busy=false;btn.disabled=false}}
 function savePick(i){const x=lastResults[i];if(!x||!x.best)return;const b=x.best,A=picks(),market=marketName(b),id=x.id+'|'+market+'|'+x.mode;
   if(A.some(z=>z.id===id)){if(typeof toast==='function')toast('Este pick ya está registrado.');return}
-  A.push({id,fid:x.id,match:x.match,league:(x.f.league&&x.f.league.name)||'',home:x.h.name,away:x.a.name,hid:x.h.id,aid:x.a.id,ko:x.f.fixture.date,market,kind:b.kind,line:b.line,side:b.side,odd:b.odd,book:b.book,source:b.source,mode:x.mode,
+  A.push({id,fid:x.id,match:x.match,league:(x.f.league&&x.f.league.name)||'',home:x.h.name,away:x.a.name,slug:typeof x.f.league.id==='string'?x.f.league.id:'',hid:x.h.id,aid:x.a.id,ko:x.f.fixture.date,market,kind:b.kind,line:b.line,side:b.side,odd:b.odd,book:b.book,source:b.source,mode:x.mode,
     prob:+b.pf.toFixed(3),pModel:+b.pm.toFixed(3),pMarket:+b.fair.toFixed(3),edge:+b.edge.toFixed(3),stake:b.stake,twoSided:b.twoSided,hF:x.hist&&x.hist.hF,hA:x.hist&&x.hist.hA,aF:x.hist&&x.hist.aF,aA:x.hist&&x.hist.aA,hN:x.hist&&x.hist.hN,aN:x.hist&&x.hist.aN,
     lam:{h:+x.lam.lh.toFixed(2),a:+x.lam.la.toFixed(2),t:+x.lam.lt.toFixed(2)},live:x.live,res:null,date:new Date().toISOString()});
   if(savePicks(A)){if(typeof toast==='function')toast('Pick guardado en el Modelo de Córners.');renderModel(modelHost)}else if(typeof toast==='function')toast('⚠ No se pudo guardar: almacenamiento lleno.')}
@@ -233,10 +238,13 @@ function savePick(i){const x=lastResults[i];if(!x||!x.best)return;const b=x.best
 // ---------- resolver automáticamente ----------
 function settle(x,val){let u=0,w=0,l=0;for(const [c,k] of lineComps(x.line)){if(val===c)continue;const win=x.side==='over'?val>c:val<c;if(win){u+=k*(x.odd-1);w+=k}else{u-=k;l+=k}}return {res:w+l===0?'v':(w>=l?'w':'l'),units:u}}
 async function resolvePending(){const msg=$('#cn-resmsg'),say=t=>{if(msg)msg.textContent=t};
-  const P=picks(),todo=P.filter(x=>!x.res&&x.fid&&!String(x.fid).startsWith('espn_')&&Date.now()-new Date(x.ko||x.date).getTime()>110*60e3);
+  const P=picks(),todo=P.filter(x=>!x.res&&x.fid&&(!String(x.fid).startsWith('espn_')||x.slug)&&Date.now()-new Date(x.ko||x.date).getTime()>110*60e3);
   if(!todo.length){say('No hay picks pendientes de partidos que ya hayan terminado.');return}
   diag={reqs:0,issues:[]};let ok=0,wait=0,fail=0;
-  for(const x of todo.slice(0,8)){try{const fx=await af('fixtures',{id:x.fid}),st=fx[0]&&fx[0].fixture&&fx[0].fixture.status&&fx[0].fixture.status.short;
+  for(const x of todo.slice(0,8)){
+    if(String(x.fid).startsWith('espn_')){try{const s=await RadarSrc.espnStats(x.slug,String(x.fid).slice(5),0),hv=s.t[x.hid],av=s.t[x.aid];if(s.st!=='post'){wait++;continue}if(hv==null||av==null){fail++;continue}
+      const val=x.kind==='total'?hv+av:x.kind==='home'?hv:av,sr=settle(x,val);x.res=sr.res;x.units=sr.units;x.actual={h:hv,a:av,t:hv+av};x.result=hv+'-'+av+' ('+(hv+av)+' córners)';ok++}catch{fail++}continue}
+    try{const fx=await af('fixtures',{id:x.fid}),st=fx[0]&&fx[0].fixture&&fx[0].fixture.status&&fx[0].fixture.status.short;
       if(!['FT','AET','PEN'].includes(st)){wait++;continue}
       const m=await cornersOf(x.fid,0),hv=m[x.hid],av=m[x.aid];if(hv==null||av==null){fail++;continue}
       const val=x.kind==='total'?hv+av:x.kind==='home'?hv:av,sr=settle(x,val);x.res=sr.res;x.units=sr.units;x.actual={h:hv,a:av,t:hv+av};x.result=hv+'-'+av+' ('+(hv+av)+' córners)';ok++}
@@ -277,7 +285,7 @@ function renderModel(target){const host=typeof target==='string'?document.queryS
   host.querySelector('#cn-res').onclick=resolvePending;host.querySelector('#cn-exp').onclick=exportJSON;host.querySelector('#cn-csv').onclick=exportCSV;
   const ca=host.querySelector('#cn-clear-an');if(ca)ca.onclick=()=>{if(confirm('¿Borrar los análisis guardados? Tus picks registrados no se tocan.')){write(K.an,[]);renderModel(host)}};
   host.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{const a=picks(),x=a.find(z=>z.id===b.dataset.id);if(!x)return;x.res=b.dataset.r||null;savePicks(a);renderModel(host)});
-  host.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{if(!confirm('¿Borrar este pick?'))return;savePicks(picks().filter(z=>z.id!==b.dataset.del));renderModel(host)})}
+  host.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{const it=picks().find(z=>z.id===b.dataset.del);if(!it)return;if(!window.RadarTrash&&!confirm('¿Borrar este pick?'))return;savePicks(picks().filter(z=>z.id!==it.id));renderModel(host);if(window.RadarTrash)RadarTrash.add('corners',it.match||'pick de córners',it,()=>{savePicks([it,...picks().filter(z=>z.id!==it.id)]);renderModel(host)})})}
 
 // ---------- pantalla: módulo ----------
 function setMode(m){mode=m;document.querySelectorAll('[data-corner-mode]').forEach(b=>b.classList.toggle('on',b.dataset.cornerMode===m));$('#corner-run').textContent=m==='pre'?'Buscar partidos y analizar córners':'Buscar partidos en vivo';$('#corner-status').textContent=m==='pre'?'Prepartido: promedios de córners a favor y en contra de cada equipo, con la cuota de córners de las casas.':'En vivo (minutos 20–85): calcula solo los córners que faltan, según el ritmo previo y el del partido.'}

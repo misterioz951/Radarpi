@@ -976,7 +976,7 @@ function registerCombo(i){
 let COMBI_MODEL_FILTER='res';
 function setCombiFilter(t){COMBI_MODEL_FILTER=t;drawCombiModel(mdlTab==='combi'?'#model-combi-content':'#comboModelView')}
 function setCombiResult(id,res){const P=LS('combipicks',[]),k=P.find(x=>x.id===id);if(!k)return;k.res=res;k.manual=!!res;SV('combipicks',P);drawCombiModel(mdlTab==='combi'?'#model-combi-content':'#comboModelView');}
-function deleteCombi(id){if(!confirm('¿Borrar esta combinada del Modelo Combi?'))return;SV('combipicks',LS('combipicks',[]).filter(x=>x.id!==id));drawCombiModel(mdlTab==='combi'?'#model-combi-content':'#comboModelView');}
+function deleteCombi(id){const it=LS('combipicks',[]).find(x=>x.id===id);if(!it)return;if(!window.RadarTrash&&!confirm('¿Borrar esta combinada del Modelo Combi?'))return;const redraw=()=>drawCombiModel(mdlTab==='combi'?'#model-combi-content':'#comboModelView');SV('combipicks',LS('combipicks',[]).filter(x=>x.id!==id));redraw();if(window.RadarTrash)RadarTrash.add('combipicks','combinada',it,()=>{SV('combipicks',[it,...LS('combipicks',[]).filter(x=>x.id!==id)]);redraw()});}
 async function showCombiTab(t){if(t==='modelo'){try{await settleCombi()}catch{}SV('activeCombiTab','buscar');switchRadarTab('m');setMdlTab('combi');return;}combiTab='buscar';SV('activeCombiTab','buscar');$('#comboSearchView').hidden=false;$('#comboModelView').hidden=true;document.querySelectorAll('[data-combi-tab]').forEach(b=>b.classList.toggle('on',b.dataset.combiTab==='buscar'));}
 function drawCombiModel(target){
   const P=LS('combipicks',[]),done=P.filter(x=>x.res==='w'||x.res==='l'),wins=done.filter(x=>x.res==='w').length,loss=done.length-wins,pending=P.filter(x=>!x.res).length;
@@ -1044,6 +1044,7 @@ $('#comboScanBtn').onclick=scanCombi;
 const afWin=[];
 async function afThrottle(){for(;;){const n=Date.now();while(afWin.length&&n-afWin[0]>60000)afWin.shift();if(afWin.length<9){afWin.push(n);return}await new Promise(r=>setTimeout(r,60000-(n-afWin[0])+200))}}
 async function afGet(path,params={}){
+  if(localStorage.getItem('radarpi_af_off')==='1')throw new Error('API-Football pausada en Ajustes → Fuentes gratuitas.');
   if(!cfg.af)throw new Error('Añade primero tu llave API-Football en Ajustes.');
   if(/[^\x21-\x7E]/.test(cfg.af))throw new Error('La llave tiene espacios o caracteres no válidos: vuelve a pegarla.');
   await afThrottle();
@@ -1498,15 +1499,19 @@ function regPick(i){
   toast('Agregado al seguimiento.');
 }
 function delPick(id){
-  if(!confirm('¿Borrar este pick del seguimiento?'))return;
+  const it=LS('picks',[]).find(x=>x.id===id);if(!it)return;
+  if(!window.RadarTrash&&!confirm('¿Borrar este pick del seguimiento?'))return;
   SV('picks',LS('picks',[]).filter(x=>x.id!==id));drawModel();
+  if(window.RadarTrash)RadarTrash.add('picks',it.m||it.match||it.n||'pick',it,()=>{SV('picks',[it,...LS('picks',[]).filter(x=>x.id!==id)]);drawModel()});
 }
-function setPick(id,res){
+function setPick(id,res,quiet){
   const P=LS('picks',[]),k=P.find(x=>x.id===id);if(!k)return;
+  const prevRes=k.res===undefined?null:k.res;
   k.res=res;k.man=res!==null;if(res===null)delete k.sc;
   SV('picks',P);
   bets.filter(b=>b.pid===id).forEach(b=>b.r=res||'p');SV('bets',bets);
   drawModel();
+  if(!quiet&&window.RadarTrash)RadarTrash.toast('Resultado actualizado',()=>setPick(id,prevRes,true));
 }
 async function settle(){
   const P=LS('picks',[]);let ch=0;
@@ -1650,7 +1655,7 @@ function setR(id,r){
   if(b.pid){const P=LS('picks',[]),k=P.find(x=>x.id===b.pid);if(k){k.res=r==='p'?null:r;k.man=r!=='p';SV('picks',P)}}
   drawBets();
 }
-function delB(id){if(confirm('¿Borrar esta apuesta?')){bets=bets.filter(b=>b.id!==id);SV('bets',bets);drawBets()}}
+function delB(id){const it=bets.find(b=>b.id===id);if(!it)return;if(!window.RadarTrash&&!confirm('¿Borrar esta apuesta?'))return;bets=bets.filter(b=>b.id!==id);SV('bets',bets);drawBets();if(window.RadarTrash)RadarTrash.add('bets',it.m||it.match||it.n||'apuesta',it,()=>{bets=[it,...bets];SV('bets',bets);drawBets()})}
 let betTab='p';
 function setBetTab(t){betTab=t;drawBets()}
 function drawBets(){
