@@ -125,7 +125,8 @@ function groupMarkets(odds){const g=new Map();for(const o of odds){const k=o.kin
 
 // ---------- decisión ----------
 function evaluate(lam,markets,cur){const res=[];
-  for(const m of markets){const mean=m.kind==='total'?lam.lt:m.kind==='home'?lam.lh:lam.la,phi=m.kind==='total'?PHI.total:PHI.team,c=cur?(m.kind==='total'?cur.h+cur.a:m.kind==='home'?cur.h:cur.a):0,pO=pOver(mean,m.line,phi,c);
+  for(const m of markets){if(localStorage.getItem('radarpi_corners_half')!=='0'&&Math.abs((m.line%1)-.5)>1e-9)continue;   // solo líneas .5 (sin devolución por línea entera ni líneas de cuarto)
+    const mean=m.kind==='total'?lam.lt:m.kind==='home'?lam.lh:lam.la,phi=m.kind==='total'?PHI.total:PHI.team,c=cur?(m.kind==='total'?cur.h+cur.a:m.kind==='home'?cur.h:cur.a):0,pO=pOver(mean,m.line,phi,c);
     for(const side of ['over','under']){const q=m[side];if(!q)continue;const sp=sideProbs(mean,phi,c,m.line,side),pm=sp.w+sp.l>0?sp.w/(sp.w+sp.l):.5,fair=m.fairOver!=null?(side==='over'?m.fairOver:1-m.fairOver):(1/q.odd)/1.06,gap=pm-fair,pf=fair+W*gap,edge=pf*q.odd-1;
       res.push({kind:m.kind,line:m.line,side,odd:q.odd,book:q.book,source:q.source||'API-Football',pm,fair,pf,gap,edge,twoSided:m.twoSided,mean,push:sp.push})}}return res}
 function decide(res,nMin){const ok=[],rej={odd:0,gap:0,p:0,edge:0};
@@ -167,7 +168,7 @@ async function analyze(f,oaEvents){
   const lid=f.league&&f.league.id;
   if(mode==='pre'&&lid&&hasCache('nl_'+lid,7*864e5)){X.kind='nostats';X.reason='La liga «'+((f.league&&f.league.name)||lid)+'» no publicó estadísticas de córners en la última comprobación (se vuelve a revisar en 7 días).';return X}
   let hh=null,aa=null;
-  if(mode==='pre'||isE||(hasCache('th_'+h.id,20*3600e3)&&hasCache('th_'+a.id,20*3600e3))){hh=await histOf(f,h,isE);aa=await histOf(f,a,isE)}
+  if(mode==='pre'||isE||(hasCache('th_'+h.id,20*3600e3)&&hasCache('th_'+a.id,20*3600e3))){hh=await histOf(f,h,isE);aa=await histOf(f,a,isE);X.fh=[...new Set([hh,aa].map(z=>(z&&z.src)||'API-Football'))].join('+')}
   let pre=null;
   if(hh&&aa){X.hist={hN:hh.rows.length,aN:aa.rows.length,miss:hh.miss+aa.miss};
     if(lid&&hh.rows.length===0&&aa.rows.length===0&&hh.miss>=2&&aa.miss>=2)await cached('nl_'+lid,7*864e5,async()=>1);
@@ -239,7 +240,7 @@ async function scan(){if(busy)return;await cacheReady;busy=true;diag={reqs:0,iss
   finally{busy=false;btn.disabled=false}}
 function savePick(i){const x=lastResults[i];if(!x||!x.best)return;const b=x.best,A=picks(),market=marketName(b),id=x.id+'|'+market+'|'+x.mode;
   if(A.some(z=>z.id===id)){if(typeof toast==='function')toast('Este pick ya está registrado.');return}
-  A.push({id,fid:x.id,match:x.match,league:(x.f.league&&x.f.league.name)||'',home:x.h.name,away:x.a.name,slug:typeof x.f.league.id==='string'?x.f.league.id:'',hid:x.h.id,aid:x.a.id,ko:x.f.fixture.date,market,kind:b.kind,line:b.line,side:b.side,odd:b.odd,book:b.book,source:b.source,mode:x.mode,
+  A.push({id,fid:x.id,match:x.match,league:(x.f.league&&x.f.league.name)||'',home:x.h.name,away:x.a.name,fh:x.fh||'',fo:(x.best&&x.best.source)||'',slug:typeof x.f.league.id==='string'?x.f.league.id:'',hid:x.h.id,aid:x.a.id,ko:x.f.fixture.date,market,kind:b.kind,line:b.line,side:b.side,odd:b.odd,book:b.book,source:b.source,mode:x.mode,
     prob:+b.pf.toFixed(3),pModel:+b.pm.toFixed(3),pMarket:+b.fair.toFixed(3),edge:+b.edge.toFixed(3),stake:b.stake,twoSided:b.twoSided,hF:x.hist&&x.hist.hF,hA:x.hist&&x.hist.hA,aF:x.hist&&x.hist.aF,aA:x.hist&&x.hist.aA,hN:x.hist&&x.hist.hN,aN:x.hist&&x.hist.aN,
     lam:{h:+x.lam.lh.toFixed(2),a:+x.lam.la.toFixed(2),t:+x.lam.lt.toFixed(2)},live:x.live,res:null,date:new Date().toISOString()});
   if(savePicks(A)){if(typeof toast==='function')toast('Pick guardado en el Modelo de Córners.');renderModel(modelHost)}else if(typeof toast==='function')toast('⚠ No se pudo guardar: almacenamiento lleno.')}

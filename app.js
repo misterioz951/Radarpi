@@ -1081,7 +1081,7 @@ async function afMore(i){
       const date=iso(new Date(r.ko));
       let fxCache=LS('af_fixtures_'+date,null),fx;
       if(fxCache&&Date.now()-fxCache.t<24*36e5)fx=fxCache.v;
-      else{const j=await afGet('fixtures',{date,timezone:'America/Bogota'});fx=j.response||[];SV('af_fixtures_'+date,{t:Date.now(),v:fx});}
+      else{const j=await afGet('fixtures',{date,timezone:'America/Bogota'});fx=j.response||[];SV('af_fixtures_'+date,{t:Date.now(),v:fx.map(slimFx)});}
       const scored=(fx||[]).map(f=>{const h=f.teams&&f.teams.home&&f.teams.home.name||'',a=f.teams&&f.teams.away&&f.teams.away.name||'';return {f,score:sim(r.h,h)+sim(r.w,a),rev:sim(r.h,a)+sim(r.w,h)}}).map(x=>({...x,score:Math.max(x.score,x.rev),reversed:x.rev>x.score})).sort((a,b)=>b.score-a.score);
       const hit=scored[0];if(!hit||hit.score<1.15)throw new Error('No encontré un partido coincidente con suficiente confianza. No se usarán datos de otro encuentro.');
       const f=hit.f,fixtureId=f.fixture&&f.fixture.id;if(!fixtureId)throw new Error('La API no devolvió ID de partido.');
@@ -1193,11 +1193,11 @@ async function afAuto(r){
   if(!(d&&d.afq!==undefined&&Date.now()-d.t<12*36e5)){
     if(afBud()>=90)throw new Error('límite propio de 90 solicitudes/día alcanzado');
     const date=iso(new Date(r.ko));let fc=LS('af_fixtures_'+date,null),fx;
-    if(fc&&Date.now()-fc.t<24*36e5)fx=fc.v;else{const j=await afGet('fixtures',{date,timezone:'America/Bogota'});afUse(1);fx=j.response||[];SV('af_fixtures_'+date,{t:Date.now(),v:fx})}
+    if(fc&&Date.now()-fc.t<24*36e5)fx=fc.v;else{const j=await afGet('fixtures',{date,timezone:'America/Bogota'});afUse(1);fx=j.response||[];SV('af_fixtures_'+date,{t:Date.now(),v:fx.map(slimFx)})}
     const hit=(fx||[]).map(f=>{const s=sim(r.h,f.teams.home.name)+sim(r.w,f.teams.away.name),v=sim(r.h,f.teams.away.name)+sim(r.w,f.teams.home.name);return{f,s:Math.max(s,v),rev:v>s}}).sort((a,b)=>b.s-a.s)[0];
     if(!hit||hit.s<1.15)throw new Error('sin coincidencia segura para '+r.m);
     const id=hit.f.fixture.id,[pj,oj]=await Promise.all([afGet('predictions',{fixture:id}).catch(()=>({})),afGet('odds',{fixture:id}).catch(()=>({}))]);afUse(2);
-    d={t:Date.now(),noInj:true,fixture:{id,home:hit.f.teams.home.name,away:hit.f.teams.away.name,date:hit.f.fixture.date,league:hit.f.league&&hit.f.league.name},prediction:(pj.response||[])[0]||null,injuries:[],reversed:hit.rev,afq:afQ(oj.response)};SV(ck,d);
+    d={t:Date.now(),noInj:true,fixture:{id,home:hit.f.teams.home.name,away:hit.f.teams.away.name,date:hit.f.fixture.date,league:hit.f.league&&hit.f.league.name},prediction:slimPred((pj.response||[])[0]),injuries:[],reversed:hit.rev,afq:afQ(oj.response)};SV(ck,d);
   }
   r.afData=d;const aq=d.afq||{};
   if(Object.keys(aq).length){r.afq=aq;if(!r.q){r.q=Object.assign({},aq);r.qx=Object.fromEntries(Object.keys(aq).map(k=>[k,1]));r.qsrc='API-Football (promedio de casas)'}else{for(const n in aq)if(!(n in r.q)){r.q[n]=aq[n];(r.qx=r.qx||{})[n]=1}}if(!r.mod.f&&!r.mod.fc){const fc=fairP(aq);if(Object.keys(fc).length)r.mod.fc=fc}}
@@ -1464,7 +1464,7 @@ function addPick(r,mk,q,s,bet){
   let k=P.find(x=>x.ev===r.ev&&x.mk===mk);
   if(!k){k={id:Date.now()+'-'+Math.floor(Math.random()*1e4),ev:r.ev,slug:r.slug,m:r.m,liga:r.liga||'Liga no guardada',ko:r.ko,mk,p:+m[1].toFixed(3),res:null};P.push(k)}
   if(!k.liga)k.liga=r.liga||'Liga no guardada';if(q)k.q=q;if(s)k.s=s;if(bet)k.bet=true;
-  const raw=(r.mod.raw||r.mod.m0||r.mod.m).find(x=>x[0]===mk);k.pm=raw?+raw[1].toFixed(3):k.p;k.pf=r.mod.f&&r.mod.f[mk]!=null?+r.mod.f[mk].toFixed(3):null;k.t=tierOf(r,mk);k.experimental=isHalfMarket(mk);try{const qq=+k.q||+(r.q&&r.q[mk])||0;if(qq>1){k.stake=baseStake(r,mk,qq);k.stakeMarket=mk}k.pc=+calP(r,mk,m[1]).toFixed(3)}catch{}
+  const raw=(r.mod.raw||r.mod.m0||r.mod.m).find(x=>x[0]===mk);k.pm=raw?+raw[1].toFixed(3):k.p;k.pf=r.mod.f&&r.mod.f[mk]!=null?+r.mod.f[mk].toFixed(3):null;k.t=tierOf(r,mk);if(!k.fc)k.fc=altOf(r)||((r.afData||LS(afCacheKeyFor(r),null))?'API-Football':'sin contraste');k.experimental=isHalfMarket(mk);try{const qq=+k.q||+(r.q&&r.q[mk])||0;if(qq>1){k.stake=baseStake(r,mk,qq);k.stakeMarket=mk}k.pc=+calP(r,mk,m[1]).toFixed(3)}catch{}
   SV('picks',P);return k.id;
 }
 function evalMk(n,h,a,cor,crd,hh,ha){
@@ -1568,6 +1568,10 @@ function profitSvg(bs){
   const d=pts.map((v,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)).join(' ');
   return `<svg class="chart" viewBox="0 0 300 130" role="img" aria-label="Evolución de la ganancia"><line x1="20" x2="280" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}" style="stroke:var(--ln);stroke-dasharray:3 3"/><path d="${d}" style="fill:none;stroke:${col};stroke-width:2.5;stroke-linejoin:round"/><circle cx="${X(pts.length-1)}" cy="${Y(last).toFixed(1)}" r="4.5" style="fill:${col}"/></svg>`;
 }
+function srcCard(P,CP){const G={},add=(sec,label,k)=>{if(k.res!=='w'&&k.res!=='l')return;const key=sec+'|'+label;(G[key]=G[key]||{sec,label,w:0,l:0})[k.res==='w'?'w':'l']++};
+  for(const k of P)if(k.fc)add('Fútbol',k.fc,k);for(const k of CP)if(k.fh)add('Córners',k.fh,k);
+  const rows=Object.values(G).sort((x,y)=>(y.w+y.l)-(x.w+x.l));
+  return `<div class="card"><h2>Acierto por fuente de datos</h2>${rows.length?'<p class="status">Cuenta solo picks resueltos guardados desde esta versión. Con menos de 20 picks por fuente, la diferencia puede ser suerte.</p>'+rows.map(r=>{const n=r.w+r.l;return `<div class="tools"><span><b>${esc(r.sec)}</b> · ${esc(r.label)}</span><span>${r.w}/${n} (${Math.round(r.w/n*100)}%)${n<20?' · muestra pequeña':''}</span></div>`}).join(''):'<p class="status">Aún no hay picks resueltos con fuente registrada. Se llenará con los picks nuevos.</p>'}</div>`}
 function drawModel(){
   if(mdlTab==='hub'){
     const P=LS('picks',[]),C=LS('combipicks',[]),N=LS('nbapicks',[]);
@@ -1576,7 +1580,7 @@ function drawModel(){
     let CP=[];try{CP=JSON.parse(localStorage.getItem('radarpi_corners_picks_v1')||'[]')}catch{}
     const cr=stats(CP);
     const card=(id,icon,name,desc,x,cls)=>`<button class="model-category ${cls}" type="button" onclick="openModelCategory('${id}')"><span class="model-category-icon">${icon}</span><span class="model-category-copy"><b>${name}</b><small>${desc}</small><span class="model-category-counts"><i class="pending">${x.p} pendientes</i><i class="ok">${x.w} ganados</i><i class="bad">${x.l} fallados</i></span></span><span class="model-category-rate">${x.rate}<small>efectividad</small></span><span class="model-category-arrow">›</span></button>`;
-    $('#mdl').innerHTML=`<div class="model-hub-head"><span class="home-eyebrow">CENTRO DE ESTADÍSTICAS</span><h2>Modelo</h2><p>Elige qué módulo quieres consultar. Cada uno conserva sus picks, estadísticas y gráficas por separado.</p></div><div class="model-category-list">${card('res','⚽','Fútbol','Pronósticos y rendimiento de fútbol',f,'football')}${card('nba','🏀','NBA','Estadísticas de jugadores, equipos y picks NBA',n,'nba')}${card('combi','✦','Combi','Seguimiento y resultados de combinadas',c,'combi')}${card('corners','⌁','Especial de Córners','Picks Especiales · estadísticas independientes',cr,'corners')}</div>`;return;
+    $('#mdl').innerHTML=`<div class="model-hub-head"><span class="home-eyebrow">CENTRO DE ESTADÍSTICAS</span><h2>Modelo</h2><p>Elige qué módulo quieres consultar. Cada uno conserva sus picks, estadísticas y gráficas por separado.</p></div><div class="model-category-list">${card('res','⚽','Fútbol','Pronósticos y rendimiento de fútbol',f,'football')}${card('nba','🏀','NBA','Estadísticas de jugadores, equipos y picks NBA',n,'nba')}${card('combi','✦','Combi','Seguimiento y resultados de combinadas',c,'combi')}${card('corners','⌁','Especial de Córners','Picks Especiales · estadísticas independientes',cr,'corners')}</div>`;$('#mdl').insertAdjacentHTML('beforeend',srcCard(P,CP));return;
   }
   const P=LS('picks',[]),D=P.filter(k=>(k.res==='w'||k.res==='l')&&!k.experimental),pend=P.filter(k=>!k.res).length;
   const nW=D.filter(k=>k.res==='w').length,nL=D.length-nW,nV=P.filter(k=>k.res==='v').length;
@@ -1864,6 +1868,15 @@ try{if(!LS('purge2',0)){Object.keys(localStorage).filter(k=>k==='DOM3'||k==='DOM
 })();
 
 // ===== Almacenamiento: limpieza de cachés (nunca toca picks, apuestas ni ajustes) =====
+// La caché de API-Football guardaba la lista completa de partidos del día y la predicción entera (decenas de KB por partido). Solo se usan unos pocos campos.
+function slimFx(f){return {fixture:{id:f.fixture&&f.fixture.id,date:f.fixture&&f.fixture.date},teams:{home:{name:f.teams&&f.teams.home&&f.teams.home.name},away:{name:f.teams&&f.teams.away&&f.teams.away.name}},league:{name:f.league&&f.league.name}}}
+function slimPred(p){return p?{predictions:p.predictions||null}:null}
+function slimCaches(){if(localStorage.getItem('radarpi_slim_v1'))return;for(const k of Object.keys(localStorage)){try{
+  if(/^af_fixtures_/.test(k)){const o=JSON.parse(localStorage.getItem(k));if(o&&Array.isArray(o.v)){o.v=o.v.map(slimFx);localStorage.setItem(k,JSON.stringify(o))}}
+  else if(/^af_match_/.test(k)){const o=JSON.parse(localStorage.getItem(k));if(o&&o.prediction&&!o.alt){o.prediction=slimPred(o.prediction);localStorage.setItem(k,JSON.stringify(o))}}}catch{}}
+  try{localStorage.setItem('radarpi_slim_v1','1')}catch{}}
+function storBreak(){const g={};for(const k of Object.keys(localStorage)){const b=(k.length+(localStorage.getItem(k)||'').length)*2/1024,t=/^af_/.test(k)?'Caché API-Football':/^(odds_|Y\d|DOM|nba_|comboScan|scan$)/.test(k)?'Cuotas y ESPN':/^radarpi_corners/.test(k)?'Córners':'Tus picks y ajustes';g[t]=(g[t]||0)+b}
+  return Object.entries(g).filter(([,v])=>v>=1).map(([k,v])=>k+' '+(v>=1024?(v/1024).toFixed(1)+' MB':Math.round(v)+' KB')).join(' · ')}
 function cleanCaches(force){
   const keep=new Set(['radarpi_corners_picks_v1','radarpi_corners_analyses_v1','radarpi_corners_afkey','radarpi_corners_oddsapi_key','radarpi_corners_af_usage','picks','bets','cfg','seen','scan','nbapicks','combipicks','nbcfg','afUsed','purge2','radarpi_backup_last_export']),now=Date.now(),max=(force?.04:14)*864e5;let n=0,bytes=0;
   for(const k of Object.keys(localStorage)){
@@ -1875,15 +1888,16 @@ function cleanCaches(force){
     if(k==='nba_gl'){let ch=0;for(const id in o)if(!o[id]||now-(o[id].t||0)>max){delete o[id];ch++}if(ch){n+=ch;try{localStorage.setItem(k,JSON.stringify(o))}catch{}}continue}
     const t=typeof o.t==='number'?o.t:(o.d?Date.parse(o.d):NaN);
     if(isNaN(t))continue;
-    if(!('v' in o)&&!/^(af_fixtures_|Y\d|DOM|nba_)/.test(k))continue;
-    if(now-t>max){bytes+=(localStorage.getItem(k)||'').length;localStorage.removeItem(k);n++}
+    if(!('v' in o)&&!/^(af_fixtures_|af_match_|Y\d|DOM|nba_)/.test(k))continue;
+    if(now-t>(/^(af_fixtures_|af_match_)/.test(k)?Math.min(max,2*864e5):max)){bytes+=(localStorage.getItem(k)||'').length;localStorage.removeItem(k);n++}
   }
   return{n,kb:Math.round(bytes*2/1024)};
 }
 function storKB(){let b=0;for(const k of Object.keys(localStorage))b+=(k.length+(localStorage.getItem(k)||'').length)*2;return Math.round(b/1024)}
 function drawStor(txt){const el=$('#storMsg');if(!el)return;const kb=storKB(),pc=Math.min(100,Math.round(kb/5120*100));
-  el.textContent=(txt?txt+' ':'')+'LocalStorage usado: '+(kb/1024).toFixed(1)+' MB de ~5 MB ('+pc+'%). La caché de Córners se guarda aparte en IndexedDB.'+(pc>=80?' ⚠ Poco espacio: limpia cachés y exporta una copia.':' Picks, historial y ajustes se conservan al limpiar.');
+  el.textContent=(txt?txt+' ':'')+'LocalStorage usado: '+(kb/1024).toFixed(1)+' MB de ~5 MB ('+pc+'%). La caché de Córners se guarda aparte en IndexedDB. Detalle: '+storBreak()+'.'+(pc>=80?' ⚠ Poco espacio: limpia cachés y exporta una copia.':' Picks, historial y ajustes se conservan al limpiar.');
   el.style.color=pc>=80?'var(--bad)':''}
+try{slimCaches()}catch{}
 try{cleanCaches(false)}catch{}
 if($('#storClean'))$('#storClean').addEventListener('click',async()=>{const r=cleanCaches(true);let extra='';try{if(window.clearRadarCornersCache){await window.clearRadarCornersCache();extra=' También se limpió la caché de Córners.'}}catch{}drawStor('Se liberaron ~'+r.kb+' KB ('+r.n+' cachés).'+extra)});
 drawStor();
