@@ -609,7 +609,8 @@ $('#go').onclick=async()=>{
           hora:dlab(e.date)+new Date(e.date).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}),p,A,B,h:hn,w:wn,mod,q,casa:cfg.bm,ev:e.id,slug,ko:e.date,hid:H.team.id,wid:W.team.id,qbad,mf:mfx?{h:mfx.h,w:mfx.w,t:mfx.t}:null});
       }
     }
-    if(cfg.af&&cfg.afa&&R.length){const top=R.map(r=>({r,s:(bestOf(r)||{sc:-1}).sc})).sort((a,b)=>b.s-a.s).slice(0,cfg.afn||8);for(const {r} of top){msg.textContent='API-Football: '+r.m+'…';try{await afAuto(r)}catch(e){diag+=' API-Football: '+String(e.message).slice(0,70)+'.';break}}}
+    if(cfg.af&&cfg.afa&&localStorage.getItem('radarpi_af_off')!=='1'&&R.length){const top=R.map(r=>({r,s:(bestOf(r)||{sc:-1}).sc})).sort((a,b)=>b.s-a.s).slice(0,cfg.afn||8);for(const {r} of top){msg.textContent='API-Football: '+r.m+'…';try{await afAuto(r)}catch(e){diag+=' API-Football: '+String(e.message).slice(0,70)+'.';break}}}
+    if(window.RadarSrc&&localStorage.getItem('radarpi_alt_off')!=='1'&&R.length){let na=0,nf=0;for(const r of R){if(r.afData)continue;msg.textContent='Fuentes gratuitas: '+r.m+'…';try{await altAuto(r);na++}catch(e){nf++;if(['limit','cool'].includes(e.kind)){diag+=' Fuentes gratis: '+String(e.message).slice(0,70)+'.';break}}}if(na||nf)diag+=` Contraste gratuito: ${na} partidos${nf?', '+nf+' sin muestra suficiente':''}.`}
     // Mantener una fuente independiente para combinadas: solo se actualiza con el escaneo normal,
     // nunca con la lista recortada del botón «Buscar el mejor pick en todas las ligas».
     if(!hunt){Rcombo=R.slice();SV('comboScan',{d:today(),t:Date.now(),R:Rcombo});}
@@ -1032,6 +1033,7 @@ async function scanCombi(){
         results.push({m:`${hn} vs ${wn}`,liga:names[slug]||slug,h:hn,w:wn,hora:dlab(e.date)+new Date(e.date).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}),p,A,B,mod,q,casa:cfg.bm,ev:e.id,slug,ko:e.date,hid:H.team.id,wid:W.team.id});
       }
     }
+    if(window.RadarSrc&&localStorage.getItem('radarpi_alt_off')!=='1'){msg.textContent='Contrastando con fuentes gratuitas…';for(const r of results){if(!r.slug||r.hid==null||r.afData)continue;try{await altAuto(r)}catch(e){if(['limit','cool'].includes(e.kind))break}}}
     if(useNba){msg.textContent='NBA…';try{results.push(...await window.nbCombiSource(t=>msg.textContent=t))}catch(e){bad.push('NBA: '+e.message)}}
     if(!results.length)throw new Error((bad.length?bad.join(' · ')+'. ':'')+'No se encontraron partidos con cuotas emparejadas en las ligas y fechas elegidas. Comprueba cobertura de OddsPapi o amplía la búsqueda.');
     panel.innerHTML=comboHtml(results);msg.textContent=`Búsqueda independiente terminada: ${results.length} partidos con cuotas analizados. No se utilizó el resultado del escáner normal.`;
@@ -1070,6 +1072,7 @@ $('#af-test').onclick=async()=>{
 };
 async function afMore(i){
   const r=R[i],box=$('#afp'+i);box.hidden=false;box.innerHTML='<p class="status">Consultando API-Football… puede gastar hasta 3 solicitudes la primera vez. Se reutilizan los datos en caché durante 12–24 horas.</p>';
+  if(localStorage.getItem('radarpi_af_off')==='1'||!cfg.af){box.innerHTML='<p class="status">Consultando fuentes gratuitas…</p>';try{box.innerHTML=altHtml(await altAuto(r))}catch(e){box.innerHTML='<p class="bad">'+esc(e.message||'Sin datos')+'</p>'}return}
   if(!cfg.af){box.innerHTML='<p class="status">Para usar esta función, crea una cuenta gratuita en API-Football, copia tu llave en Ajustes y pulsa Guardar. La cuota gratuita publicada es de 100 solicitudes al día.</p>';return}
   const cacheKey='af_match_'+String(r.ev||r.h+'_'+r.w+'_'+iso(new Date(r.ko))).replace(/[^a-z0-9_-]/gi,'_');
   let data=LS(cacheKey,null);
@@ -1113,7 +1116,7 @@ function afConflict(r,name,p){
   const gap=p-ap,oneXtwo=['Local gana','Empate','Visitante gana'].includes(name);
   // Un resultado directo con solo 15% o menos del proveedor y al menos 25% del modelo es una contradicción fuerte.
   // También se veta si el modelo excede la probabilidad del proveedor en 20 puntos; no se confunde doble oportunidad con 1X2.
-  if(gap>=0.20||(oneXtwo&&ap<=0.15&&p>=0.25))return {api:ap,model:p,gap,level:'strong'};
+  if(gap>=0.20||(oneXtwo&&ap<=0.15&&p>=0.25))return {api:ap,model:p,gap,level:altOf(r)?'moderate':'strong'};
   if(gap>=0.12)return {api:ap,model:p,gap,level:'moderate'};
   return null;
 }
@@ -1171,6 +1174,20 @@ function afQ(resp){
 }
 const afBud=()=>{const u=LS('afUsed',{d:'',n:0});return u.d===today()?u.n:0};
 const afUse=k=>SV('afUsed',{d:today(),n:afBud()+k});
+// Contraste gratuito (ESPN / football-data.co.uk / football-data.org): mismo formato que los datos de API-Football, así todo el motor lo reutiliza.
+async function altAuto(r){
+  const ck=afCacheKeyFor(r);let d=LS(ck,null);
+  if(d&&d.alt&&Date.now()-d.t<6*36e5){r.afData=d;return d}
+  if(d&&!d.alt&&d.prediction){r.afData=d;return d}
+  if(!window.RadarSrc)throw new Error('módulo de fuentes no cargado');
+  const m=await RadarSrc.matchProbs(r.slug,r.hid,r.wid,r.h,r.w);
+  if(!m)throw new Error('sin muestra suficiente para '+r.m);
+  const P=x=>Math.round(x*100)+'%';
+  d={t:Date.now(),v:1,alt:m.src,lh:m.lh,la:m.la,over25:m.over25,nH:m.nH,nA:m.nA,noInj:true,fixture:{id:'alt',home:r.h,away:r.w,date:r.ko,league:r.liga},reversed:false,
+    prediction:{predictions:{percent:{home:P(m.home),draw:P(m.draw),away:P(m.away)},under_over:m.over25>=.6?'+2.5':m.over25<=.4?'-2.5':null,advice:null,winner:null}},injuries:[],afq:{}};
+  SV(ck,d);r.afData=d;return d}
+const altOf=r=>{const d=r.afData||LS(afCacheKeyFor(r),null);return d&&d.alt||null};
+function altHtml(d){const p=d.prediction.predictions.percent;return `<div class="nh"><b>Contraste gratuito (${esc(d.alt)})</b><span class="chip3">Modelo de goles por tabla</span></div><p><b>Local ${p.home} · Empate ${p.draw} · Visitante ${p.away}</b></p><p class="status">Goles esperados ${d.lh.toFixed(2)} – ${d.la.toFixed(2)} · Más de 2,5 goles: ${Math.round(d.over25*100)}% · Muestra: ${d.nH} partidos del local en casa y ${d.nA} del visitante fuera. Es una estimación estadística simple (sin bajas ni alineaciones): sirve de contraste y por sí sola no bloquea un pick.</p>`}
 async function afAuto(r){
   const ck=afCacheKeyFor(r);let d=LS(ck,null);
   if(!(d&&d.afq!==undefined&&Date.now()-d.t<12*36e5)){
@@ -1389,11 +1406,11 @@ async function aiRun(i){
     modelo:{goles_esperados:{local:+r.mod.lh.toFixed(2),visitante:+r.mod.la.toFixed(2)},
       mercados:r.mod.m.map(m=>({mercado:m[0],prob_pct:Math.round(m[1]*100),cuota_minima:+(1.05/m[1]).toFixed(2),techo_stake:techo(r,m),prob_modelo_pct:Math.round(((r.mod.raw||r.mod.m0||r.mod.m).find(x=>x[0]===m[0])||m)[1]*100),prob_pinnacle_pct:(r.mod.f&&r.mod.f[m[0]]!=null)?Math.round(r.mod.f[m[0]]*100):null,nivel:tierOf(r,m[0]),cuota_casa:(r.q&&r.q[m[0]])||null,valor_pct:(r.q&&r.q[m[0]])?Math.round((m[1]*r.q[m[0]]-1)*100):null}))},
     cuota_del_usuario:(sel&&q)?{mercado:sel,cuota:q}:null,
-    api_football:(()=>{const d=r.afData||LS(afCacheKeyFor(r),null);if(!d)return null;const pp=d.prediction&&d.prediction.predictions||{},pc=pp.percent||{};return {partido_confirmado:`${d.fixture&&d.fixture.home||''} vs ${d.fixture&&d.fixture.away||''}`,probabilidades_1x2:{local:afPctNum(d.reversed?pc.away:pc.home),empate:afPctNum(pc.draw),visitante:afPctNum(d.reversed?pc.home:pc.away)},consejo:pp.advice||null,ganador_estimado:pp.winner&&pp.winner.name||null,bajas:(d.injuries||[]).map(x=>({jugador:x.player&&x.player.name||null,equipo:x.team&&x.team.name||null,motivo:x.player&&(x.player.type||x.player.reason)||null})),error_prediccion:d.predictionError||null};})(),
+    api_football:(()=>{const d=r.afData||LS(afCacheKeyFor(r),null);if(!d)return null;const pp=d.prediction&&d.prediction.predictions||{},pc=pp.percent||{};return {fuente_contraste:d.alt?('estimación propia por tabla ('+d.alt+'), menos fiable que un proveedor: solo reduce la confianza, no bloquea por sí sola'):'API-Football',partido_confirmado:`${d.fixture&&d.fixture.home||''} vs ${d.fixture&&d.fixture.away||''}`,probabilidades_1x2:{local:afPctNum(d.reversed?pc.away:pc.home),empate:afPctNum(pc.draw),visitante:afPctNum(d.reversed?pc.home:pc.away)},consejo:pp.advice||null,ganador_estimado:pp.winner&&pp.winner.name||null,bajas:(d.injuries||[]).map(x=>({jugador:x.player&&x.player.name||null,equipo:x.team&&x.team.name||null,motivo:x.player&&(x.player.type||x.player.reason)||null})),error_prediccion:d.predictionError||null};})(),
     contexto_calidad:{muestra_local:r.A.n,muestra_visitante:r.B.n,cuota_real_disponible:!!(sel?q:bestOf(r)?.q),alineacion_confirmada:!!(inf&&inf.alineaciones),modelo_validado_fuera_de_muestra:false},pick_de_la_app:bp?{mercado:bp.n,prob_pct:Math.round(bp.p*100),cuota:bp.q,valor_pct:bp.e!=null?Math.round(bp.e*100):null,nivel:bp.t}:null};
   try{
     const messages=[
-      {role:'system',content:'Eres analista escéptico de apuestas deportivas. Usa las estadísticas y el contexto recibido; no inventes datos ni trates ausencia de noticia como confirmación. Las probabilidades son estimaciones no calibradas todavía, basadas en una muestra pequeña, así que no las presentes como certezas. Comprueba si el contexto competitivo (eliminación/clasificación/descenso/título), posibles rotaciones, bajas y descanso contradicen la señal estadística. Una necesidad de ganar no significa automáticamente que ganará ni que habrá muchos goles. Si contexto clave está sin verificar, la alineación no está confirmada, faltan datos del mercado, el valor estimado es menor de 5% o mayor de 25%, o hay contradicciones fuertes, recomienda no apostar. Si api_football contiene probabilidades comparables y el mercado elegido contradice fuertemente al proveedor, debes recomendar no_apostar, no ignorar el dato ni inventar una alternativa. Solo recomienda el pick_de_la_app o el mercado exacto seleccionado; no cambies de mercado. No conviertas una probabilidad alta en valor si la cuota no compensa. Las razones deben incluir datos numéricos del JSON y, cuando aplique, hechos contextuales con fuente/estado. Devuelve máximo 3 razones y 3 riesgos. ajuste_stake debe ser 0, -1 o -2. Responde SOLO JSON válido: {"decision":"apostar"|"no_apostar","pick":"nombre exacto del mercado","ajuste_stake":0|-1|-2,"cuota_minima":número,"resumen":"una frase","razones":["..."],"riesgos":["..."]}. Nunca prometas ganancias.'},
+      {role:'system',content:'Eres analista escéptico de apuestas deportivas. Usa las estadísticas y el contexto recibido; no inventes datos ni trates ausencia de noticia como confirmación. Las probabilidades son estimaciones no calibradas todavía, basadas en una muestra pequeña, así que no las presentes como certezas. Comprueba si el contexto competitivo (eliminación/clasificación/descenso/título), posibles rotaciones, bajas y descanso contradicen la señal estadística. Una necesidad de ganar no significa automáticamente que ganará ni que habrá muchos goles. Si contexto clave está sin verificar, la alineación no está confirmada, faltan datos del mercado, el valor estimado es menor de 5% o mayor de 25%, o hay contradicciones fuertes, recomienda no apostar. Si api_football contiene probabilidades comparables y el mercado elegido contradice fuertemente al proveedor, debes recomendar no_apostar (salvo que fuente_contraste sea una estimación propia: entonces solo reduce la confianza), no ignorar el dato ni inventar una alternativa. Solo recomienda el pick_de_la_app o el mercado exacto seleccionado; no cambies de mercado. No conviertas una probabilidad alta en valor si la cuota no compensa. Las razones deben incluir datos numéricos del JSON y, cuando aplique, hechos contextuales con fuente/estado. Devuelve máximo 3 razones y 3 riesgos. ajuste_stake debe ser 0, -1 o -2. Responde SOLO JSON válido: {"decision":"apostar"|"no_apostar","pick":"nombre exacto del mercado","ajuste_stake":0|-1|-2,"cuota_minima":número,"resumen":"una frase","razones":["..."],"riesgos":["..."]}. Nunca prometas ganancias.'},
       {role:'system',content:modo+' Los datos de bajas_y_alineaciones vienen de ESPN y pueden estar incompletos: sin bajas reportadas no significa que no haya bajas. Solo las bajas en titulares_recientes son relevantes (evalúa a qué lado favorecen o perjudican); baja_larga ya está reflejada en la forma reciente y no_titulares casi no importa. Si las alineaciones no están confirmadas, dilo en los riesgos y no pongas un stake alto. noticias_y_contexto viene de una búsqueda web y puede tener errores: úsalo solo para señalar riesgos o contexto (rotaciones, motivación, bajas) y para ajuste_stake; nunca para inventar números.'},
       {role:'user',content:JSON.stringify(data)}];
     let j=null,providerError='';

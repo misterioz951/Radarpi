@@ -42,6 +42,7 @@ async function http(url,opts,label){let r;try{r=await fetch(url,{...opts,signal:
 async function af(path,params={},opts={}){
   const key=getAF();if(!key)throw mkErr('auth','Falta la llave de API-Football (guárdala en este módulo o en Ajustes).');
   if(!opts.free){const {u}=counter();if(u.n>=dailyCap())throw mkErr('limit','Límite propio de '+dailyCap()+' solicitudes por día alcanzado (llevas '+u.n+').');if(diag.reqs>=SCANCAP)throw mkErr('scancap','Tope de '+SCANCAP+' solicitudes por escaneo alcanzado.')}
+  if(typeof afThrottle==='function')await afThrottle();   // mismo límite por minuto (9) que Fútbol y Combi: comparten llave
   const u=new URL(AFBASE+path);Object.entries(params).forEach(([k,v])=>u.searchParams.set(k,v));
   const {r,j}=await http(u,{headers:{'x-apisports-key':key}},'API-Football');
   if(!opts.free){bump();diag.reqs=(diag.reqs||0)+1}
