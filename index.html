@@ -128,10 +128,11 @@
 <p class="status" id="storMsg" role="status" aria-live="polite"></p>
 <button class="btn s" id="storClean" type="button">Limpiar cachés</button>
 </details>
-<details class="card grp" id="src-card"><summary>Fuentes gratuitas (córners y datos) · sin API-Football</summary><p>ESPN (sin llave) da córners en vivo, prepartido e historial. football-data.co.uk aporta historial con córners de las ligas grandes. football-data.org (gratis, 12 ligas) aporta la tabla y resultados, pero no córners. Las cuotas de córners siguen viniendo de The Odds API.</p>
+<details class="card grp" id="src-card"><summary>Fuentes gratuitas y límites de córners</summary><p>ESPN (sin llave) da córners en vivo, prepartido e historial. football-data.co.uk aporta historial con córners de las ligas grandes. football-data.org (gratis, 12 ligas) aporta la tabla y resultados, pero no córners. Las cuotas de córners siguen viniendo de The Odds API.</p>
 <label>Llave football-data.org (opcional)<input id="s-fdo" type="password" autocomplete="off"></label>
 <label>Proxy CORS propio (opcional, p. ej. un Cloudflare Worker)<input id="s-px" type="text" autocomplete="off" placeholder="https://mi-worker.workers.dev/?u="></label>
 <label class="tg-row"><span>Usar fuentes gratuitas en Fútbol y Combi<small>Contrasta 1X2 y goles con un modelo propio basado en tablas (football-data.org, football-data.co.uk o ESPN). Tiene límites diarios propios y se pausa 15 min si un servidor responde con límite.</small></span><input id="s-alt" type="checkbox"></label>
+<div class="tools"><label>Córners · máx. partidos prepartido<input id="s-cmp" type="number" min="1" max="30" inputmode="numeric" placeholder="10" style="width:5rem"></label><label>Córners · máx. partidos en vivo<input id="s-cml" type="number" min="1" max="30" inputmode="numeric" placeholder="12" style="width:5rem"></label></div>
 <label class="tg-row"><span>Pausar API-Football<small>Mientras esté baneada no se hace ninguna llamada. Desactívalo si te desbanean.</small></span><input id="s-afoff" type="checkbox"></label>
 <div class="tools"><button class="btn s" id="s-save" type="button">Guardar</button><button class="btn s" id="s-test" type="button">Probar fuentes</button><span id="s-status" class="status" role="status"></span></div></details>
 <details class="card grp" id="trash-card"><summary>🗑 Papelera (30 días)</summary><div id="trash-list"></div></details>
