@@ -1464,7 +1464,7 @@ function addPick(r,mk,q,s,bet){
   let k=P.find(x=>x.ev===r.ev&&x.mk===mk);
   if(!k){k={id:Date.now()+'-'+Math.floor(Math.random()*1e4),ev:r.ev,slug:r.slug,m:r.m,liga:r.liga||'Liga no guardada',ko:r.ko,mk,p:+m[1].toFixed(3),res:null};P.push(k)}
   if(!k.liga)k.liga=r.liga||'Liga no guardada';if(q)k.q=q;if(s)k.s=s;if(bet)k.bet=true;
-  const raw=(r.mod.raw||r.mod.m0||r.mod.m).find(x=>x[0]===mk);k.pm=raw?+raw[1].toFixed(3):k.p;k.pf=r.mod.f&&r.mod.f[mk]!=null?+r.mod.f[mk].toFixed(3):null;k.t=tierOf(r,mk);if(!k.fc)k.fc=altOf(r)||((r.afData||LS(afCacheKeyFor(r),null))?'API-Football':'sin contraste');k.experimental=isHalfMarket(mk);try{const qq=+k.q||+(r.q&&r.q[mk])||0;if(qq>1){k.stake=baseStake(r,mk,qq);k.stakeMarket=mk}k.pc=+calP(r,mk,m[1]).toFixed(3)}catch{}
+  const raw=(r.mod.raw||r.mod.m0||r.mod.m).find(x=>x[0]===mk);k.pm=raw?+raw[1].toFixed(3):k.p;k.pf=r.mod.f&&r.mod.f[mk]!=null?+r.mod.f[mk].toFixed(3):null;k.t=tierOf(r,mk);if(window.RadarBackend&&!k.bk){try{k.bk=RadarBackend.forPick(r,mk)}catch{}}if(!k.fc)k.fc=altOf(r)||((r.afData||LS(afCacheKeyFor(r),null))?'API-Football':'sin contraste');k.experimental=isHalfMarket(mk);try{const qq=+k.q||+(r.q&&r.q[mk])||0;if(qq>1){k.stake=baseStake(r,mk,qq);k.stakeMarket=mk}k.pc=+calP(r,mk,m[1]).toFixed(3)}catch{}
   SV('picks',P);return k.id;
 }
 function evalMk(n,h,a,cor,crd,hh,ha){

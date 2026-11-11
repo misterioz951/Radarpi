@@ -56,7 +56,7 @@
 
 <section id="s-r" hidden><div id="sum"></div><button class="btn s" id="add">+ Añadir apuesta</button><div id="bets"></div></section>
 
-<section id="s-m" hidden><div id="mdl"></div></section>
+<section id="s-m" hidden><div id="mdl"></div><div id="panel-root"></div></section>
 
 <section id="s-a" hidden>
 <details class="card grp theme-settings">
@@ -136,6 +136,10 @@
 <label class="tg-row"><span>Córners: solo líneas .5<small>Activado: solo propone líneas como 15.5 o 16.5. Apagado: también líneas enteras (se devuelve si el total sale exacto) y de cuarto.</small></span><input id="s-half" type="checkbox"></label>
 <label class="tg-row"><span>Pausar API-Football<small>Mientras esté baneada no se hace ninguna llamada. Desactívalo si te desbanean.</small></span><input id="s-afoff" type="checkbox"></label>
 <div class="tools"><button class="btn s" id="s-save" type="button">Guardar</button><button class="btn s" id="s-test" type="button">Probar fuentes</button><span id="s-status" class="status" role="status"></span></div></details>
+<details class="card grp" id="bk-card"><summary>📐 Modelo validado (backend)</summary><p>Carga los 4 archivos que genera el backtest (<code>model_params.json</code>, <code>calibration_params.json</code>, <code>devig_selection.json</code>, <code>model_version.json</code>), ya sea desde la carpeta <code>backend_params/</code> o importándolos aquí. Se comprueba el hash de cada uno: si no son de la misma corrida, no se usa nada. En modo sombra: guarda sus probabilidades y la versión en cada pick, pero no cambia tus decisiones.</p>
+<div class="tools"><label class="btn s">Importar archivos<input id="bk-files" type="file" accept=".json,application/json" multiple hidden></label><button class="btn s" id="bk-reload" type="button">Recargar</button></div><p id="bk-status" class="status" role="status"></p></details>
+<details class="card grp" id="led-card"><summary>🔒 Registro auditable de picks</summary><p>Cada pick (Fútbol y Córners) se anota en un registro de solo-añadir y encadenado con SHA-256: probabilidades cruda, de mercado, de-vig, calibrada y final, cuota del pick y de cierre, EV, Kelly, stake y resultado. Lo que no existe se guarda como vacío, nunca inventado. Borrar un pick de la app no lo borra del registro.</p>
+<div class="tools"><button class="btn s" id="led-verify" type="button">Verificar cadena</button><button class="btn s" id="led-json" type="button">Exportar JSON</button><button class="btn s" id="led-csv" type="button">Exportar CSV</button><span id="led-status" class="status" role="status"></span></div></details>
 <details class="card grp" id="trash-card"><summary>🗑 Papelera (30 días)</summary><div id="trash-list"></div></details>
 <button class="btn" id="save">Guardar ajustes</button>
 </section>
@@ -150,7 +154,7 @@
 </nav>
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script src="fuentes.js?v=20261103src"></script><script src="app.js?v=20261103src"></script><script src="corners.js?v=20261103src"></script><script src="nba.js?v=20261102multi"></script><script>
+<script src="monitor.js?v=20261110mon"></script><script src="fuentes.js?v=20261103src"></script><script src="registro.js?v=20261104led"></script><script src="modelo_backend.js?v=20261105bk"></script><script src="panel.js?v=20261110pnl"></script><script src="app.js?v=20261103src"></script><script src="corners.js?v=20261103src"></script><script src="nba.js?v=20261102multi"></script><script>
 // PWA: registra el service worker (requiere https o localhost) y avisa cuando hay versión nueva
 if('serviceWorker' in navigator){addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').then(reg=>{reg.addEventListener('updatefound',()=>{const w=reg.installing;if(w)w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller&&typeof toast==='function')toast('Hay una versión nueva de RadarPi: recarga la página para usarla.')})})}).catch(()=>{})})}
 </script>
