@@ -9,7 +9,7 @@ function toast(t,ms){const e=$('#toast');e.textContent=t;e.classList.add('show')
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const LG={
   "Colombia":"col.1","Premier League":"eng.1","Championship":"eng.2","La Liga":"esp.1","Serie A":"ita.1","Bundesliga":"ger.1","Ligue 1":"fra.1","Liga MX":"mex.1","Argentina":"arg.1","Brasileirão":"bra.1","Eredivisie":"ned.1","Primeira Liga":"por.1",
-  "Champions League":"uefa.champions","Europa League":"uefa.europa","Conference League":"uefa.europa.conf","Libertadores":"conmebol.libertadores","Sudamericana":"conmebol.sudamericana","MLS":"usa.1",
+  "Champions League":"uefa.champions","Europa League":"uefa.europa","Conference League":"uefa.europa.conf","Nations League":"uefa.nations","Libertadores":"conmebol.libertadores","Sudamericana":"conmebol.sudamericana","MLS":"usa.1",
   "Bélgica":"bel.1","Turquía":"tur.1","Escocia":"sco.1","Grecia":"gre.1","Austria":"aut.1","Suiza":"sui.1","Dinamarca":"den.1","Noruega":"nor.1","Suecia":"swe.1",
   "Chile":"chi.1","Uruguay":"uru.1","Paraguay":"par.1","Perú":"per.1","Ecuador":"ecu.1",
   "FA Cup":"eng.fa","Copa de la Liga (EFL)":"eng.league_cup","Copa del Rey":"esp.copa_del_rey","DFB-Pokal":"ger.dfb_pokal","Coppa Italia":"ita.coppa_italia","Coupe de France":"fra.coupe_de_france","KNVB Beker":"ned.cup","Taça de Portugal":"por.taca.portugal","Copa Argentina":"arg.copa","Copa do Brasil":"bra.copa_do_brazil"
@@ -158,6 +158,12 @@ async function discoverDomestic(id){
   }
   try{SV(key,{t:Date.now(),v:null})}catch{}return null;
 }
+// Selecciones nacionales (UEFA Nations League): no tienen liga local, así que su historial se arma con TODOS sus partidos de selección
+// (Nations League, eliminatorias, Eurocopa, Mundial y amistosos). Se piden en paralelo y se corta en cuanto hay 10 partidos terminados.
+const NATL=['uefa.nations'];
+const NATC=['uefa.nations','uefa.euroq','fifa.worldq.uefa','uefa.euro','fifa.world'];   // partidos oficiales: se juegan con el mejor equipo
+const NATF='fifa.friendly';   // amistosos: se rotan muchos jugadores, solo se usan si faltan partidos oficiales
+const NAT=new Set([...NATC,NATF]);
 const CAL=new Set(['arg.1','bra.1','col.1','chi.1','uru.1','par.1','per.1','ecu.1','bol.1','ven.1','usa.1','nor.1','swe.1','fin.1','isl.1','irl.1','conmebol.libertadores','conmebol.sudamericana']);
 const prevSeason=sl=>{const d=new Date(),y=d.getFullYear();return CAL.has(sl)?y-1:(d.getMonth()>=6?y-1:y-2)};
 async function schedEvs(sl,id,season){
@@ -186,7 +192,7 @@ async function domOf(id,known){
 // Fuerza del rival: cada partido del historial se ajusta por lo que ese rival suele marcar y recibir (tabla de su liga).
 // Los goles crudos (gf, ga) se conservan para los patrones; el modelo usa gfa/gaa. En torneos continentales el ajuste se recorta a la mitad.
 async function adjustForm(v,id){
-  const dm=await domMap().catch(()=>({})),slOf=x=>CONT.includes(x.sl)?(dm[x.o]||null):x.sl,need=[...new Set(v.map(slOf).filter(Boolean))],S={};
+  const dm=await domMap().catch(()=>({})),slOf=x=>NAT.has(x.sl)?null:CONT.includes(x.sl)?(dm[x.o]||null):x.sl,need=[...new Set(v.map(slOf).filter(Boolean))],S={};
   for(let i=0;i<need.length;i+=6)await Promise.all(need.slice(i,i+6).map(async s=>{S[s]=await standings(s).catch(()=>null)}));
   const cl=x=>Math.max(.6,Math.min(1.6,x));
   for(const x of v){
@@ -196,9 +202,44 @@ async function adjustForm(v,id){
     x.gfa=+(x.gf/sd).toFixed(3);x.gaa=+(x.ga/sa).toFixed(3);
   }
 }
+async function natSched(sl,id,season){
+  // Si una competición/temporada falla (ESPN no la tiene), se recuerda por hoy para no repetir peticiones lentas.
+  const bk='NATBAD_'+sl+(season||'')+'_'+id,b=LS(bk,null);if(b&&b.d===today())return [];
+  try{
+    const j=await espn(`${sl}/teams/${id}/schedule`+(season?`?season=${season}`:''));
+    const evs=((j&&j.events)||[]).map(e=>[e,sl]);
+    if(!evs.length)SV(bk,{d:today(),v:0});
+    return evs;
+  }catch{SV(bk,{d:today(),v:0});return [];}
+}
+async function natForm(slug,id){
+  const y=new Date().getFullYear();let evs=[];
+  // 1) Solo partidos oficiales (Nations League, eliminatorias, Eurocopa, Mundial): temporada vigente y, si faltan, anteriores hasta llegar a 10
+  const r1=await Promise.all(NATC.map(sl=>natSched(sl,id)));r1.forEach(a=>evs.push(...a));
+  for(const yr of [y,y-1,y-2]){
+    if(toGames(evs,id).length>=10)break;
+    const r=await Promise.all(NATC.map(sl=>natSched(sl,id,yr)));r.forEach(a=>evs.push(...a));
+  }
+  // 2) Los amistosos (muchas rotaciones) solo entran como último recurso, si hay menos de 5 partidos oficiales
+  if(toGames(evs,id).length<5){
+    evs.push(...await natSched(NATF,id));
+    for(const yr of [y,y-1]){if(toGames(evs,id).length>=5)break;evs.push(...await natSched(NATF,id,yr))}
+  }
+  const out=toGames(evs,id).slice(-10);
+  // Sin ajuste por fuerza del rival: no hay una tabla común para selecciones; se usan goles reales.
+  out.forEach(x=>{x.gfa=x.gf;x.gaa=x.ga});
+  // Titulares de cada partido (siempre, aunque «Córners y tarjetas» esté apagado): sirven para detectar bajas y rotación.
+  try{await addExtra(slug,out,id)}catch{}
+  return out;
+}
 async function teamForm(slug,id){
   const k='Y6'+slug+id,cc=LS(k,null);
   if(cc&&cc.d===today()&&(cc.v||[]).length>=5)return cc.v;
+  if(NATL.includes(slug)){
+    const out=await natForm(slug,id);
+    if(out.length)SV(k,{d:today(),v:out});
+    return out;
+  }
   let evs=await schedEvs(slug,id);
   const sls=[slug];
   // Torneos cortos (Champions, Europa, Libertadores…): se completa con la liga local del equipo.
@@ -351,6 +392,7 @@ const TL={'col.1':[/colombia/i,/primera a|betplay|liga/i],'eng.1':[/england/i,/^
   'uefa.champions':[/./,/champions league/i],
   'uefa.europa':[/./,/^(?!.*conference).*europa league/i],
   'uefa.europa.conf':[/./,/conference league/i],
+  'uefa.nations':[/./,/^(?!.*(concacaf|women|femen)).*nations league/i],
   'bel.1':[/belgium/i,/pro league|jupiler/i],'tur.1':[/turkey|türkiye/i,/super lig|süper lig/i],
   'sco.1':[/scotland/i,/premiership/i],'gre.1':[/greece/i,/super league/i],'aut.1':[/austria/i,/bundesliga/i],
   'sui.1':[/switzerland/i,/super league/i],'den.1':[/denmark/i,/superliga/i],'nor.1':[/norway/i,/eliteserien/i],
@@ -364,11 +406,13 @@ const TL={'col.1':[/colombia/i,/primera a|betplay|liga/i],'eng.1':[/england/i,/^
   'arg.copa':[/argentina/i,/copa argentina/i],'bra.copa_do_brazil':[/brazil/i,/copa do bra[sz]il/i]};
 const BADT=/women|femenin|u-?\d\d|youth|reserve|qualif|serie [bcd]|primera b|segunda|\b2\./i;
 async function tourIds(){
-  return cached('optour_v5',7,async()=>{
+  return cached('optour_v6',7,async()=>{
     const all=await op('tournaments',{sportId:10}),out={};
     for(const [slug,[c,n]] of Object.entries(TL)){
       const f=all.filter(t=>c.test(t.categoryName||'')&&n.test(t.tournamentName||'')&&!BADT.test(t.tournamentName||''));
-      if(f.length)out[slug]=f.sort((a,b)=>(b.futureFixtures||0)-(a.futureFixtures||0))[0].tournamentId;
+      if(f.length){f.sort((a,b)=>(b.futureFixtures||0)-(a.futureFixtures||0));
+        // La Nations League puede venir dividida por divisiones (A, B, C, D): se usan todas las que tengan partidos.
+        out[slug]=slug==='uefa.nations'?f.filter(t=>(t.futureFixtures||0)>0||t===f[0]).map(t=>t.tournamentId):f[0].tournamentId;}
     }
     return out;
   });
@@ -425,7 +469,7 @@ async function loadOdds(bm,lg,opts){
   if(autoRun&&!(c&&c.k===key))throw new Error('el escaneo automático no gasta cuotas; haz un escaneo manual');
   if(!opts.force&&c&&c.k===key&&(Date.now()-c.t<3*36e5||autoRun))return c.v;
   const MK=await mkMap(),T=await tourIds(),P=await cached('oppart',30,()=>op('participants',{sportId:10}));
-  const ids=lg.map(x=>T[x]).filter(Boolean);
+  const ids=[...new Set(lg.map(x=>T[x]).flat().filter(Boolean))];
   if(!ids.length)throw new Error('no encontré esas ligas en OddsPapi');
   let size=+(LS('opchunk',5))||5;const arr=[];
   for(let i=0;i<ids.length;){
@@ -696,7 +740,7 @@ function conflictOf(r,n){
 }
 function whyNo(r){
   const qm=cfg.qm||1.5;
-  if(r.A.n<5||r.B.n<5)return `Historial insuficiente: ${esc(r.h)} tiene ${r.A.n} y ${esc(r.w)} ${r.B.n} partidos recientes (se necesitan 5). RadarPi ya completa con la liga local y la temporada anterior; si sigue pasando, ESPN no tiene datos de ese equipo.`;
+  if(r.A.n<5||r.B.n<5)return `Historial insuficiente: ${esc(r.h)} tiene ${r.A.n} y ${esc(r.w)} ${r.B.n} partidos recientes (se necesitan 5). ${NAT.has(r.slug)?'En selecciones RadarPi suma Nations League, eliminatorias, Eurocopa, Mundial y amistosos; si sigue faltando, ESPN no tiene esos partidos.':'RadarPi ya completa con la liga local y la temporada anterior; si sigue pasando, ESPN no tiene datos de ese equipo.'}`;
   if(!(r.q&&Object.keys(r.q).length))return 'No hay cuotas de tu casa para este partido (no se emparejó con OddsPapi o la casa no lo ofrece). Sin cuota real no se puede comprobar el valor.';
   const ok=r.mod.m.filter(([n,p])=>!isHalfMarket(n)&&Number.isFinite(p)&&p>=0.5&&p<=0.9),wq=ok.filter(([n])=>r.q[n]);
   if(!wq.length)return 'La casa tiene cuotas, pero no en los mercados donde el modelo ve 50% de probabilidad o más.';
@@ -870,9 +914,12 @@ async function info(i){
     return o;
   };
   const lu=((sm&&sm.rosters)||[]).map(t=>({lado:t.homeAway,formacion:t.formation||null,
-    titulares:(t.roster||[]).filter(p=>p.starter).map(p=>(p.athlete&&p.athlete.displayName)||'?')}));
+    titulares:(t.roster||[]).filter(p=>p.starter).map(p=>(p.athlete&&p.athlete.displayName)||'?'),ids:(t.roster||[]).filter(p=>p.starter&&p.athlete&&p.athlete.id!=null).map(p=>String(p.athlete.id))}));
   const conf=lu.length>=2&&lu.every(t=>t.titulares.length>=11);
-  r.inf={bajas_local:cls(r.A.sx,ih),bajas_visitante:cls(r.B.sx,iw),alineaciones:conf?lu:null};
+  // Rotación: de los 11 confirmados, cuántos eran titulares habituales (≥40% de sus últimos partidos con alineación conocida)
+  const rot=(sx,lado)=>{const t=conf&&lu.find(z=>z.lado===lado);if(!t||!sx||sx.n<3||t.ids.length<11)return null;
+    const hab=t.ids.filter(id=>{const e=sx.c[id];return e&&e[0]>=Math.ceil(sx.n*0.4)}).length;return{hab,tot:t.ids.length,n:sx.n}};
+  r.inf={bajas_local:cls(r.A.sx,ih),bajas_visitante:cls(r.B.sx,iw),alineaciones:conf?lu:null,rotacion:{local:rot(r.A.sx,'home'),visitante:rot(r.B.sx,'away')}};
   return r.inf;
 }
 async function showInfoRun(i){
@@ -886,7 +933,7 @@ async function showInfoRun(i){
     return c.length?`<div>${c.join('')}</div>`:'<span class="mut">sin bajas reportadas (puede estar incompleto)</span>'};
   const eh=`<div class="nh"><span class="chip3">Datos de ESPN</span></div>
 <div class="n2"><div><small>${esc(r.h)}</small><b>Bajas</b>${G(f.bajas_local)}</div><div><small>${esc(r.w)}</small><b>Bajas</b>${G(f.bajas_visitante)}</div></div>
-<div class="n2" style="grid-template-columns:1fr"><div><b>Alineaciones</b>`+(f.alineaciones?f.alineaciones.map(t=>`<p class="mr-s"><b style="display:inline;letter-spacing:0;text-transform:none;font-size:12px;color:var(--ink)">${t.lado==='home'?esc(r.h):esc(r.w)}</b> ${esc(t.formacion||'')}: ${esc(t.titulares.join(', '))}</p>`).join(''):'<span class="mut">Aún no publicadas (suelen salir ~1 h antes).</span>')+`</div></div>`;
+<div class="n2" style="grid-template-columns:1fr"><div><b>Alineaciones</b>`+(f.alineaciones?(['local','visitante'].map(s=>{const z=f.rotacion&&f.rotacion[s];return z?`<p class="mr-s"><b style="display:inline;letter-spacing:0;text-transform:none;font-size:12px;color:var(--ink)">${s==='local'?esc(r.h):esc(r.w)}</b> rotación: <span class="${z.hab<=7?'bad':'ok'}">${z.hab} de ${z.tot} son titulares habituales</span> (base: últimos ${z.n} partidos)</p>`:''}).join('')):'')+(f.alineaciones?f.alineaciones.map(t=>`<p class="mr-s"><b style="display:inline;letter-spacing:0;text-transform:none;font-size:12px;color:var(--ink)">${t.lado==='home'?esc(r.h):esc(r.w)}</b> ${esc(t.formacion||'')}: ${esc(t.titulares.join(', '))}</p>`).join(''):'<span class="mut">Aún no publicadas (suelen salir ~1 h antes).</span>')+`</div></div>`;
   if(!cfg.gk&&!cfg.br){b.innerHTML=eh+'<div class="nsep"></div><p class="mr-s">Configura Gemini o Brave Search + OpenRouter en Ajustes para consultar también noticias recientes.</p>';return}
   b.innerHTML=eh+'<div class="nsep"></div><div class="nh"><span class="chip3">Noticias y contexto</span></div><p class="mr-s">Buscando fuentes recientes…</p>';
   let gh;try{r.news=null;gh=newsHtml(await research(i),r)}catch(e){gh=`<p class="bad">Gemini: ${esc(e.message.slice(0,140))}</p>`}
@@ -1440,9 +1487,10 @@ async function aiRun(i){
     if(afFinal&&afFinal.level==='strong'){o.decision='no_apostar';note=`Contradicción fuerte de API-Football: ${Math.round(afFinal.api*100)}% para este mercado frente a ${Math.round(mk[1]*100)}% del modelo. Se bloquea la recomendación.`}
     const aj=Math.max(-2,Math.min(0,Math.round(+o.ajuste_stake||0)));
     const rl=x=>x?x.titulares_recientes.length:0,nb=Math.max(inf?rl(inf.bajas_local)+rl(inf.bajas_visitante):0,Math.min(2,Math.round(+(news&&news.bajas_clave_total)||0)));
+    const rp=inf&&inf.rotacion?['local','visitante'].filter(s=>inf.rotacion[s]&&inf.rotacion[s].hab<=7).length:0;   // equipo con rotación fuerte: pesa como una baja clave
     let stk=mk?baseStake(r,mk[0],price):1;
     if(inf&&!inf.alineaciones)stk=Math.min(stk,7);
-    stk=Math.max(1,Math.min(10,stk-(nb>=2?2:nb===1?1:0)+aj));
+    stk=Math.max(1,Math.min(10,stk-((nb+rp)>=2?2:(nb+rp)===1?1:0)+aj));
     if(o.decision!=='apostar'){box.innerHTML=`<div class="vd"><div class="vh"><span class="chip3 bad">No apostar</span></div><p>${esc(o.resumen||'')}</p>${note?`<p class="bad">${esc(note)}</p>`:''}${lista(o.razones,'Razones')}</div>`;return}
     const pct=stk*0.3,amt=cfg.bk?Math.round(cfg.bk*pct/100/100)*100:0;
     r.pk=o.pick;r.sk=amt;r.pq=price;
@@ -1875,7 +1923,7 @@ function slimCaches(){if(localStorage.getItem('radarpi_slim_v1'))return;for(cons
   if(/^af_fixtures_/.test(k)){const o=JSON.parse(localStorage.getItem(k));if(o&&Array.isArray(o.v)){o.v=o.v.map(slimFx);localStorage.setItem(k,JSON.stringify(o))}}
   else if(/^af_match_/.test(k)){const o=JSON.parse(localStorage.getItem(k));if(o&&o.prediction&&!o.alt){o.prediction=slimPred(o.prediction);localStorage.setItem(k,JSON.stringify(o))}}}catch{}}
   try{localStorage.setItem('radarpi_slim_v1','1')}catch{}}
-function storBreak(){const g={};for(const k of Object.keys(localStorage)){const b=(k.length+(localStorage.getItem(k)||'').length)*2/1024,t=/^af_/.test(k)?'Caché API-Football':/^(odds_|Y\d|DOM|nba_|comboScan|scan$)/.test(k)?'Cuotas y ESPN':/^radarpi_corners/.test(k)?'Córners':'Tus picks y ajustes';g[t]=(g[t]||0)+b}
+function storBreak(){const g={};for(const k of Object.keys(localStorage)){const b=(k.length+(localStorage.getItem(k)||'').length)*2/1024,t=/^af_/.test(k)?'Caché API-Football':/^(odds_|Y\d|DOM|NATBAD|nba_|comboScan|scan$)/.test(k)?'Cuotas y ESPN':/^radarpi_corners/.test(k)?'Córners':'Tus picks y ajustes';g[t]=(g[t]||0)+b}
   return Object.entries(g).filter(([,v])=>v>=1).map(([k,v])=>k+' '+(v>=1024?(v/1024).toFixed(1)+' MB':Math.round(v)+' KB')).join(' · ')}
 function cleanCaches(force){
   const keep=new Set(['radarpi_corners_picks_v1','radarpi_corners_analyses_v1','radarpi_corners_afkey','radarpi_corners_oddsapi_key','radarpi_corners_af_usage','picks','bets','cfg','seen','scan','nbapicks','combipicks','nbcfg','afUsed','purge2','radarpi_backup_last_export']),now=Date.now(),max=(force?.04:14)*864e5;let n=0,bytes=0;
@@ -1888,7 +1936,7 @@ function cleanCaches(force){
     if(k==='nba_gl'){let ch=0;for(const id in o)if(!o[id]||now-(o[id].t||0)>max){delete o[id];ch++}if(ch){n+=ch;try{localStorage.setItem(k,JSON.stringify(o))}catch{}}continue}
     const t=typeof o.t==='number'?o.t:(o.d?Date.parse(o.d):NaN);
     if(isNaN(t))continue;
-    if(!('v' in o)&&!/^(af_fixtures_|af_match_|Y\d|DOM|nba_)/.test(k))continue;
+    if(!('v' in o)&&!/^(af_fixtures_|af_match_|Y\d|DOM|NATBAD|nba_)/.test(k))continue;
     if(now-t>(/^(af_fixtures_|af_match_)/.test(k)?Math.min(max,2*864e5):max)){bytes+=(localStorage.getItem(k)||'').length;localStorage.removeItem(k);n++}
   }
   return{n,kb:Math.round(bytes*2/1024)};
