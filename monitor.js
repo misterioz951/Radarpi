@@ -82,6 +82,7 @@ const H={persistent:()=>persistent,
   async counts(){await dbp;if(!db)return{snaps:mem.snaps.length,matches:mem.matches.size,scans:mem.scans.size,rows:mem.snaps.reduce((a,s)=>a+s.rows.length,0)};
     const t=db.transaction(['snaps','matches','scans']),n=await Promise.all([rq(t.objectStore('snaps').count()),rq(t.objectStore('matches').count()),rq(t.objectStore('scans').count())]);
     const sc=await rq(db.transaction('scans').objectStore('scans').getAll())||[];return{snaps:n[0],matches:n[1],scans:n[2],rows:sc.reduce((a,x)=>a+(x.n_rows||0),0)}},
+  async clear(){await dbp;mem.snaps.length=0;mem.matches.clear();mem.scans.clear();scan=null;if(!db)return;await new Promise(done=>{try{const t=db.transaction(['snaps','matches','scans'],'readwrite');['snaps','matches','scans'].forEach(n=>t.objectStore(n).clear());t.oncomplete=done;t.onerror=t.onabort=done}catch{done()}})},
   async first(){const m=await H.matches();return m.reduce((a,x)=>!a||x.first_seen<a?x.first_seen:a,null)},
   async exportAll(fmt){await dbp;const parts=[],head=['match_id','bookmaker','market','selection','odds','captured_at','source','app_version','scan_id','home','away','kickoff'],q=v=>v==null?'':'"'+String(v).replace(/"/g,'""')+'"';
     if(fmt==='csv')parts.push(head.join(',')+'\n');else parts.push('[');let first=true;
@@ -104,8 +105,8 @@ async function tapOddsPapi(res,url){const bm=new URL(url,location.href).searchPa
     if(rows.length)out.push({match_id:'op:'+nz(h)+'|'+nz(w)+'|'+String(f.startTime||'').slice(0,10),source:'oddspapi',bookmaker:bm,home:h,away:w,kickoff:f.startTime||null,league:null,rows})}
   await addSnaps(out)}
 async function tapOddsApi(res){const j=await res.json(),list=Array.isArray(j)?j:(j&&j.bookmakers?[j]:[]),out=[];
-  for(const e of list)for(const b of e.bookmakers||[]){const rows=[];for(const m of b.markets||[])for(const o of m.outcomes||[]){if(!(o.price>1))continue;
-    rows.push([m.key,[o.description,o.name,o.point!=null?o.point:null].filter(x=>x!=null&&x!=='').join(' '),+o.price])}
+  for(const e of list)for(const b of e.bookmakers||[]){const rows=[];for(const m of b.markets||[]){if(/^(player|batter|pitcher)_/.test(m.key)&&localStorage.getItem('radarpi_hist_props')!=='1')continue;for(const o of m.outcomes||[]){if(!(o.price>1))continue;
+    rows.push([m.key,[o.description,o.name,o.point!=null?o.point:null].filter(x=>x!=null&&x!=='').join(' '),+o.price])}}
     if(rows.length)out.push({match_id:'oa:'+e.id,source:'the-odds-api',bookmaker:b.key,home:e.home_team,away:e.away_team,kickoff:e.commence_time,league:e.sport_key||null,source_updated_at:b.last_update||null,rows})}
   await addSnaps(out)}
 // ---------- envoltorio de fetch: transparente ----------

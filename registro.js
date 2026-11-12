@@ -31,9 +31,12 @@ function rec(module,o){const ev=o.p_final!=null&&o.odds_pick>1?o.p_final*o.odds_
   d.missing=Object.keys(d).filter(k=>d[k]===null);return d}
 const fut=k=>rec('futbol',{market:k.mk,selection:k.mk,league:k.liga,match:k.m,kickoff:k.ko,p_raw:r4(num(k.pm)),p_devig:r4(num(k.pf)),p_calibrated:r4(num(k.pc)),p_final:r4(num(k.pc!=null?k.pc:k.p)),odds_pick:num(k.q),odds_close:num(k.qc),ts_pick:k.savedAt,stake:num(k.stake!=null?k.stake:k.s),data_source:k.fc,bk:k.bk});
 const cor=k=>rec('corners',{market:k.market,selection:k.side&&k.line!=null?k.side+' '+k.line:k.market,league:k.league,match:k.match,kickoff:k.ko,p_raw:r4(num(k.pModel)),p_devig:r4(num(k.pMarket)),p_calibrated:null,p_final:r4(num(k.prob)),odds_pick:num(k.odd),odds_close:null,ts_pick:k.created||k.savedAt||null,stake:num(k.stake),data_source:k.fh});
+const nba=k=>rec('nba',{market:k.st||(k.meta&&k.meta.stat)||'NBA',selection:k.t,league:'NBA',match:k.t,kickoff:k.ko,p_raw:null,p_devig:null,p_calibrated:null,p_final:r4(num(k.p)),odds_pick:num(k.q),odds_close:null,ts_pick:null,stake:num(k.sk!=null?k.sk:k.stake),data_source:null});
+const cmb=k=>rec('combi',{market:'Combinada',selection:k.key,league:(k.legs||[]).length&&k.legs.every(l=>l.league==='NBA')?'NBA':'Mixto',match:(k.legs||[]).map(l=>l.market).join(' + '),kickoff:null,p_raw:null,p_devig:null,p_calibrated:null,p_final:r4(num(k.p)),odds_pick:num(k.q),odds_close:null,ts_pick:k.created||null,stake:num(k.stake),data_source:null});
 const rd=k=>{try{return JSON.parse(localStorage.getItem(k)||'[]')}catch{return[]}};
 async function sync(){await ready;const cur=new Map();
   for(const k of rd('picks'))cur.set('f:'+k.id,[k,fut(k),k.res,k.qc]);for(const k of rd('radarpi_corners_picks_v1'))cur.set('c:'+k.id,[k,cor(k),k.res,null]);
+  for(const k of rd('nbapicks'))cur.set('n:'+k.id,[k,nba(k),k.res,null]);for(const k of rd('combipicks'))cur.set('b:'+k.id,[k,cmb(k),k.res,null]);
   for(const [id,[k,d,res,qc]] of cur){const s=state.get(id);
     if(!s){d.backfilled=true;d.data_snapshot_id=(await sha(canon({id,p_raw:d.p_raw,p_devig:d.p_devig,odds:d.odds_pick,src:d.data_source}))).slice(0,12);append('pick',id,d);state.set(id,{q:d.odds_pick,qc:d.odds_close,res:null,gone:false});if(res)append('result',id,{result:res}),state.get(id).res=res;continue}
     if(d.odds_pick!=null&&d.odds_pick!==s.q){append('odds_update',id,{odds_pick:d.odds_pick});s.q=d.odds_pick}
