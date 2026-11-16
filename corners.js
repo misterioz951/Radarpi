@@ -250,16 +250,16 @@ function settle(x,val){let u=0,w=0,l=0;for(const [c,k] of lineComps(x.line)){if(
 async function resolvePending(){const msg=$('#cn-resmsg'),say=t=>{if(msg)msg.textContent=t};
   const P=picks(),todo=P.filter(x=>!x.res&&x.fid&&(!String(x.fid).startsWith('espn_')||x.slug)&&Date.now()-new Date(x.ko||x.date).getTime()>110*60e3);
   if(!todo.length){say('No hay picks pendientes de partidos que ya hayan terminado.');return}
-  diag={reqs:0,issues:[]};let ok=0,wait=0,fail=0;
+  diag={reqs:0,issues:[]};let ok=0,wait=0,fail=0,nu=0;
   for(const x of todo.slice(0,8)){
     if(String(x.fid).startsWith('espn_')){try{const s=await RadarSrc.espnStats(x.slug,String(x.fid).slice(5),0),hv=s.t[x.hid],av=s.t[x.aid];if(s.st!=='post'){wait++;continue}if(hv==null||av==null){fail++;continue}
-      const val=x.kind==='total'?hv+av:x.kind==='home'?hv:av,sr=settle(x,val);x.res=sr.res;x.units=sr.units;x.actual={h:hv,a:av,t:hv+av};x.result=hv+'-'+av+' ('+(hv+av)+' córners)';ok++}catch{fail++}continue}
+      const val=x.kind==='total'?hv+av:x.kind==='home'?hv:av,sr=settle(x,val);x.res=sr.res;if(sr.res==='v')nu++;x.units=sr.units;x.actual={h:hv,a:av,t:hv+av};x.result=hv+'-'+av+' ('+(hv+av)+' córners)';ok++}catch{fail++}continue}
     try{const fx=await af('fixtures',{id:x.fid}),st=fx[0]&&fx[0].fixture&&fx[0].fixture.status&&fx[0].fixture.status.short;
       if(!['FT','AET','PEN'].includes(st)){wait++;continue}
       const m=await cornersOf(x.fid,0),hv=m[x.hid],av=m[x.aid];if(hv==null||av==null){fail++;continue}
-      const val=x.kind==='total'?hv+av:x.kind==='home'?hv:av,sr=settle(x,val);x.res=sr.res;x.units=sr.units;x.actual={h:hv,a:av,t:hv+av};x.result=hv+'-'+av+' ('+(hv+av)+' córners)';ok++}
+      const val=x.kind==='total'?hv+av:x.kind==='home'?hv:av,sr=settle(x,val);x.res=sr.res;if(sr.res==='v')nu++;x.units=sr.units;x.actual={h:hv,a:av,t:hv+av};x.result=hv+'-'+av+' ('+(hv+av)+' córners)';ok++}
     catch(e){fail++;if(['limit','auth','scancap','rate'].includes(e.kind)){say('⏸ '+e.message);break}}}
-  savePicks(P);const txt=`Resueltos: ${ok} · aún sin terminar: ${wait} · sin dato: ${fail}. Cada pick usa 2 solicitudes.`;renderModel(modelHost);const m2=$('#cn-resmsg');if(m2)m2.textContent=txt}
+  savePicks(P);const txt=`Resueltos: ${ok}${nu?` (${nu} nulo${nu===1?'':'s'} por línea exacta: se devuelve el stake, míralos en la pestaña «Nulos»)`:''} · aún sin terminar: ${wait} · sin dato: ${fail}. Cada pick usa 2 solicitudes.`;renderModel(modelHost);const m2=$('#cn-resmsg');if(m2)m2.textContent=txt}
 
 // ---------- exportación ----------
 function download(name,text,type){const b=new Blob([text],{type}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),2000)}
@@ -280,11 +280,11 @@ function analysisItem(a){const b=a.best;return `<details class="model-pick ${b?'
   <div class="model-pick-body"><div class="model-pick-metrics">${a.lam?`<span><small>Esperado</small><b>${a.lam.t}</b></span>`:''}<span><small>Cuotas</small><b>${a.nOdds}</b></span>${a.hN!=null?`<span><small>Muestra</small><b>${a.hN}-${a.aN}</b></span>`:''}${b?`<span><small>Pick</small><b>${esc(b.market)} @${b.odd}</b></span>`:''}</div>
   <small class="model-pick-note">${a.hF!=null?`Promedios local ${a.hF.toFixed(1)}/${a.hA.toFixed(1)} · visitante ${a.aF.toFixed(1)}/${a.aA.toFixed(1)} (a favor/en contra). `:''}${b?`Modelo ${pct(b.pModel)}% · mercado ${pct(b.pMarket)}% · final ${pct(b.pFinal)}% · ${esc(b.book)}. `:''}${esc(a.reason||'')}${a.books&&a.books.length?' Casas: '+esc(a.books.join(', '))+'.':''}</small></div></details>`}
 function renderModel(target){const host=typeof target==='string'?document.querySelector(target):target;if(!host)return;modelHost=host;
-  const P=picks(),A=analyses(),D=P.filter(x=>x.res==='w'||x.res==='l'),W_=D.filter(x=>x.res==='w').length,pend=P.filter(x=>!x.res).length,units=D.reduce((t,x)=>t+(x.units!=null?x.units:(x.res==='w'?x.odd-1:-1)),0);
-  const tabs=[['res','Resumen',''],['all','Todos',P.length],['p','Pendientes',pend],['w','Acertados',W_],['l','Fallados',D.length-W_],['an','Análisis',A.length]];if(!tabs.some(t=>t[0]===mtab))mtab='res';
+  const P=picks(),A=analyses(),D=P.filter(x=>x.res==='w'||x.res==='l'),W_=D.filter(x=>x.res==='w').length,pend=P.filter(x=>!x.res).length,V_=P.filter(x=>x.res==='v').length,units=D.reduce((t,x)=>t+(x.units!=null?x.units:(x.res==='w'?x.odd-1:-1)),0);
+  const tabs=[['res','Resumen',''],['all','Todos',P.length],['p','Pendientes',pend],['w','Acertados',W_],['l','Fallados',D.length-W_],['v','Nulos',V_],['an','Análisis',A.length]];if(!tabs.some(t=>t[0]===mtab))mtab='res';
   const grp=(f,lab)=>{const ks=[...new Set(D.map(f))].sort();return ks.length?`<div class="sec">${lab}</div>`+ks.map(k=>{const a=D.filter(x=>f(x)===k);return rwRow(k,a.filter(x=>x.res==='w').length,a.length,pct(a.reduce((t,x)=>t+x.prob,0)/a.length))}).join(''):''};
   let body='';
-  if(mtab==='res'){body=`<div class="band"><div><small>Efectividad</small><b>${D.length?Math.round(100*W_/D.length)+'%':'—'}</b><small>${W_} de ${D.length}</small></div><div><small>Unidades</small><b class="${units>=0?'ok':'bad'}">${D.length?(units>=0?'+':'')+units.toFixed(1):'—'}</b><small>stake plano</small></div><div><small>Pendientes</small><b>${pend}</b><small>${P.length} registrados</small></div></div>
+  if(mtab==='res'){body=`<div class="band"><div><small>Efectividad</small><b>${D.length?Math.round(100*W_/D.length)+'%':'—'}</b><small>${W_} de ${D.length}</small></div><div><small>Unidades</small><b class="${units>=0?'ok':'bad'}">${D.length?(units>=0?'+':'')+units.toFixed(1):'—'}</b><small>stake plano</small></div><div><small>Pendientes</small><b>${pend}</b><small>${P.length} registrados${V_?` · ${V_} nulo${V_===1?'':'s'}`:''}</small></div></div>
    ${D.length?`<div class="card">${rwRow('Todos los resueltos',W_,D.length,pct(D.reduce((t,x)=>t+x.prob,0)/D.length))}${grp(x=>x.side==='over'?'Más de (Over)':'Menos de (Under)','Por lado')}${grp(x=>KIND[x.kind]||x.kind,'Por tipo de línea')}${grp(x=>x.mode==='live'?'En vivo':'Prepartido','Por modalidad')}${grp(x=>Math.floor(x.prob*20)*5+'–'+(Math.floor(x.prob*20)*5+4)+'%','Por probabilidad prometida')}</div>`:'<div class="corner-empty">Registra picks y márcalos (o usa «Resolver pendientes») para ver tu rendimiento.</div>'}
    ${D.length<30?`<p class="status">Muestra pequeña (${D.length}): con menos de 30 picks no concluyas nada.</p>`:''}`}
   else if(mtab==='an'){body=A.length?A.slice(0,60).map(analysisItem).join('')+`<div class="tools"><button class="btn s" id="cn-clear-an" type="button">Borrar análisis guardados</button></div>`:'<div class="corner-empty">Aún no hay análisis guardados. Cada escaneo guarda aquí todos los partidos que revisó, tengan pick o no.</div>'}

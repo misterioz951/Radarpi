@@ -681,3 +681,5 @@ html[data-theme="sand"] .acts2 .btn:first-child,html[data-theme="sand"] .mc .act
 .ht-lg b{font:800 20px var(--f-d)}.ht-lg small{color:var(--mut);font-size:11.5px}
 .ht-lst{display:grid;gap:8px;margin-top:10px}.ht-li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--ln);border-radius:14px;background:var(--s2)}
 .ht-li b{display:block;font-size:14px}.ht-li small{color:var(--mut);font-size:12px}.ht-lb{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+
+.cw-act{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin:4px 0 12px}.cw-act input{width:96px;padding:8px 10px;border-radius:10px;border:1px solid var(--ln);background:var(--card);color:var(--ink);font:600 15px var(--f-b)}
