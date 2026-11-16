@@ -122,6 +122,9 @@ function proj(rows,s){const a=rows.filter(r=>r[0]>=8).slice(0,12).map(r=>val(r,s
   return{a,m,v:Math.max(v,m*1.05),med:[...a].sort((x,y)=>x-y)[a.length>>1],cur:rows.filter(r=>r[5]&&r[0]>=8).length}}
 const shr=(p,cur)=>.5+(p-.5)*(NB.k||.75)*(cur>=5?1:.73);
 const pOver=(P,L)=>shr(1-nbCdf(Math.floor(L),P.m,P.v),P.cur);
+// Calibración con tu historial (210 picks): los «Más» prometían ~60% y acertaban ~45% en las dos mitades del periodo; los «Menos» estaban bien (−2 pts).
+// Por eso el «Más» se recorta 10 puntos. Se revisa con una copia nueva cuando haya más picks resueltos.
+const NB_OVER_CUT=0.10,pMas=p=>Math.max(.05,p-NB_OVER_CUT);
 
 // ---- Cuotas (The Odds API, gratis 500 créditos/mes; varias llaves con relevo) ----
 async function nbo(path,params){const ks=NC.keys.split(/[\s,]+/).filter(Boolean);if(!ks.length)throw new Error('sin llave');
@@ -223,14 +226,11 @@ async function nbScan(hunt){const msg=$('#nbmsg'),bs=[$('#nbgo'),$('#nbhunt')].f
 const f1=x=>x.toFixed(1);
 function nbPropOpts(g,p,s){const P=proj(p.g,s);if(!P)return null;const bs=(p.tm===g.h.ab?g.h:g.a).boost||1;const cx=nbCtx(g,p.tm,s);P.m*=bs*cx.f;P.v*=bs*cx.f;P.bs=bs;P.cx=cx;const od=NB.od&&NB.od[g.id]&&NB.od[g.id].o,mk={pts:'player_points',reb:'player_rebounds',ast:'player_assists',tp:'player_threes',pra:'player_points_rebounds_assists'}[s],ov=od&&od[mk+'|'+nz(p.n)+'|Over'],un=od&&od[mk+'|'+nz(p.n)+'|Under'],key=g.id+p.id+s;
   const L=NB.ln[key]!=null?NB.ln[key]:(ov?ov.p:Math.floor(P.med)+.5),po=pOver(P,L),side=(o,pr,name)=>{const q=o&&o.p===L?o.q:null;return{name,pr,q,e:q?pr*q-1:null}};
-  return{P,L,key,ov:side(ov,po,'Más'),un:side(un,1-po,'Menos'),real:!!ov}}
+  return{P,L,key,ov:side(ov,pMas(po),'Más'),un:side(un,1-po,'Menos'),real:!!ov}}
 function propBlk(g,p,s){const o=nbPropOpts(g,p,s);if(!o)return '<p class="status">Pocos partidos para proyectar.</p>';const {P,L,key}=o,a=[...P.a].slice(0,10).reverse(),mx=Math.max(L*1.5,...a,1);
   const bars=a.map(x=>`<div class="nb-b"><i class="${x>L?'ok':'no'}" style="height:${Math.max(4,x/mx*100)}%"></i><span>${x}</span></div>`).join('');
   const sd=x=>{NB.reg[key+x.name]={t:`${p.n} ${STX[s][0]} ${x.name} ${L}`,p:x.pr,q:x.q,g:g.h.ab+'-'+g.a.ab,st:STX[s][0],gid:g.id,ko:g.date,meta:{t:'pr',pid:p.id,stat:s,side:x.name,line:L}};return `<button class="nb-s${x.e!=null&&x.e>.03?' va':''}" onclick="nbLog('${key+x.name}')"><b>${x.name} ${L}</b><span>${Math.round(x.pr*100)}%</span><small>${x.q?'@'+x.q+(x.e!=null?' · valor '+(x.e>=0?'+':'')+Math.round(x.e*100)+'%':''):'justa @'+(1/x.pr).toFixed(2)}</small></button>`};
   return `<div class="nb-bars" style="--ln:${L/mx*100}%">${bars}<u></u></div><div class="nb-ln">Proy. <b>${f1(P.m)}</b> · mediana ${P.med} · línea <input type="number" step=".5" value="${L}" onchange="NB.ln['${key}']=+this.value;nbDraw()"> ${o.real?'<em>cuota EE. UU.</em>':'<em>sin línea real</em>'}</div><div class="nb-sd">${sd(o.ov)}${sd(o.un)}</div>${P.cur<5?'<p class="status">Pocos juegos de esta temporada: se usa también la anterior y se recorta la confianza.</p>':''}${P.bs>1.02?'<p class="status">+'+Math.round((P.bs-1)*100)+'% por bajas del equipo.</p>':''}${nbCtxNote({cx:P.cx})}`}
-function gameRows(g){const m=gameModel(g);if(!m)return '<p class="status">Sin datos suficientes del equipo.</p>';const ob=[...(g.a.out||[]).map(x=>g.a.ab+' '+esc(x)),...(g.h.out||[]).map(x=>g.h.ab+' '+esc(x))];
-  const rs=[];if(m.rest.h.b2b)rs.push(g.h.ab+' juega back-to-back');else if(m.rest.h.n4>=2)rs.push(g.h.ab+': 3.er juego en 4 noches');if(m.rest.a.b2b)rs.push(g.a.ab+' juega back-to-back');else if(m.rest.a.n4>=2)rs.push(g.a.ab+': 3.er juego en 4 noches');
-  return `<p class="nb-pj">Proyección: ${g.a.ab} <b>${Math.round(m.ap)}</b> – ${g.h.ab} <b>${Math.round(m.hp)}</b> · total ${f1(m.tot)}${ob.length?'<br><small>Bajas: '+ob.join(', ')+'</small>':''}${rs.length?'<br><small>Descanso: '+rs.join(' · ')+'</small>':''}<br><small>${m.rt?'Incluye fuerza de ataque y defensa de cada equipo en la temporada.':'Solo forma reciente: no se pudieron leer los ratings de temporada.'}</small></p>`+gameCands(g).map((c,i)=>{const k=g.id+'G'+i;NB.reg[k]={t:g.a.ab+'@'+g.h.ab+' '+c.n,p:c.p,q:c.q,g:'',st:'Partido',gid:g.id,ko:g.date,meta:c.meta||null};return `<div class="nb-gr"><span>${c.n}</span><b>${Math.round(c.p*100)}%</b><small>${c.q?'@'+c.q+' · valor '+Math.round((c.p*c.q-1)*100)+'%':'justa @'+(1/c.p).toFixed(2)}</small>${c.q?`<button class="btn s" onclick="nbLog('${k}')">＋</button>`:''}</div>`}).join('')}
 // ---- Motor de picks NBA (mismas reglas de fondo que fútbol: cuota real, valor, ancla al mercado, veto) ----
 function nbAll(g){const C=[];
   gameCands(g).forEach((c,i)=>C.push({k:'TG'+g.id+i,kind:'Partido',n:c.n,full:g.a.ab+'@'+g.h.ab+' · '+c.n,p:c.p,q:c.q,fair:c.fair==null?null:c.fair,real:true,meta:c.meta||null}));
@@ -240,7 +240,7 @@ function nbAll(g){const C=[];
   if(NC.alt){const od=NB.od&&NB.od[g.id]&&NB.od[g.id].o;if(od){const AM={pts:'player_points_alternate',reb:'player_rebounds_alternate',ast:'player_assists_alternate',tp:'player_threes_alternate'};
     [g.h,g.a].forEach(s=>s.pl.forEach(p=>Object.keys(AM).forEach(st=>{const pre=AM[st]+'|'+nz(p.n)+'|Over@',ks=Object.keys(od).filter(k=>k.startsWith(pre));if(!ks.length)return;const o=nbPropOpts(g,p,st);if(!o)return;
       ks.forEach(k=>{const a=od[k],L=a.p;if(L==null||a.q==null)return;const u=od[AM[st]+'|'+nz(p.n)+'|Under@'+L],fair=u&&u.q?(1/a.q)/(1/a.q+1/u.q):null,tx=p.n+' '+STX[st][0]+' Más '+L+' (alt.)';
-        C.push({k:'TA'+g.id+p.id+st+L,kind:STX[st][0],n:tx,full:tx,p:pOver(o.P,L),q:a.q,fair,real:true,cur:o.P.cur,na:o.P.a.length,bs:o.P.bs,cx:o.P.cx,arr:o.P.a.slice(0,10),L,side:'Más',meta:{t:'pr',pid:p.id,stat:st,side:'Más',line:L}})})})))}}
+        C.push({k:'TA'+g.id+p.id+st+L,kind:STX[st][0],n:tx,full:tx,p:pMas(pOver(o.P,L)),q:a.q,fair,real:true,cur:o.P.cur,na:o.P.a.length,bs:o.P.bs,cx:o.P.cx,arr:o.P.a.slice(0,10),L,side:'Más',meta:{t:'pr',pid:p.id,stat:st,side:'Más',line:L}})})})))}}
   return C}
 // Si un tipo de pick lleva 10+ resueltos y acierta 8+ puntos menos de lo que prometía, solo se propone con más exigencia
 function nbGate(kind){const D=NB.picks.filter(x=>x.res&&x.st===kind);if(D.length<10)return null;const w=D.filter(x=>x.res==='w').length,pr=D.reduce((t,x)=>t+x.p,0)/D.length;return w/D.length<pr-.08?{p:.66,e:.04}:null}
@@ -303,18 +303,53 @@ function nbTicket(g,c,lean,veto,label){
 <div class="meter${st>=5?' hi':''}" role="img" aria-label="Stake ${st} de 9">${Array.from({length:9},(_,k)=>`<i class="${k<st?'f':''}"></i>`).join('')}</div>
 ${nbBars(c)}${nbCtxNote(c)}${c.hits?'<div class="mr-s" style="margin-top:6px">Superó esa línea en <b>'+c.hits+'</b> de sus últimos partidos. Verifica que tu casa tenga esa línea (o más baja) y confirma que juega.</div>':''}${lean?'<div class="tkw">'+nbNoOddsNote(g,c)+'</div>':''}
 <div class="acts2" style="margin-top:8px"><button class="btn s" onclick="nbLog('${c.k}')">＋ Registrar pick</button></div></div>`}
-const nbPlayers=g=>[g.h,g.a].flatMap(s=>s.pl).sort((a,b)=>b.mn-a.mn).map(p=>{const s=NB.sel[p.id]||'pts';return `<div class="nb-p"><div class="nb-ph"><b>${esc(p.n)}</b><small>${p.tm} · ${p.pos} · ${Math.round(p.mn)} min${p.st?' · <i class="bad">'+({doubt:'Duda fuerte',q:'Duda'}[p.st]||p.st)+'</i>':''}</small></div><div class="nb-ch">${Object.keys(STX).map(k=>`<button class="${k===s?'on':''}" onclick="NB.sel['${p.id}']='${k}';nbDraw()">${STX[k][0]}</button>`).join('')}</div>${propBlk(g,p,s)}</div>`}).join('');
+// ===== Proyección, mercados y jugadores: menú por pestañas dentro de cada partido =====
+const NB_STATS=['pts','reb','ast','tp','pra'];
+function nbProjHtml(g){const m=gameModel(g);if(!m)return '<p class="status">Sin datos suficientes del equipo.</p>';
+  const ob=[...(g.a.out||[]).map(x=>g.a.ab+' '+esc(x)),...(g.h.out||[]).map(x=>g.h.ab+' '+esc(x))],rs=[];
+  if(m.rest.h.b2b)rs.push(g.h.ab+' juega back-to-back');else if(m.rest.h.n4>=2)rs.push(g.h.ab+': 3.er juego en 4 noches');
+  if(m.rest.a.b2b)rs.push(g.a.ab+' juega back-to-back');else if(m.rest.a.n4>=2)rs.push(g.a.ab+': 3.er juego en 4 noches');
+  const lead=m.hp>=m.ap?g.h:g.a,mar=Math.abs(m.hp-m.ap),hi=m.hp>=m.ap;
+  return `<div class="nbx-score"><div class="nbx-tm${hi?'':' lead'}"><small>${esc(g.a.ab)}</small><b>${Math.round(m.ap)}</b></div><div class="nbx-mid"><small>Total proyectado</small><b>${f1(m.tot)}</b><small>${esc(lead.ab)} por ${f1(mar)}</small></div><div class="nbx-tm${hi?' lead':''}"><small>${esc(g.h.ab)}</small><b>${Math.round(m.hp)}</b></div></div>`
+   +((ob.length||rs.length)?`<div class="nbx-chips">${ob.map(x=>`<span class="ch bad">${x} · baja</span>`).join('')}${rs.map(x=>`<span class="ch am">${esc(x)}</span>`).join('')}</div>`:'<p class="status">Sin bajas reportadas ni descansos cortos (puede estar incompleto).</p>')
+   +`<p class="status">${m.rt?'Incluye fuerza de ataque y defensa de cada equipo en la temporada.':'Solo forma reciente: no se pudieron leer los ratings de temporada.'}</p>`}
+function nbMktHtml(g){if(!gameModel(g))return '<p class="status">Sin datos suficientes del equipo.</p>';
+  const C=gameCands(g);if(!C.length)return '<p class="status">Sin mercados de partido disponibles.</p>';
+  return '<div class="nbx-mk">'+C.map((c,i)=>{const k=g.id+'G'+i,e=c.q?c.p*c.q-1:null;
+    NB.reg[k]={t:g.a.ab+'@'+g.h.ab+' '+c.n,p:c.p,q:c.q,g:'',st:'Partido',gid:g.id,ko:g.date,meta:c.meta||null};
+    return `<div class="nbx-m${e!=null&&e>.03?' va':''}"><div class="nbx-mh"><span>${esc(c.n)}</span><b>${Math.round(c.p*100)}%</b></div><div class="nbx-bar"><i style="width:${Math.max(3,Math.round(c.p*100))}%"></i></div><div class="nbx-mf"><small>${c.q?'@'+c.q+' · valor '+(e>=0?'+':'')+Math.round(e*100)+'%':'justa @'+(1/c.p).toFixed(2)+' · sin cuota real'}</small>${c.q?`<button class="btn s" onclick="nbLog('${k}')">＋ Registrar</button>`:''}</div></div>`}).join('')+'</div><p class="status">Probabilidades de partido recortadas por historial: acertaron menos de lo que prometían.</p>'}
+function nbPlayersHtml(g){
+  const st=(NB.gs=NB.gs||{})[g.id]||'pts',so=(NB.ps=NB.ps||{})[g.id]||'mn',op=NB.op=NB.op||{};
+  const rows=[g.h,g.a].flatMap(t=>t.pl).map(p=>{const o=nbPropOpts(g,p,st);const ev=o?Math.max(o.ov.e==null?-9:o.ov.e,o.un.e==null?-9:o.un.e):-9;return{p,o,ev}});
+  rows.sort(so==='ev'?(a,b)=>b.ev-a.ev||b.p.mn-a.p.mn:(a,b)=>b.p.mn-a.p.mn);
+  const ctl=`<div class="nbx-ctl"><div class="nbx-st">${NB_STATS.map(k=>`<button class="${k===st?'on':''}" onclick="nbStat('${g.id}','${k}')">${STX[k][0]}</button>`).join('')}</div><div class="nbx-so"><span>Ordenar</span><button class="${so==='mn'?'on':''}" onclick="nbSort('${g.id}','mn')">Minutos</button><button class="${so==='ev'?'on':''}" onclick="nbSort('${g.id}','ev')">Mejor valor</button></div></div>`;
+  if(!rows.length)return ctl+'<p class="status">ESPN no devolvió jugadores para este partido: usa «Probar fuentes».</p>';
+  const body=rows.map(({p,o,ev})=>{
+    const who=`<div class="nbx-pn"><b>${esc(p.n)}</b><small>${p.tm} · ${p.pos} · ${Math.round(p.mn)} min${p.st?' · <i class="bad">'+({doubt:'Duda fuerte',q:'Duda'}[p.st]||p.st)+'</i>':''}</small></div>`;
+    if(!o)return `<div class="nbx-p nbx-na">${who}<small>Pocos partidos para proyectar</small></div>`;
+    const key=o.key,va=ev>.03,pv=Math.round(o.ov.pr*100),pu=Math.round(o.un.pr*100),lead=pv>=pu;
+    return `<details class="nbx-p${va?' va':''}" ${op[key]?'open':''} ontoggle="NB.op['${key}']=this.open"><summary>${who}<div class="nbx-pj"><b>${f1(o.P.m)}</b><small>línea ${o.L}</small></div><div class="nbx-pp"><span class="o${lead?' lead':''}">Más ${pv}%</span><span class="u${lead?'':' lead'}">Menos ${pu}%</span>${va?`<em>valor +${Math.round(ev*100)}%</em>`:''}</div></summary>${propBlk(g,p,st)}</details>`}).join('');
+  return ctl+`<div class="nbx-pl">${body}</div>`+(st?'<p class="status">«Más» recortado 10 puntos: en tu historial acertó ~45% prometiendo ~60%. «Menos» sin recorte.</p>':'')}
+function nbStat(gid,k){(NB.gs=NB.gs||{})[gid]=k;nbRefPl(gid)}
+function nbSort(gid,v){(NB.ps=NB.ps||{})[gid]=v;nbRefPl(gid)}
+function nbRefPl(gid){const g=NB.g.find(x=>String(x.id)===String(gid)),el=document.getElementById('nbpl'+gid);if(g&&el)el.innerHTML=nbPlayersHtml(g)}
+function nbTabG(gid,t){(NB.gt=NB.gt||{})[gid]=t;const r=document.getElementById('nbtabs'+gid);if(!r)return;r.querySelectorAll('[data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t===t));r.parentElement.querySelectorAll('.nbx-pane').forEach(p=>{p.hidden=p.dataset.t!==t})}
+function nbTabsHtml(g){const t=(NB.gt=NB.gt||{})[g.id]||'jug',T=[['proj','Proyección'],['mkt','Mercados'],['jug','Jugadores']];
+  return `<div class="nbx"><div class="nbx-tabs" id="nbtabs${g.id}">${T.map(([k,l])=>`<button data-t="${k}" class="${k===t?'on':''}" onclick="nbTabG('${g.id}','${k}')">${l}</button>`).join('')}</div>`
+   +`<div class="nbx-pane" data-t="proj" ${t==='proj'?'':'hidden'}>${nbProjHtml(g)}</div>`
+   +`<div class="nbx-pane" data-t="mkt" ${t==='mkt'?'':'hidden'}>${nbMktHtml(g)}</div>`
+   +`<div class="nbx-pane" data-t="jug" ${t==='jug'?'':'hidden'}><div id="nbpl${g.id}">${nbPlayersHtml(g)}</div></div></div>`}
 function nbCard(g){
   const R0=nbCands(g),best=R0.out[0]||null,lean=best?null:nbLean(g),pr=R0.out.find(c=>c.kind!=='Partido'&&(!best||c.k!==best.k)),pl=pr||((best&&best.kind!=='Partido')?null:(NC.lp?nbLeanProp(g):null)),pcard=pl?nbTicket(g,pl,!pr,null,pr?'PICK DE JUGADOR · SEGÚN REGLAS':'PICK DE JUGADOR · SIN CUOTA REAL'):'<div class="nopick2"><b>Sin pick de jugador</b><p>Ningún jugador cumple la línea en 8 de 10 partidos con 20+ minutos y sin duda de lesión. Jugadores leídos: '+[g.h,g.a].reduce((t,x)=>t+x.pl.length,0)+(NB.g.length&&![g.h,g.a].some(x=>x.pl.length)?'. ESPN no devolvió estadísticas de jugadores para este partido: usa «Probar fuentes».':'. Con la temporada recién empezada se usan juegos de la temporada pasada y el filtro es más estricto.')+'</p></div>',tm=new Date(g.date).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   const top=best||lean||pr||pl;
   const player=pr||pl;
   const topTxt=top?esc(top.n)+' · '+Math.round(top.p*100)+'%':'Sin pick destacado';
   const playerTxt=player?('Jugador: '+esc(player.n)+' · '+Math.round(player.p*100)+'%'):'Jugador: sin pick que pase los filtros';
-  return `<details class="nb-game"><summary><span class="nb-game-title"><span class="pill">NBA</span><b>${esc(g.a.n)} @ ${esc(g.h.n)}</b><small>${dlab(g.date)}${tm}</small></span><span class="nb-game-picks"><b>${topTxt}</b><small>${playerTxt}</small></span><span class="nb-game-arrow">⌄</span></summary><article class="card mc"><div class="mh"><span class="pill">NBA</span><span class="ko">${dlab(g.date)}${tm}</span></div><div class="mt"><b>${esc(g.a.n)}</b><em>@</em><b>${esc(g.h.n)}</b></div>
+  return `<details class="nb-game" ${(NB.og||{})[g.id]?'open':''} ontoggle="(NB.og=NB.og||{})['${g.id}']=this.open"><summary><span class="nb-game-title"><span class="pill">NBA</span><b>${esc(g.a.n)} @ ${esc(g.h.n)}</b><small>${dlab(g.date)}${tm}</small></span><span class="nb-game-picks"><b>${topTxt}</b><small>${playerTxt}</small></span><span class="nb-game-arrow">⌄</span></summary><article class="card mc"><div class="mh"><span class="pill">NBA</span><span class="ko">${dlab(g.date)}${tm}</span></div><div class="mt"><b>${esc(g.a.n)}</b><em>@</em><b>${esc(g.h.n)}</b></div>
 ${nbTicket(g,best||lean,!best&&!!lean,R0.veto)}
 ${pcard}
 <div class="acts2"><button class="btn" onclick="nbAI('${g.id}')">✦ Análisis IA</button></div><div class="ai" id="nbai${g.id}" hidden></div>
-<details class="dd"><summary>Proyección, mercados y jugadores</summary>${gameRows(g)}<div class="sec">Jugadores</div>${nbPlayers(g)}</details></article></details>`}
+${nbTabsHtml(g)}</article></details>`}
 function nbDraw(){nbK();const box=$('#nbres');if(!NB.g.length){box.innerHTML='';return}NB.reg={};
   let head='';
   if(NB.hunt){
@@ -399,7 +434,7 @@ const nzInj=s=>{s=String(s||'').toLowerCase();return /\bout\b|fuera/.test(s)?'ou
 async function nbInj(){const o={};try{const j=await nbj(NE+'injuries');for(const t of j.injuries||[])for(const x of t.injuries||[]){const s=nzInj(x.status);if(s&&x.athlete)o[nz(x.athlete.displayName)]={s,c:x.shortComment||x.status}}}catch{}return o}
 function ns(name){const nn=nz(name);if(nn.length<5)return null;for(const ln of String(NC.news||'').split('\n')){if(!nz(ln).includes(nn))continue;const w=ln.toLowerCase(),c=ln.trim().slice(0,90);
   if(/\b(out|fuera|baja|descartad|ruled out|inactiv)/.test(w))return{s:'out',c};if(/doubt|dudoso/.test(w))return{s:'doubt',c};if(/question|day-to-day|gtd|duda|probable/.test(w))return{s:'q',c}}return null}
-function gameCands(g){const m=gameModel(g);if(!m)return [];const od=(NB.od&&NB.od[g.id]&&NB.od[g.id].o)||{},C=[],fp=(a,b)=>a&&b&&a.q&&b.q?(1/a.q)/(1/a.q+1/b.q):null,add=(n,p,o,fair,meta)=>C.push({n,p:shr(p,9),q:o?o.q:null,fair,meta}),mar=m.mar;
+function gameCands(g){const m=gameModel(g);if(!m)return [];const od=(NB.od&&NB.od[g.id]&&NB.od[g.id].o)||{},C=[],fp=(a,b)=>a&&b&&a.q&&b.q?(1/a.q)/(1/a.q+1/b.q):null,add=(n,p,o,fair,meta)=>C.push({n,p:.5+(shr(p,9)-.5)*Math.min(1,.6/(NB.k||.75)),q:o?o.q:null,fair,meta}),mar=m.mar;
   const ln=g.ln||{},hw=od['h2h|'+nz(g.h.n)+'|'],aw=od['h2h|'+nz(g.a.n)+'|'],sh=od['spreads|'+nz(g.h.n)+'|']||(ln.sp!=null?{p:ln.sp,q:null}:null),sa=od['spreads|'+nz(g.a.n)+'|']||(ln.sp!=null?{p:-ln.sp,q:null}:null),ov=od['totals|over|']||(ln.ou!=null?{p:ln.ou,q:null}:null),un=od['totals|under|']||(ln.ou!=null?{p:ln.ou,q:null}:null);
   add('Gana '+g.h.ab,1-Phi(-mar/12),hw,fp(hw,aw),{t:'ml',tm:g.h.ab});add('Gana '+g.a.ab,Phi(-mar/12),aw,fp(aw,hw),{t:'ml',tm:g.a.ab});
   if(sh&&sa){add(g.h.ab+' '+(sh.p>0?'+':'')+sh.p,1-Phi((-sh.p-mar)/12),sh,fp(sh,sa),{t:'sp',tm:g.h.ab,line:sh.p});add(g.a.ab+' '+(sa.p>0?'+':'')+sa.p,1-Phi((mar-sa.p)/12),sa,fp(sa,sh),{t:'sp',tm:g.a.ab,line:sa.p})}

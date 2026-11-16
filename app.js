@@ -791,7 +791,7 @@ function safeLine(r){if(r.A.n<5||r.B.n<5||!r.q)return '';
   return L?`<div class="tk safe"><small class="tkl">LÍNEA SEGURA · SIN VALOR CLARO</small><div class="tk1"><b class="n">${esc(L.n)}</b></div><div class="tk2"><span><b>${Math.round(L.pc*100)}%</b> prob.</span><span>cuota <b>@${L.q}</b></span><span>valor <b>${L.e>=0?'+':''}${Math.round(L.e*100)}%</b></span><span>stake sugerido <b>1/9</b></span></div><p class="status">Riesgo bajo, sin ventaja: pata de combinada o stake mínimo.</p></div>`:''}
 function reasons(r){if(r.A.n<5||r.B.n<5||!r.q)return '';const F=FM(),c={q:0,rng:0,pc:0,val:0,veto:0};
   for(const [n,p] of r.mod.m){if(isHalfMarket(n)||!(p>=.35&&p<=.9))continue;const q=r.q[n];if(!q||q<1.01)continue;c.q++;const pc=calP(r,n,p),e=pc*q-1,rf=refOf(r,n);
-    if(F.r){const mk=rf!=null?rf:Math.min(.97,.95/q);if(q<F.qa||q>F.qb)c.rng++;else if(p<F.pmin)c.pc++;else if(p-mk>F.gap||(/^Ambos/.test(n)&&(p<.75||p-mk>.10)))c.veto++;else if(p*q<1)c.val++;continue}
+    if(F.r){const mk=rf!=null?rf:Math.min(.97,.95/q);if(q<F.qa||q>F.qb)c.rng++;else if(p<F.pmin)c.pc++;else if(p-mk>F.gap||(/^Ambos/.test(n)&&(p<.75||p-mk>.10)))c.veto++;else if(p*q<1||calF(p)*q<(['tot','btts'].includes(mgrp(n))?1.0:.95))c.val++;continue}
     if(q<F.qa||q>F.qb)c.rng++;else if(pc<F.pc)c.pc++;else if(rf!=null&&p-rf>.10)c.veto++;else if(e<F.ea)c.val++;else if(e>F.eb)c.veto++}
   return c.q?`<p class="status">Mercados con cuota: ${c.q}. Descartados: cuota fuera de rango ${c.rng}, probabilidad baja ${c.pc}, sin valor ${c.val}, modelo demasiado optimista frente al mercado ${c.veto}.</p>`:''}
 const shortWhy=r=>{const t=String(diagnose(r)).replace(/<[^>]+>/g,'').trim(),i=t.indexOf('. ');return esc(i>0&&i<130?t.slice(0,i+1):t.slice(0,120)+(t.length>120?'…':''))};
@@ -988,21 +988,29 @@ function comboHtml(source){
   combos.sort((a,b)=>b.p-a.p||b.e-a.e);
   // Sin repetir líneas: cada partido aparece en una sola combinada. Solo si así salen menos de 3, se permite repetirlo hasta 2 veces.
   const choose=maxUse=>{const used=new Map(),out=[],seen=new Set();
-    for(const c of combos){
-      const k=c.legs.map(x=>x.event+':'+x.b.n).sort().join('|');if(seen.has(k))continue;
-      if(c.legs.some(x=>(used.get(x.event)||0)>=maxUse))continue;
+    const key=c=>c.legs.map(x=>x.event+':'+x.b.n).sort().join('|');
+    const ok=c=>{
+      if(seen.has(key(c)))return false;
+      if(c.legs.some(x=>(used.get(x.event)||0)>=maxUse))return false;
       const evs=new Set(c.legs.map(x=>x.event));
-      if(maxUse>1&&out.some(u=>{const ue=new Set(u.legs.map(x=>x.event));return [...evs].filter(e=>ue.has(e)).length===Math.min(evs.size,ue.size)}))continue;
-      seen.add(k);out.push(c);c.legs.forEach(x=>used.set(x.event,(used.get(x.event)||0)+1));
-      if(out.length>=6)break;
-    }return out};
+      if(maxUse>1&&out.some(u=>{const ue=new Set(u.legs.map(x=>x.event));return [...evs].filter(e=>ue.has(e)).length===Math.min(evs.size,ue.size)}))return false;
+      return true};
+    const take=c=>{seen.add(key(c));out.push(c);c.legs.forEach(x=>used.set(x.event,(used.get(x.event)||0)+1))};
+    // Ordenar por probabilidad hace que las de 2 líneas ganen siempre: se reserva primero la mejor de 4 y la mejor de 3 (si pasan los filtros).
+    for(const n of [4,3]){if(byGame.size<n*2)continue;const c=combos.find(c=>c.legs.length===n&&ok(c));if(c&&out.length<6)take(c)}   // solo si hay partidos de sobra para no dejar sin combinadas de 2
+    for(const c of combos){if(out.length>=6)break;if(ok(c))take(c)}
+    return out.sort((a,b)=>b.p-a.p||b.e-a.e)};
   let unique=choose(1),reuse=false;
   const few=unique.length<3;   // nunca se repite un partido entre combinadas: si salen pocas, se avisa en vez de encadenarlas
   COMBI_CURRENT=unique.map(c=>({...c,stakeFinal:comboFinalStake(c)}));
   const best=COMBI_CURRENT.length?COMBI_CURRENT.reduce((a,b)=>b.p>a.p?b:a):null;
+  // Líneas que pasaron los filtros pero no quedaron en ninguna combinada: se muestran como «en espera» en vez de desaparecer
+  const usedEv=new Set(COMBI_CURRENT.flatMap(c=>c.legs.map(l=>l.event))),wait=pool.filter(l=>!usedEv.has(l.event)).slice(0,4);
+  const waitMsg=!wait.length?'':COMBI_CURRENT.length?'Pasaron los filtros pero no tienen pareja: espera otro partido con cuota para combinarlas.':wait.length===1?'Esta línea pasó los filtros, pero Combi necesita otra de un partido distinto para combinarla. Espera otro partido con cuota o amplía ligas/días.':`Estas líneas pasaron los filtros, pero ninguna pareja llega a la cuota objetivo @${target.toFixed(2)} con valor positivo.`;
+  const waitHtml=wait.length?`<div class="combo-wait"><b>${wait.length===1?'1 línea en espera de otra para combinar':wait.length+' líneas sin pareja'}</b><p class="mr-s">${waitMsg}</p>${wait.map(l=>`<div class="cl ${famCls(l.b.n)}"><span class="cl-n">•</span><div><b>${esc(l.r.h)} <span>vs</span> ${esc(l.r.w)}</b><small>${esc(l.b.n)} · prob. ${Math.round(l.b.p*100)}%</small></div><span class="cl-q">@${l.b.q.toFixed(2)}</span></div>`).join('')}</div>`:'';
   const bestHtml=best?`<div class="combo-best"><b>★ Combinada de mayor confianza estimada</b><p>${best.legs.map(l=>esc(l.r.h)+' vs '+esc(l.r.w)).join(' · ')} · ${best.legs.length} líneas</p><div class="combo-stats"><div><small>Probabilidad conjunta aprox.</small><b>${Math.round(best.p*100)}%</b></div><div><small>Cuota combinada</small><b>@${best.q.toFixed(2)}</b></div><div><small>Valor estimado</small><b>${best.e>=0?'+':''}${Math.round(best.e*100)}%</b></div></div><p><b>Stake combinado: ${best.stakeFinal}/9</b> · menor que el de cada línea porque combinar reduce la probabilidad conjunta.</p></div>`:'';
   const content=COMBI_CURRENT.length?COMBI_CURRENT.map((c,i)=>`<details class="combo-item"><summary class="combo-title"><span class="ci-tag">${best===c?'★ Mayor confianza':'Combinada '+(i+1)}</span><strong class="combo-odds">@${c.q.toFixed(2)}</strong><span class="ci-sub">${c.legs.length} líneas · ${Math.round(c.p*100)}% prob. · <b class="${c.e>0?'ok':'bad'}">valor ${c.e>=0?'+':''}${Math.round(c.e*100)}%</b> · stake ${c.stakeFinal}/9</span></summary><div class="combo-item-body">${c.legs.map((l,j)=>`<div class="cl ${famCls(l.b.n)}"><span class="cl-n">${j+1}</span><div><b>${esc(l.r.h)} <span>vs</span> ${esc(l.r.w)}</b><small>${esc(l.b.n)} · prob. ${Math.round(l.b.p*100)}%</small></div><span class="cl-q">@${l.b.q.toFixed(2)}</span></div>`).join('')}<div class="combo-register"><label>Cuota final en tu casa<input id="comboRealQ${i}" type="number" min="1.01" step="0.01" value="${c.q.toFixed(2)}"></label><button class="btn s" type="button" onclick="registerCombo(${i})">＋ Registrar</button></div></div></details>`).join(''):`<div class="combo-empty"><div class="combo-empty-icon">✦</div><b>No hay combinadas que pasen los filtros</b><p>Combi necesita al menos dos encuentros con líneas de stake 5 o superior, probabilidad alta, cuota real y valor positivo. Líneas que pasaron el filtro: ${legs.length} en ${byGame.size} partido(s) de ${(source||[]).length} revisados. Filtro actual «${({s:'estricto',b:'equilibrado',w:'amplio'})[cfg.fm||'b']}» (Ajustes → Filtros de picks). Prueba el filtro «amplio», más ligas o «Hoy y mañana».</p></div>`;
-  return `<div class="combo-wrap"><div class="combo-hero"><div class="combo-eyebrow">BÚSQUEDA INDEPENDIENTE</div><h2>Combinadas RadarPi</h2><p>Ordenadas por probabilidad conjunta. Cada registro queda separado de los picks sencillos.</p><div class="combo-pills"><span>2–4 partidos</span><span>Sin repetir líneas</span><span>Stake por línea 5–9</span><span>Objetivo @${target.toFixed(2)}+</span></div></div>${bestHtml}${few&&COMBI_CURRENT.length?'<p class="status">Solo hay '+COMBI_CURRENT.length+' combinada'+(COMBI_CURRENT.length===1?'':'s')+' sin repetir partidos. Para ver más, amplía las ligas o los días.</p>':''}<div class="combo-results-head"><b>${COMBI_CURRENT.length?`${COMBI_CURRENT.length} combinada${COMBI_CURRENT.length===1?'':'s'} candidata${COMBI_CURRENT.length===1?'':'s'}`:'Sin combinadas válidas'}</b><span>Máximo 6 resultados</span></div>${content}<p class="combo-disclaimer">Probabilidades conjuntas aproximadas: los partidos no son del todo independientes. Una cuota alta no garantiza rentabilidad.</p></div>`;
+  return `<div class="combo-wrap"><div class="combo-hero"><div class="combo-eyebrow">BÚSQUEDA INDEPENDIENTE</div><h2>Combinadas RadarPi</h2><p>Ordenadas por probabilidad conjunta. Cada registro queda separado de los picks sencillos.</p><div class="combo-pills"><span>2–4 partidos</span><span>Sin repetir líneas</span><span>Stake por línea 5–9</span><span>Objetivo @${target.toFixed(2)}+</span></div></div>${bestHtml}${few&&COMBI_CURRENT.length?'<p class="status">Solo hay '+COMBI_CURRENT.length+' combinada'+(COMBI_CURRENT.length===1?'':'s')+' sin repetir partidos. Para ver más, amplía las ligas o los días.</p>':''}<div class="combo-results-head"><b>${COMBI_CURRENT.length?`${COMBI_CURRENT.length} combinada${COMBI_CURRENT.length===1?'':'s'} candidata${COMBI_CURRENT.length===1?'':'s'}`:'Sin combinadas válidas'}</b><span>Máximo 6 resultados</span></div>${(!COMBI_CURRENT.length&&wait.length)?'':content}${waitHtml}<p class="combo-disclaimer">Probabilidades conjuntas aproximadas: los partidos no son del todo independientes. Una cuota alta no garantiza rentabilidad.</p></div>`;
 }
 function comboFinalStake(c){
   // Stake combinado separado de los stakes de cada selección; escala conservadora 1–3/9.
@@ -1181,6 +1189,10 @@ function calibStats(){
 const FMODES={r:{r:1,qa:1.25,qb:1.9,pmin:.65,gap:.15,pc:.5,ea:0,eb:9},s:{qa:1.3,qb:2.3,pc:.5,ea:.015,eb:.18},b:{qa:1.2,qb:2.6,pc:.46,ea:0,eb:.22},w:{qa:1.15,qb:3.2,pc:.4,ea:0,eb:.3}};
 if(cfg.fmv!==2){cfg.fm='r';cfg.fmv=2;SV('cfg',cfg)}   // migración: el modo «Fiable» pasa a ser el predeterminado
 const FM=()=>FMODES[cfg.fm]||FMODES.r;
+// Calibración del modelo de fútbol con tu copia del 16-nov (237 picks resueltos): el modelo prometía 69.7% y acertaba 57.8%.
+// Con esta curva (ajustada sobre la probabilidad cruda del modelo) una promesa de 70% queda en ~59% y una de 80% en ~69%.
+// Se usa solo en los picks «Fiable»: sirve para mostrar una probabilidad honesta y para exigir valor real después del ajuste.
+const calF=p=>{const x=Math.min(.97,Math.max(.03,p));return 1/(1+Math.exp(-(0.88*Math.log(x/(1-x))-0.40)))};
 function calP(r,n,p){if(r&&r.nba)return p;
   const C=calibStats(),g=C.by[mgrp(n)]||{n:0,w:0,e:0},ra=(C.all.w+6)/(C.all.e+6),rg=(g.w+4)/(g.e+4),b=g.n/(g.n+8);
   const kf=Math.min(1.05,Math.max(.7,b*rg+(1-b)*ra)),ref=(r.mod.f&&r.mod.f[n]!=null)?r.mod.f[n]:(r.mod.fc&&r.mod.fc[n]!=null?r.mod.fc[n]:null);
@@ -1295,8 +1307,11 @@ function candScan(r){
     if(ref!=null&&p-ref>0.10){veto.push({n,p,ref});continue}
     const afc=afConflict(r,n,p);
     if(afc&&afc.level==='strong'){veto.push({n,p,ref:afc.api,source:'API-Football',reason:'Contradicción fuerte con API-Football'});continue}
-    const dr=afDir(r,n),sc=(F.r?p*.6-Math.max(0,gap-.05):pc*.6+Math.min(e,.12)*1.5)+({A:.035,B:.015,C:-.025}[t]||0)+(sp?.01:0)-(afc&&afc.level==='moderate'?.04:0)+(dr>0?.015:dr<0?-.04:0);
-    out.push({n,p:F.r?p:pc,pm:p,q,e:F.r?p*q-1:e,sc,t});
+    // Fiable: tras calibrar, la ventaja debe seguir existiendo. Goles y «Ambos marcan» fueron lo peor del historial (−22% y −28% de retorno), así que piden más.
+    const pcal=calF(p);
+    if(F.r&&pcal*q<(['tot','btts'].includes(mgrp(n))?1.0:.95))continue;
+    const dr=afDir(r,n),sc=(F.r?pcal*.6-Math.max(0,gap-.05):pc*.6+Math.min(e,.12)*1.5)+({A:.035,B:.015,C:-.025}[t]||0)+(sp?.01:0)-(afc&&afc.level==='moderate'?.04:0)+(dr>0?.015:dr<0?-.04:0);
+    out.push({n,p:F.r?pcal:pc,pm:p,q,e:F.r?pcal*q-1:e,sc,t});
   }
   return {out:out.sort((a,b)=>b.sc-a.sc),veto};
 }
@@ -1327,7 +1342,7 @@ function baseStake(r,n,price){
   if(!price||price<=1)return 1;
   const F=FM();
   if(F.r){   // stake según la probabilidad (no según la «ventaja»: las ventajas grandes fueron errores del modelo en tu historial); tope 5 hasta validar más
-    const p=m[1];if(price<F.qa||price>F.qb||p<F.pmin||p*price<1)return 1;
+    const p=m[1];if(price<F.qa||price>F.qb||p<F.pmin||p*price<1||calF(p)*price<(['tot','btts'].includes(mgrp(n))?1.0:.95))return 1;
     let b=p>=.8?5:p>=.75?4:p>=.7?3:2;
     if(r.A.n<8||r.B.n<8)b=Math.min(b,3);
     if(conflictOf(r,n))b-=1;
