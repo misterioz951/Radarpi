@@ -483,5 +483,5 @@ function nbInitGeneralSettings(){
 }
 function nbSet(){SV('nbcfg',NC);document.querySelectorAll('#nbday button').forEach((b,i)=>b.classList.toggle('on',i===NC.day))}
 nbInit();nbAutoRes(false).catch(()=>{});
-Object.assign(window,{NB,NC,nbScan,nbCard,nbTest,nbLog,nbTab,nbPicks,nbSetRes,nbDel,nbAutoRes,nbSet,nbDraw,nbAI});
+Object.assign(window,{NB,NC,nbScan,nbCard,nbTest,nbLog,nbTab,nbPicks,nbSetRes,nbDel,nbAutoRes,nbSet,nbDraw,nbAI,nbStat,nbSort,nbTabG});
 })();
