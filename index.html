@@ -38,6 +38,7 @@
 </details>
 <button class="btn" id="go"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 12l5.5-5.5"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg><span>Escanear partidos</span></button>
 <button class="btn s wide" id="hunt" type="button">Buscar el mejor pick en todas las ligas</button>
+<button class="btn s wide" id="htBtn" type="button">Partidos en descanso · picks de 2.ª parte</button><p class="status" id="htMsg"></p><div id="htBox"></div><div id="htLog"></div>
 <p class="status" id="msg"></p>
 <div id="res"><div class="empty"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="32" cy="32" r="26"/><circle cx="32" cy="32" r="15"/><path d="M32 32l16-16"/></svg><b>Todo listo para escanear</b>Elige tus ligas y toca el botón. Te muestro solo los partidos con patrones o con valor.</div></div>
 </section>
@@ -154,7 +155,7 @@
 </nav>
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script src="monitor.js?v=20261112mon"></script><script src="fuentes.js?v=20261103src"></script><script src="registro.js?v=20261112led"></script><script src="modelo_backend.js?v=20261105bk"></script><script src="panel.js?v=20261112pnl"></script><script src="app.js?v=20261116eng"></script><script src="corners.js?v=20261112nations"></script><script src="nba.js?v=20261116fix"></script><script>
+<script src="monitor.js?v=20261112mon"></script><script src="fuentes.js?v=20261103src"></script><script src="registro.js?v=20261112led"></script><script src="modelo_backend.js?v=20261105bk"></script><script src="panel.js?v=20261112pnl"></script><script src="app.js?v=20261117ht"></script><script src="descanso.js?v=20261117ht2"></script><script src="corners.js?v=20261117nulos"></script><script src="nba.js?v=20261116fix"></script><script>
 // PWA: registra el service worker (requiere https o localhost) y avisa cuando hay versión nueva
 if('serviceWorker' in navigator){addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').then(reg=>{reg.addEventListener('updatefound',()=>{const w=reg.installing;if(w)w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller&&typeof toast==='function')toast('Hay una versión nueva de RadarPi: recarga la página para usarla.')})})}).catch(()=>{})})}
 </script>

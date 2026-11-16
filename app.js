@@ -1761,7 +1761,7 @@ function drawBets(){
 // ===== Copia de seguridad de RadarPi: exporta todas las claves locales =====
 const SECRETS=['gq','gk','or','br','ok','ok2','af'];
 const NB_SECRETS=['keys','sgo','bdl','apisports'];   // llaves dentro de los ajustes NBA (nbcfg)
-const BACKUP_KEYS=['picks','bets','cfg','seen','scan','nbapicks','combipicks','nbcfg','radarpi_corners_picks_v1','radarpi_corners_analyses_v1'];
+const BACKUP_KEYS=['picks','bets','cfg','seen','scan','nbapicks','combipicks','nbcfg','htpicks','radarpi_corners_picks_v1','radarpi_corners_analyses_v1'];
 function exportRadarBackup(){
   const msg=$('#backupMsg');
   try{
@@ -1799,7 +1799,7 @@ $('#backupFile').addEventListener('change',async e=>{
     if(!pairs.length)throw new Error('La copia está vacía o tiene un formato no compatible.');
     if(!confirm('Se restaurarán los datos de la copia (picks, apuestas y ajustes). Las llaves de API que ya tienes se conservan. Los datos actuales con el mismo nombre serán reemplazados. Se recomienda exportar primero una copia del estado actual. ¿Continuar?'))return;
     for(const [k,v] of pairs){
-      if(!BACKUP_KEYS.includes(k)&&!/^(picks|bets|cfg|seen|scan|nbapicks|combipicks|nbcfg)$/.test(k)&&data.format>=3)continue;
+      if(!BACKUP_KEYS.includes(k)&&!/^(picks|bets|cfg|seen|scan|nbapicks|combipicks|nbcfg|htpicks)$/.test(k)&&data.format>=3)continue;
       if(v===null){localStorage.removeItem(k);continue}
       if(k==='cfg'){   // conserva las llaves de API que ya tienes en este dispositivo
         try{const nw=JSON.parse(v),cur=JSON.parse(localStorage.getItem('cfg')||'{}');SECRETS.forEach(x=>{if(!nw[x]&&cur[x])nw[x]=cur[x]});localStorage.setItem('cfg',JSON.stringify(nw));continue}catch{}
@@ -1941,7 +1941,7 @@ function slimCaches(){if(localStorage.getItem('radarpi_slim_v1'))return;for(cons
 function storBreak(){const g={};for(const k of Object.keys(localStorage)){const b=(k.length+(localStorage.getItem(k)||'').length)*2/1024,t=/^af_/.test(k)?'Caché API-Football':/^(odds_|Y\d|DOM|NATBAD|nba_|comboScan|scan$)/.test(k)?'Cuotas y ESPN':/^radarpi_corners/.test(k)?'Córners':'Tus picks y ajustes';g[t]=(g[t]||0)+b}
   return Object.entries(g).filter(([,v])=>v>=1).map(([k,v])=>k+' '+(v>=1024?(v/1024).toFixed(1)+' MB':Math.round(v)+' KB')).join(' · ')}
 function cleanCaches(force){
-  const keep=new Set(['radarpi_corners_picks_v1','radarpi_corners_analyses_v1','radarpi_corners_afkey','radarpi_corners_oddsapi_key','radarpi_corners_af_usage','picks','bets','cfg','seen','scan','nbapicks','combipicks','nbcfg','afUsed','purge2','radarpi_backup_last_export']),now=Date.now(),max=(force?.04:14)*864e5;let n=0,bytes=0;
+  const keep=new Set(['htpicks','radarpi_corners_picks_v1','radarpi_corners_analyses_v1','radarpi_corners_afkey','radarpi_corners_oddsapi_key','radarpi_corners_af_usage','picks','bets','cfg','seen','scan','nbapicks','combipicks','nbcfg','afUsed','purge2','radarpi_backup_last_export']),now=Date.now(),max=(force?.04:14)*864e5;let n=0,bytes=0;
   for(const k of Object.keys(localStorage)){
     // La caché antigua de Córners es temporal: se elimina al limpiar, nunca los picks/análisis.
     if(k==='radarpi_corners_cache_v3'){if(force){bytes+=(localStorage.getItem(k)||'').length;localStorage.removeItem(k);n++}continue}
